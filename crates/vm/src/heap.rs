@@ -18,11 +18,29 @@ pub enum HeapData {
 }
 
 #[derive(Clone)]
+pub struct WebConfig {
+    pub kompresi: bool,
+    pub rate_limit: Option<u32>,
+    pub proxies: HashMap<String, String>,
+}
+
+impl Default for WebConfig {
+    fn default() -> Self {
+        Self {
+            kompresi: false,
+            rate_limit: None,
+            proxies: HashMap::new(),
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct Heap {
     pub objects: Vec<HeapObject>,
     pub free_list_head: Option<usize>,
     pub allocated_count: usize,
     pub web_routes: HashMap<String, usize>,
+    pub web_config: WebConfig,
 }
 
 impl Default for Heap {
@@ -38,6 +56,7 @@ impl Heap {
             free_list_head: None,
             allocated_count: 0,
             web_routes: HashMap::new(),
+            web_config: WebConfig::default(),
         }
     }
 

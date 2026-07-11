@@ -1,0 +1,25 @@
+// Contoh Penggunaan Web Server Tingkat Lanjut (Compression, Rate Limit, Proxy)
+
+tampilkan("Menyiapkan konfigurasi server...")
+
+// 1. Aktifkan Kompresi (Gzip / Brotli otomatis)
+web.kompresi(benar)
+tampilkan("✅ Kompresi diaktifkan")
+
+// 2. Aktifkan Rate Limiter (misal: 2 request per detik)
+// Coba refresh browser sangat cepat, maka akan muncul "Too Many Requests"
+web.ratelimit(2)
+tampilkan("✅ Rate limiter diaktifkan (2 req/detik)")
+
+// 3. Tambahkan Reverse Proxy
+// Semua path yang berawalan /api akan diteruskan ke jsonplaceholder
+web.proxy("/api", "https://jsonplaceholder.typicode.com")
+tampilkan("✅ Reverse Proxy diaktifkan (/api -> jsonplaceholder)")
+
+// 4. Tambahkan Rute Normal
+web.get("/", fungsi(req) {
+    kembalikan "<h1>Halo dari RPL!</h1><p>Coba akses <a href='/api/users/1'>/api/users/1</a> untuk menguji proxy, atau muat ulang halaman dengan cepat untuk menguji rate limit.</p>"
+})
+
+// Jalankan Server!
+web.jalankan(4005)
