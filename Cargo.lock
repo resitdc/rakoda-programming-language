@@ -745,23 +745,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ipl"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "ast",
- "clap",
- "errors",
- "interpreter",
- "lexer",
- "notify",
- "parser",
- "tokio",
- "vm",
- "web",
-]
-
-[[package]]
 name = "is_terminal_polyfill"
 version = "1.70.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1108,6 +1091,23 @@ dependencies = [
  "libc",
  "untrusted",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "rpl"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ast",
+ "clap",
+ "errors",
+ "interpreter",
+ "lexer",
+ "notify",
+ "parser",
+ "tokio",
+ "vm",
+ "web",
 ]
 
 [[package]]

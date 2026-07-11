@@ -6,7 +6,7 @@ pub fn preprocess_template(input: &str) -> String {
 
     while i < chars.len() {
         if !in_ipl {
-            // Cek apakah masuk blok IPL
+            // Cek apakah masuk blok RPL
             if i + 4 < chars.len() && chars[i..i+5] == ['<', '?', 'i', 'p', 'l'] {
                 in_ipl = true;
                 i += 5;
@@ -42,12 +42,12 @@ pub fn preprocess_template(input: &str) -> String {
             if !html_chunk.is_empty() {
                 // Escape quotes and backslashes for string literal
                 let escaped = html_chunk.replace('\\', "\\\\").replace('"', "\\\"");
-                // Also escape newlines so it can be a valid string literal in IPL
+                // Also escape newlines so it can be a valid string literal in RPL
                 let escaped = escaped.replace('\n', "\\n").replace('\r', "");
                 output.push_str(&format!("\ncetak \"{}\"\n", escaped));
             }
         } else {
-            // Mode IPL
+            // Mode RPL
             let mut ipl_chunk = String::new();
             while i < chars.len() {
                 if i + 1 < chars.len() && chars[i] == '?' && chars[i+1] == '>' {

@@ -3,12 +3,12 @@ use std::path::PathBuf;
 use std::fs;
 use anyhow::{Context, Result};
 use lexer::Lexer;
-use parser::Parser as IplParser;
+use parser::Parser as RplParser;
 use interpreter::Interpreter;
 
 #[derive(Parser)]
-#[command(name = "ipl")]
-#[command(about = "Interpreter Indonesia Programming Language (IPL)", long_about = None)]
+#[command(name = "rpl")]
+#[command(about = "Interpreter Rakoda Programming Language (RPL)", long_about = None)]
 #[command(version = "0.1.0")]
 struct Cli {
     #[command(subcommand)]
@@ -48,7 +48,7 @@ fn run_file(file: &PathBuf, use_vm: bool) -> Result<bool> {
         }
     };
 
-    let mut parser = IplParser::new(tokens);
+    let mut parser = RplParser::new(tokens);
     let program = match parser.parse_program() {
         Ok(p) => p,
         Err(e) => {
@@ -68,7 +68,7 @@ fn run_file(file: &PathBuf, use_vm: bool) -> Result<bool> {
             Ok(chunk) => {
                 if let Err((msg, opt_lokasi)) = machine.execute(chunk) {
                     if let Some(lokasi) = opt_lokasi {
-                        let e = errors::IplError::Runtime { pesan: msg, lokasi };
+                        let e = errors::RplError::Runtime { pesan: msg, lokasi };
                         eprintln!("{}", e.tampilkan(&kode_sumber));
                     } else {
                         eprintln!("\x1b[33mVM Error: {}\x1b[0m", msg);
@@ -146,7 +146,7 @@ async fn main() -> Result<()> {
             }
         }
         Commands::Repl => {
-            println!("Memulai sesi REPL IPL. Ketik 'berhenti' untuk keluar.");
+            println!("Memulai sesi REPL RPL. Ketik 'berhenti' untuk keluar.");
         }
         Commands::Serve { file, port } => {
             web::start_server(file.clone(), *port).await?;

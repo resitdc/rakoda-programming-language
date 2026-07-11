@@ -2,7 +2,7 @@ tampilkan "Memulai inisialisasi server..."
 
 web.get("/halo", fungsi(req) {
     tampilkan "Menerima request di rute /halo"
-    kembalikan "Halo Dunia! Ini dari server Native IPL menggunakan fungsi anonim!"
+    kembalikan "Halo Dunia! Ini dari server Native RPL menggunakan fungsi anonim!"
 })
 
 web.get("/json", fungsi(req) {

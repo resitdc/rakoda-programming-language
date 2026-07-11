@@ -1,6 +1,6 @@
 // Test File System
 tampilkan("--- UJI FILE SYSTEM ---")
-buat tulisan = "Halo dari IPL! Bahasa pemrograman buatan Indonesia."
+buat tulisan = "Halo dari RPL! Bahasa pemrograman buatan Indonesia."
 buat hasil = file.tulis("tes.txt", tulisan)
 jika hasil == benar maka
     tampilkan("Berhasil menulis file tes.txt")

@@ -1,6 +1,6 @@
 pub mod token;
 use token::{SpannedToken, Token};
-use errors::{Lokasi, IplError};
+use errors::{Lokasi, RplError};
 
 pub struct Lexer {
     chars: Vec<char>,
@@ -49,7 +49,7 @@ impl Lexer {
         }
     }
 
-    pub fn tokenize(&mut self) -> Result<Vec<SpannedToken>, IplError> {
+    pub fn tokenize(&mut self) -> Result<Vec<SpannedToken>, RplError> {
         let mut tokens = Vec::new();
 
         loop {
@@ -122,7 +122,7 @@ impl Lexer {
                         self.advance();
                         Token::Dan
                     } else {
-                        return Err(IplError::Sintaks {
+                        return Err(RplError::Sintaks {
                             pesan: "Diharapkan '&&' untuk DAN.".to_string(),
                             lokasi: lokasi_awal,
                             saran: None,
@@ -135,7 +135,7 @@ impl Lexer {
                         self.advance();
                         Token::Atau
                     } else {
-                        return Err(IplError::Sintaks {
+                        return Err(RplError::Sintaks {
                             pesan: "Diharapkan '||' untuk ATAU.".to_string(),
                             lokasi: lokasi_awal,
                             saran: None,
@@ -158,7 +158,7 @@ impl Lexer {
                 _ => {
                     let err_char = c.to_string();
                     self.advance();
-                    return Err(IplError::Sintaks {
+                    return Err(RplError::Sintaks {
                         pesan: format!("Karakter tidak dikenali: '{}'", err_char),
                         lokasi: Lokasi::new(self.baris, self.kolom - 1),
                         saran: Some("Mungkin kamu tidak sengaja mengetik karakter ini? Pastikan hanya menggunakan simbol dan teks yang valid.".to_string()),
@@ -180,7 +180,7 @@ impl Lexer {
         Ok(tokens)
     }
 
-    fn read_string(&mut self) -> Result<Token, IplError> {
+    fn read_string(&mut self) -> Result<Token, RplError> {
         let lokasi_awal = Lokasi::new(self.baris, self.kolom);
         self.advance();
         let mut string_val = String::new();
@@ -211,7 +211,7 @@ impl Lexer {
             }
         }
 
-        Err(IplError::Sintaks {
+        Err(RplError::Sintaks {
             pesan: "String tidak ditutup (lupa tanda kutip \")".to_string(),
             lokasi: lokasi_awal,
             saran: Some("Tambahkan tanda kutip (\") di akhir string.".to_string()),
@@ -350,7 +350,7 @@ impl Lexer {
         }
     }
 
-    fn read_number(&mut self) -> Result<Token, IplError> {
+    fn read_number(&mut self) -> Result<Token, RplError> {
         let lokasi_awal = Lokasi::new(self.baris, self.kolom);
         let mut number_str = String::new();
         let mut is_float = false;
@@ -370,7 +370,7 @@ impl Lexer {
 
         match number_str.parse::<f64>() {
             Ok(val) => Ok(Token::Angka(val)),
-            Err(_) => Err(IplError::Sintaks {
+            Err(_) => Err(RplError::Sintaks {
                 pesan: format!("Format angka tidak valid: {}", number_str),
                 lokasi: lokasi_awal,
                 saran: Some("Pastikan format angka benar (contoh: 123 atau 12.3).".to_string()),

@@ -40,5 +40,5 @@ tampilkan("Hasil Download: " + respon_dl.data)
 
 tampilkan("")
 tampilkan("Cek apakah file berhasil didownload...")
-// Note: We can't easily check file from IPL yet, but we will see it in the folder!
+// Note: We can't easily check file from RPL yet, but we will see it in the folder!
 tampilkan("Berhasil cek file di folder!")

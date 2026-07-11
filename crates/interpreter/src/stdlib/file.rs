@@ -8,7 +8,7 @@ use crate::lingkungan::Lingkungan;
 pub fn register(env: &Rc<RefCell<Lingkungan>>) {
     let module_env = Lingkungan::baru();
     
-    // file.tulis("catatan.txt", "Belajar IPL")
+    // file.tulis("catatan.txt", "Belajar RPL")
     module_env.borrow_mut().set("tulis".to_string(), Objek::FungsiBawaan(|args| {
         if args.len() == 2 {
             if let (Objek::String(nama_file), Objek::String(isi)) = (&args[0], &args[1]) {

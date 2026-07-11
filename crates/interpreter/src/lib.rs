@@ -9,7 +9,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 
 use ast::{Expression, InfixOperator, PrefixOperator, Program, Statement};
-use errors::IplError;
+use errors::RplError;
 use lingkungan::Lingkungan;
 use objek::Objek;
 
@@ -48,7 +48,7 @@ impl Interpreter {
         }
     }
 
-    pub fn eval_program(&mut self, program: Program) -> Result<Objek, IplError> {
+    pub fn eval_program(&mut self, program: Program) -> Result<Objek, RplError> {
         let mut hasil = Objek::Kosong;
 
         for statement in program.statements {
@@ -58,7 +58,7 @@ impl Interpreter {
                 return Ok(*nilai);
             }
             if let Objek::Pengecualian(err) = hasil {
-                return Err(IplError::Runtime {
+                return Err(RplError::Runtime {
                     pesan: format!("Pengecualian tidak ditangkap: {}", err.to_string_pretty(0, true)),
                     lokasi: errors::Lokasi::new(0, 0),
                 });
@@ -68,7 +68,7 @@ impl Interpreter {
         Ok(hasil)
     }
 
-    fn eval_statement(&mut self, statement: Statement) -> Result<Objek, IplError> {
+    fn eval_statement(&mut self, statement: Statement) -> Result<Objek, RplError> {
         match statement {
             Statement::Expression(expr) => self.eval_expression(expr),
             Statement::Tampilkan { nilai, .. } => {
@@ -107,7 +107,7 @@ impl Interpreter {
             }
             Statement::Assignment { nama, nilai, lokasi } => {
                 if self.lingkungan.borrow().get(&nama).is_none() {
-                    return Err(IplError::VariabelTidakDitemukan {
+                    return Err(RplError::VariabelTidakDitemukan {
                         nama,
                         lokasi,
                         saran: Some("Pastikan menggunakan kata kunci 'buat' saat pertama kali mendeklarasikan variabel.".to_string()),
@@ -213,7 +213,7 @@ impl Interpreter {
         }
     }
 
-    fn eval_block(&mut self, statements: Vec<Statement>) -> Result<Objek, IplError> {
+    fn eval_block(&mut self, statements: Vec<Statement>) -> Result<Objek, RplError> {
         let mut hasil = Objek::Kosong;
 
         for statement in statements {
@@ -230,7 +230,7 @@ impl Interpreter {
         Ok(hasil)
     }
 
-    fn eval_expression(&mut self, expr: Expression) -> Result<Objek, IplError> {
+    fn eval_expression(&mut self, expr: Expression) -> Result<Objek, RplError> {
         match expr {
             Expression::Angka(val, _) => Ok(Objek::Angka(val)),
             Expression::String(val, _) => Ok(Objek::String(val)),
@@ -246,7 +246,7 @@ impl Interpreter {
             Expression::Identifier(nama, lokasi) => {
                 match self.lingkungan.borrow().get(&nama) {
                     Some(val) => Ok(val),
-                    None => Err(IplError::VariabelTidakDitemukan { 
+                    None => Err(RplError::VariabelTidakDitemukan { 
                         nama: nama.clone(),
                         lokasi,
                         saran: Some(format!("Gunakan perintah 'buat {} = ...' terlebih dahulu sebelum memakainya.", nama)),
@@ -257,14 +257,14 @@ impl Interpreter {
                 let path = Path::new(&path_str);
                 let kode_asli = match fs::read_to_string(path) {
                     Ok(k) => k,
-                    Err(e) => return Err(IplError::Sintaks {
+                    Err(e) => return Err(RplError::Sintaks {
                         pesan: format!("Gagal memuat modul '{}': {}", path_str, e),
                         lokasi,
                         saran: Some("Pastikan path file sudah benar dan file dapat diakses.".to_string()),
                     }),
                 };
                 
-                let is_html_template = path_str.ends_with(".ipl.html");
+                let is_html_template = path_str.ends_with(".rpl.html");
                 let kode_sumber = if is_html_template {
                     template::preprocess_template(&kode_asli)
                 } else {
@@ -273,7 +273,7 @@ impl Interpreter {
                 
                 let mut lexer = lexer::Lexer::new(&kode_sumber);
                 let tokens = lexer.tokenize().map_err(|mut e| {
-                    if let IplError::Sintaks { pesan, .. } = &mut e {
+                    if let RplError::Sintaks { pesan, .. } = &mut e {
                         *pesan = format!("Di dalam modul '{}': {}", path_str, pesan);
                     }
                     e
@@ -281,7 +281,7 @@ impl Interpreter {
                 
                 let mut parser = parser::Parser::new(tokens);
                 let program = parser.parse_program().map_err(|mut e| {
-                    if let IplError::Sintaks { pesan, .. } = &mut e {
+                    if let RplError::Sintaks { pesan, .. } = &mut e {
                         *pesan = format!("Di dalam modul '{}': {}", path_str, pesan);
                     }
                     e
@@ -303,8 +303,8 @@ impl Interpreter {
                 
                 if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
                     let mut real_stem = stem;
-                    if real_stem.ends_with(".ipl") {
-                        real_stem = real_stem.trim_end_matches(".ipl");
+                    if real_stem.ends_with(".rpl") {
+                        real_stem = real_stem.trim_end_matches(".rpl");
                     }
                     self.lingkungan.borrow_mut().set(real_stem.to_string(), modul_obj.clone());
                 }
@@ -343,7 +343,7 @@ impl Interpreter {
                             Objek::Angka(val) => {
                                 let idx = val as usize;
                                 if val < 0.0 || idx >= elemen.len() {
-                                    Err(IplError::Sintaks {
+                                    Err(RplError::Sintaks {
                                         pesan: format!("Indeks array {} di luar batas (0-{}).", idx, elemen.len().saturating_sub(1)),
                                         lokasi,
                                         saran: Some("Pastikan nomor yang diakses tidak melebihi ukuran array.".to_string()),
@@ -352,7 +352,7 @@ impl Interpreter {
                                     Ok(elemen[idx].clone())
                                 }
                             }
-                            _ => Err(IplError::TipeData {
+                            _ => Err(RplError::TipeData {
                                 pesan: "Akses elemen array harus menggunakan angka.".to_string(),
                                 lokasi,
                                 saran: Some("Gunakan angka untuk mengakses urutan di dalam array, contoh: data[0]".to_string()),
@@ -378,14 +378,14 @@ impl Interpreter {
                         };
                         match env.borrow().get(&kunci) {
                             Some(val) => Ok(val),
-                            None => Err(IplError::Sintaks {
+                            None => Err(RplError::Sintaks {
                                 pesan: format!("Properti atau fungsi '{}' tidak ditemukan di dalam modul.", kunci),
                                 lokasi,
                                 saran: None,
                             }),
                         }
                     }
-                    _ => Err(IplError::TipeData {
+                    _ => Err(RplError::TipeData {
                         pesan: "Hanya Array, Kamus, atau Modul yang bisa diakses bagian dalamnya dengan `[ ]` atau `.`".to_string(),
                         lokasi,
                         saran: Some("Pastikan variabel tersebut adalah daftar kumpulan data.".to_string()),
@@ -423,7 +423,7 @@ impl Interpreter {
                     }
                     Objek::Fungsi { parameter, body, env } => {
                         if arg_eval.len() != parameter.len() {
-                            return Err(IplError::Sintaks {
+                            return Err(RplError::Sintaks {
                                 pesan: format!("Fungsi '{}' mengharapkan {} data (argumen), tapi kamu memberikan {}.", nama_fungsi, parameter.len(), arg_eval.len()),
                                 lokasi,
                                 saran: Some("Pastikan jumlah data di dalam kurung sesuai dengan yang diminta fungsi.".to_string()),
@@ -449,7 +449,7 @@ impl Interpreter {
                         }
                     }
                     _ => {
-                        Err(IplError::TipeData {
+                        Err(RplError::TipeData {
                             pesan: format!("'{}' bukanlah sebuah fungsi yang bisa dipanggil.", nama_fungsi),
                             lokasi,
                             saran: Some(format!("Mungkin '{}' adalah variabel biasa? Pastikan hanya menggunakan '()' pada nama fungsi.", nama_fungsi)),
@@ -460,7 +460,7 @@ impl Interpreter {
         }
     }
 
-    fn eval_prefix_expression(&self, operator: PrefixOperator, kanan: Objek, lokasi: errors::Lokasi) -> Result<Objek, IplError> {
+    fn eval_prefix_expression(&self, operator: PrefixOperator, kanan: Objek, lokasi: errors::Lokasi) -> Result<Objek, RplError> {
         match operator {
             PrefixOperator::Bukan => {
                 Ok(Objek::Boolean(!is_truthy(&kanan)))
@@ -468,7 +468,7 @@ impl Interpreter {
             PrefixOperator::Minus => {
                 match kanan {
                     Objek::Angka(val) => Ok(Objek::Angka(-val)),
-                    _ => Err(IplError::TipeData {
+                    _ => Err(RplError::TipeData {
                         pesan: "Kamu menggunakan tanda kurang '-' (negatif) pada tipe data yang bukan Angka.".to_string(),
                         lokasi,
                         saran: Some("Pastikan kamu hanya menempelkan tanda '-' pada variabel bernilai Angka.".to_string()),
@@ -478,7 +478,7 @@ impl Interpreter {
         }
     }
 
-    fn eval_infix_expression(&self, operator: InfixOperator, kiri: Objek, kanan: Objek, lokasi: errors::Lokasi) -> Result<Objek, IplError> {
+    fn eval_infix_expression(&self, operator: InfixOperator, kiri: Objek, kanan: Objek, lokasi: errors::Lokasi) -> Result<Objek, RplError> {
         match (kiri, kanan) {
             (Objek::Angka(kiri_val), Objek::Angka(kanan_val)) => {
                 self.eval_angka_infix(operator, kiri_val, kanan_val, lokasi)
@@ -499,7 +499,7 @@ impl Interpreter {
                     } else {
                         Some("Teks hanya bisa digabungkan dengan tanda tambah '+'. Tidak bisa dikurang, dikali, atau dibandingkan (<, >).".to_string())
                     };
-                    Err(IplError::TipeData {
+                    Err(RplError::TipeData {
                         pesan: format!("Operator '{}' membutuhkan tipe data yang seragam. Ditemukan: Teks dan Tipe Data Lain.", operator),
                         lokasi,
                         saran,
@@ -519,7 +519,7 @@ impl Interpreter {
                     } else {
                         Some("Teks hanya bisa digabungkan dengan tanda tambah '+'. Tidak bisa dikurang, dikali, atau dibandingkan (<, >).".to_string())
                     };
-                    Err(IplError::TipeData {
+                    Err(RplError::TipeData {
                         pesan: format!("Operator '{}' membutuhkan tipe data yang seragam. Ditemukan: Tipe Data Lain dan Teks.", operator),
                         lokasi,
                         saran,
@@ -545,7 +545,7 @@ impl Interpreter {
                             )
                         };
 
-                        Err(IplError::TipeData {
+                        Err(RplError::TipeData {
                             pesan: pesan_spesifik,
                             lokasi,
                             saran,
@@ -556,14 +556,14 @@ impl Interpreter {
         }
     }
 
-    fn eval_angka_infix(&self, operator: InfixOperator, kiri: f64, kanan: f64, lokasi: errors::Lokasi) -> Result<Objek, IplError> {
+    fn eval_angka_infix(&self, operator: InfixOperator, kiri: f64, kanan: f64, lokasi: errors::Lokasi) -> Result<Objek, RplError> {
         match operator {
             InfixOperator::Tambah => Ok(Objek::Angka(kiri + kanan)),
             InfixOperator::Kurang => Ok(Objek::Angka(kiri - kanan)),
             InfixOperator::Kali => Ok(Objek::Angka(kiri * kanan)),
             InfixOperator::Bagi => {
                 if kanan == 0.0 {
-                    Err(IplError::TipeData {
+                    Err(RplError::TipeData {
                         pesan: "Pembagian dengan nilai 0 (Nol).".to_string(),
                         lokasi,
                         saran: Some("Pastikan angka pembaginya tidak sama dengan nol (0). Tidak ada angka yang bisa dibagi nol.".to_string()),
@@ -583,12 +583,12 @@ impl Interpreter {
         }
     }
 
-    fn eval_string_infix(&self, operator: InfixOperator, kiri: String, kanan: String, lokasi: errors::Lokasi) -> Result<Objek, IplError> {
+    fn eval_string_infix(&self, operator: InfixOperator, kiri: String, kanan: String, lokasi: errors::Lokasi) -> Result<Objek, RplError> {
         match operator {
             InfixOperator::Tambah => Ok(Objek::String(format!("{}{}", kiri, kanan))),
             InfixOperator::SamaDengan => Ok(Objek::Boolean(kiri == kanan)),
             InfixOperator::TidakSamaDengan => Ok(Objek::Boolean(kiri != kanan)),
-            _ => Err(IplError::TipeData {
+            _ => Err(RplError::TipeData {
                 pesan: "Kamu mencoba menggunakan operasi matematika yang tidak diizinkan pada Teks.".to_string(),
                 lokasi,
                 saran: Some("Untuk menggabungkan teks, gunakan tanda tambah '+'. Operasi lain seperti kurang, kali, atau bagi tidak berlaku untuk teks.".to_string()),

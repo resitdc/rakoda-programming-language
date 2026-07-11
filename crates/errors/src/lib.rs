@@ -13,7 +13,7 @@ impl Lokasi {
 }
 
 #[derive(Error, Debug)]
-pub enum IplError {
+pub enum RplError {
     #[error("Sintaks tidak valid: {pesan}")]
     Sintaks {
         pesan: String,
@@ -54,25 +54,25 @@ pub enum IplError {
     },
 }
 
-impl IplError {
+impl RplError {
     pub fn tampilkan(&self, source_code: &str) -> String {
         match self {
-            IplError::Sintaks { pesan, lokasi, saran } => {
+            RplError::Sintaks { pesan, lokasi, saran } => {
                 format_error(pesan, lokasi, saran, source_code)
             }
-            IplError::VariabelTidakDitemukan { nama, lokasi, saran } => {
+            RplError::VariabelTidakDitemukan { nama, lokasi, saran } => {
                 format_error(&format!("Variabel '{}' belum dibuat.", nama), lokasi, saran, source_code)
             }
-            IplError::FungsiTidakDitemukan { nama, lokasi, saran } => {
+            RplError::FungsiTidakDitemukan { nama, lokasi, saran } => {
                 format_error(&format!("Fungsi '{}' tidak ditemukan.", nama), lokasi, saran, source_code)
             }
-            IplError::TipeData { pesan, lokasi, saran } => {
+            RplError::TipeData { pesan, lokasi, saran } => {
                 format_error(&format!("Tipe data tidak cocok: {}", pesan), lokasi, saran, source_code)
             }
-            IplError::Internal { pesan } => {
+            RplError::Internal { pesan } => {
                 format!("\x1b[33mKesalahan sistem internal: {}\x1b[0m", pesan)
             }
-            IplError::Runtime { pesan, lokasi } => {
+            RplError::Runtime { pesan, lokasi } => {
                 format_error(&format!("Runtime Error: {}", pesan), lokasi, &None, source_code)
             }
         }

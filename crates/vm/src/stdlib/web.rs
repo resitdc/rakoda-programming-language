@@ -38,7 +38,7 @@ pub fn register(vm: &mut VM) {
             };
             
             let addr = format!("0.0.0.0:{}", port);
-            println!("🚀 Menjalankan Server Web Native IPL di http://{}", addr);
+            println!("🚀 Menjalankan Server Web Native RPL di http://{}", addr);
             
             let server = tiny_http::Server::http(&addr)
                 .map_err(|e| format!("Gagal menjalankan server: {}", e))?;

@@ -2,14 +2,14 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Web IPL Pertama Saya!</title>
+    <title>Web RPL Pertama Saya!</title>
     <style>
         body { background-color: #1e1e2f; color: #cdd6f4; font-family: sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         h1 { font-size: 3rem; background: linear-gradient(90deg, #f38ba8, #cba6f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     </style>
 </head>
 <body>
-    <?ipl
+    <?rpl
         buat nama = "Siswa SMK"
         buat nilai = 100
         
@@ -19,8 +19,8 @@
         selesai
     ?>
     <div style="width: 80%; max-width: 600px; display: flex; flex-direction: column; align-items: center;">
-        <?ipl gabung "komponen_navbar.ipl.html" ?>
-        <h1>Halo Web IPL!</h1>
+        <?rpl gabung "komponen_navbar.rpl.html" ?>
+        <h1>Halo Web RPL!</h1>
     
     <p>Selamat datang, {{ nama }}!</p>
     <p>Nilai kamu: {{ nilai }} ({{ pesan }})</p>
