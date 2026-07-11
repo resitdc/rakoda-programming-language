@@ -1,0 +1,8 @@
+tampilkan "=== TES CONSTANT FOLDING ==="
+tampilkan "Pohon sintaks matematika ini akan di-collapse menjadi 1 angka sebelum kode dieksekusi!"
+
+buat x = 10 * 20 + 30 - 5
+tampilkan x
+
+buat nama = "Restu" + " " + "Dwi" + " " + "Cahyo"
+tampilkan nama

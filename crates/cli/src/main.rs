@@ -55,6 +55,8 @@ fn run_file(file: &PathBuf) -> Result<bool> {
         }
     };
 
+    let program = ast::optimizer::optimize_program(program);
+
     let mut interpreter = Interpreter::baru();
     match interpreter.eval_program(program) {
         Ok(hasil) => {

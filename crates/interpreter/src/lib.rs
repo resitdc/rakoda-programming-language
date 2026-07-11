@@ -427,10 +427,15 @@ impl Interpreter {
                 } else if operator == InfixOperator::TidakSamaDengan {
                     Ok(Objek::Boolean(true))
                 } else {
+                    let saran = if let Objek::Angka(_) = kanan_val {
+                        Some("Gunakan fungsi `angka()` untuk mengubah Teks menjadi Angka, atau `teks()` untuk mengubah Angka menjadi Teks.".to_string())
+                    } else {
+                        Some("Teks hanya bisa digabungkan dengan tanda tambah '+'. Tidak bisa dikurang, dikali, atau dibandingkan (<, >).".to_string())
+                    };
                     Err(IplError::TipeData {
-                        pesan: format!("Kamu mencoba menggunakan operasi matematika selain tambah pada Teks dan Tipe Data Lain."),
+                        pesan: format!("Operator '{}' membutuhkan tipe data yang seragam. Ditemukan: Teks dan Tipe Data Lain.", operator),
                         lokasi,
-                        saran: Some("Teks hanya bisa digabungkan dengan tanda tambah '+'. Tidak bisa dikurang, kali, atau bagi.".to_string()),
+                        saran,
                     })
                 }
             }
@@ -442,10 +447,15 @@ impl Interpreter {
                 } else if operator == InfixOperator::TidakSamaDengan {
                     Ok(Objek::Boolean(true))
                 } else {
+                    let saran = if let Objek::Angka(_) = kiri_val {
+                        Some("Gunakan fungsi `angka()` untuk mengubah Teks menjadi Angka, atau `teks()` untuk mengubah Angka menjadi Teks.".to_string())
+                    } else {
+                        Some("Teks hanya bisa digabungkan dengan tanda tambah '+'. Tidak bisa dikurang, dikali, atau dibandingkan (<, >).".to_string())
+                    };
                     Err(IplError::TipeData {
-                        pesan: format!("Kamu mencoba menggunakan operasi matematika selain tambah pada Tipe Data Lain dan Teks."),
+                        pesan: format!("Operator '{}' membutuhkan tipe data yang seragam. Ditemukan: Tipe Data Lain dan Teks.", operator),
                         lokasi,
-                        saran: Some("Hanya tanda tambah '+' yang bisa digunakan untuk menggabungkan sesuatu dengan Teks.".to_string()),
+                        saran,
                     })
                 }
             }
@@ -455,11 +465,25 @@ impl Interpreter {
                     InfixOperator::TidakSamaDengan => Ok(Objek::Boolean(kiri_obj != kanan_obj)),
                     InfixOperator::Dan => Ok(Objek::Boolean(is_truthy(&kiri_obj) && is_truthy(&kanan_obj))),
                     InfixOperator::Atau => Ok(Objek::Boolean(is_truthy(&kiri_obj) || is_truthy(&kanan_obj))),
-                    _ => Err(IplError::TipeData {
-                        pesan: format!("Kamu mencoba menghitung {} dengan {}", kiri_obj, kanan_obj),
-                        lokasi,
-                        saran: Some("Pastikan tipe datanya sama atau mendukung operasi tersebut (misalnya Angka dengan Angka).".to_string()),
-                    })
+                    _ => {
+                        let (saran, pesan_spesifik) = if let (Objek::String(_), Objek::Angka(_)) | (Objek::Angka(_), Objek::String(_)) = (&kiri_obj, &kanan_obj) {
+                            (
+                                Some("Gunakan fungsi `angka()` untuk mengubah Teks menjadi Angka, atau `teks()` untuk mengubah Angka menjadi Teks.".to_string()),
+                                format!("Operator '{}' membutuhkan tipe data yang seragam. Ditemukan: Teks dan Angka.", operator)
+                            )
+                        } else {
+                            (
+                                Some("Pastikan tipe datanya sama atau mendukung operasi tersebut (misalnya Angka dengan Angka).".to_string()),
+                                format!("Kamu mencoba menghitung {} dengan {} menggunakan operator '{}'", kiri_obj, kanan_obj, operator)
+                            )
+                        };
+
+                        Err(IplError::TipeData {
+                            pesan: pesan_spesifik,
+                            lokasi,
+                            saran,
+                        })
+                    }
                 }
             }
         }

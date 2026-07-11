@@ -1,0 +1,6 @@
+buat umur = "17"
+
+// Ini harusnya error pintar
+jika umur > 10 maka
+    tampilkan "Lebih besar dari 10"
+selesai

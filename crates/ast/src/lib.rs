@@ -1,4 +1,5 @@
 use errors::Lokasi;
+pub mod optimizer;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Program {
@@ -115,6 +116,26 @@ pub enum InfixOperator {
     Atau,
 }
 
+impl std::fmt::Display for InfixOperator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let op = match self {
+            InfixOperator::Tambah => "+ (tambah)",
+            InfixOperator::Kurang => "- (kurang)",
+            InfixOperator::Kali => "* (kali)",
+            InfixOperator::Bagi => "/ (bagi)",
+            InfixOperator::Mod => "% (modulus)",
+            InfixOperator::LebihDari => "> (lebih dari)",
+            InfixOperator::KurangDari => "< (kurang dari)",
+            InfixOperator::Minimal => ">= (minimal)",
+            InfixOperator::Maksimal => "<= (maksimal)",
+            InfixOperator::SamaDengan => "== (sama dengan)",
+            InfixOperator::TidakSamaDengan => "!= (tidak sama dengan)",
+            InfixOperator::Dan => "&& (dan)",
+            InfixOperator::Atau => "|| (atau)",
+        };
+        write!(f, "{}", op)
+    }
+}
 impl Expression {
     pub fn lokasi(&self) -> &Lokasi {
         match self {
