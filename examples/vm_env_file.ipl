@@ -1,0 +1,14 @@
+tampilkan "=== TEST ENV & FILE DI VM ==="
+
+buat database_url = env.get("DATABASE_URL")
+tampilkan "DATABASE_URL dari env:"
+tampilkan database_url
+
+tampilkan "Menulis ke file teks..."
+file.tulis("examples/tes_vm.txt", "Halo dari Bytecode VM!")
+
+tampilkan "Membaca dari file teks..."
+buat isi_file = file.baca("examples/tes_vm.txt")
+tampilkan isi_file
+
+tampilkan "=== SELESAI ==="

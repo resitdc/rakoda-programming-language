@@ -21,6 +21,8 @@ enum Commands {
         file: PathBuf,
         #[arg(short, long)]
         watch: bool,
+        #[arg(long)]
+        vm: bool,
     },
     Repl,
     Serve {
@@ -33,7 +35,7 @@ enum Commands {
     },
 }
 
-fn run_file(file: &PathBuf) -> Result<bool> {
+fn run_file(file: &PathBuf, use_vm: bool) -> Result<bool> {
     let kode_sumber = fs::read_to_string(file)
         .with_context(|| format!("Gagal membaca file: {}", file.display()))?;
 
@@ -57,6 +59,26 @@ fn run_file(file: &PathBuf) -> Result<bool> {
 
     let program = ast::optimizer::optimize_program(program);
 
+    if use_vm {
+        let compiler = vm::Compiler::new();
+        match compiler.compile(program) {
+            Ok(chunk) => {
+                let mut machine = vm::VM::new();
+                vm::stdlib::register_all(&mut machine);
+                
+                if let Err(e) = machine.execute(chunk) {
+                    eprintln!("VM Error: {}", e);
+                    return Ok(false);
+                }
+                return Ok(true);
+            }
+            Err(e) => {
+                eprintln!("Compiler Error: {}", e);
+                return Ok(false);
+            }
+        }
+    }
+
     let mut interpreter = Interpreter::baru();
     match interpreter.eval_program(program) {
         Ok(hasil) => {
@@ -77,9 +99,9 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::Run { file, watch } => {
+        Commands::Run { file, watch, vm } => {
             if !*watch {
-                let success = run_file(file)?;
+                let success = run_file(file, *vm)?;
                 if !success {
                     std::process::exit(1);
                 }
@@ -90,7 +112,7 @@ async fn main() -> Result<()> {
 
                 print!("{}[2J{}[1;1H", 27 as char, 27 as char); // Clear screen
                 println!("\x1b[32m⏳ Memulai watch mode untuk {}...\x1b[0m", file.display());
-                let _ = run_file(file);
+                let _ = run_file(file, *vm);
                 println!("\n\x1b[32m👀 Menunggu perubahan file...\x1b[0m");
 
                 let (tx, rx) = channel();
@@ -107,7 +129,7 @@ async fn main() -> Result<()> {
                                     last_run = std::time::Instant::now();
                                     print!("{}[2J{}[1;1H", 27 as char, 27 as char); // Clear screen
                                     println!("\x1b[32m🔄 File berubah, menjalankan ulang...\x1b[0m\n");
-                                    let _ = run_file(file);
+                                    let _ = run_file(file, *vm);
                                     println!("\n\x1b[32m👀 Menunggu perubahan file...\x1b[0m");
                                 }
                             }

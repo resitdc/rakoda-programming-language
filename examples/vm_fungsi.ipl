@@ -1,0 +1,17 @@
+tampilkan "=== TES FUNGSI VM ==="
+
+fungsi sapa(nama) maka
+    tampilkan "Halo " + nama + ", selamat datang di Bytecode VM!"
+selesai
+
+fungsi hitung_luas(panjang, lebar) maka
+    kembalikan panjang * lebar
+selesai
+
+sapa("Siswa")
+
+buat luas = hitung_luas(10, 5)
+tampilkan "Luas persegi panjang adalah:"
+tampilkan luas
+
+tampilkan "=== SELESAI ==="

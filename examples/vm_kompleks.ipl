@@ -1,0 +1,38 @@
+tampilkan "=== TEST STRUKTUR DATA DI VM ==="
+
+buat data_pengguna = ["Resit", "Budi"]
+tampilkan "Data Awal:"
+tampilkan data_pengguna
+
+tampilkan "Menambahkan 'Andi' ke daftar..."
+list.tambah(data_pengguna, "Andi")
+tampilkan data_pengguna
+
+tampilkan "Panjang daftar saat ini:"
+tampilkan list.panjang(data_pengguna)
+
+tampilkan "Membuat kamus dan mengubahnya ke JSON..."
+buat orang = {
+    "nama": "Siswa",
+    "umur": 17,
+    "aktif": benar
+}
+buat teks_json = json.stringify(orang)
+tampilkan teks_json
+
+tampilkan "Mem-parsing JSON kembali..."
+buat kembali_objek = json.parse(teks_json)
+tampilkan kembali_objek["nama"]
+
+tampilkan "Melakukan HTTP Request..."
+buat respons = http.get("https://jsonplaceholder.typicode.com/todos/1")
+tampilkan "Status:"
+tampilkan respons["status"]
+tampilkan "Body (mentah):"
+tampilkan respons["body"]
+
+tampilkan "Mengambil title dari body JSON..."
+buat todo_obj = json.parse(respons["body"])
+tampilkan todo_obj["title"]
+
+tampilkan "=== SELESAI ==="

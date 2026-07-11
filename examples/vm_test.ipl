@@ -1,0 +1,20 @@
+tampilkan "=== EKSEKUSI BYTECODE VM ==="
+
+buat x = 10 * 2
+buat y = 5
+
+tampilkan "Nilai x adalah:"
+tampilkan x
+
+jika x > y maka
+    tampilkan "x lebih besar dari y"
+selesai
+
+buat hitung = 0
+selama hitung < 3 maka
+    tampilkan "Perulangan ke:"
+    tampilkan hitung
+    hitung = hitung + 1
+selesai
+
+tampilkan "=== SELESAI ==="

@@ -1,0 +1,15 @@
+tampilkan "=== TEST NATIVE FUNCTIONS IN VM ==="
+
+buat num = angka("123")
+tampilkan "Teks ke angka: "
+tampilkan num
+
+buat kuadrat = matematika.kuadrat(5)
+tampilkan "Kuadrat 5 adalah: "
+tampilkan kuadrat
+
+buat waktu_sekarang = waktu.sekarang()
+tampilkan "Timestamp saat ini: "
+tampilkan waktu_sekarang
+
+tampilkan "=== SELESAI ==="
