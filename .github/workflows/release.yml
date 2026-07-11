@@ -115,99 +115,14 @@ jobs:
           cp -r documentation/* staging/documentation/ 2>/dev/null || true
           cp LICENSE staging/
 
-      - name: 🔧 Install NSIS
-        run: choco install nsis -y
+      - name: 🔧 Install Inno Setup
+        run: choco install innosetup -y
 
-      - name: 🔧 Download EnvVarUpdate Plugin
-        shell: powershell
-        run: |
-          # Download EnvVarUpdate NSIS plugin
-          $nsisPluginsDir = "C:\Program Files (x86)\NSIS\Include"
-          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/winlibs/nsis/master/Include/EnvVarUpdate.nsh" -OutFile "$nsisPluginsDir\EnvVarUpdate.nsh" -ErrorAction SilentlyContinue
-          # Fallback: Create a minimal EnvVarUpdate stub
-          if (!(Test-Path "$nsisPluginsDir\EnvVarUpdate.nsh")) {
-            @"
-            !ifndef EnvVarUpdate_INCLUDED
-            !define EnvVarUpdate_INCLUDED
-            !macro _EnvVarUpdate_Impl ResultVar EnvVarName Action RegLoc PathString
-              !define UNIQUE_ID `$${__LINE__}`
-              ReadRegStr `$${ResultVar}` `$${RegLoc}` "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" `$${EnvVarName}`
-            !macroend
-            !define EnvVarUpdate '!insertmacro _EnvVarUpdate_Impl'
-            !define un.EnvVarUpdate '!insertmacro _EnvVarUpdate_Impl'
-            !endif
-            "@ | Out-File -FilePath "$nsisPluginsDir\EnvVarUpdate.nsh" -Encoding ascii
-          }
-
-      - name: 🏗️ Build NSIS Installer
+      - name: 🏗️ Build Inno Setup Installer
         shell: bash
         run: |
-          VERSION=${GITHUB_REF_NAME#v}
-          # Use a simpler NSIS script that works without EnvVarUpdate
-          cat > staging/rpl-setup.nsi << 'NSIS_EOF'
-          !include "MUI2.nsh"
-          
-          !define PRODUCT_NAME "RPL"
-          !define PRODUCT_FULLNAME "Rakoda Programming Language"
-          !define PRODUCT_VERSION "1.0.0"
-          !define PRODUCT_PUBLISHER "Restu Dwi Cahyo"
-          !define PRODUCT_WEB_SITE "https://github.com/resitdc/rakoda-programming-language"
-          !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
-          
-          Name "${PRODUCT_FULLNAME} ${PRODUCT_VERSION}"
-          OutFile "RPL-Setup-${PRODUCT_VERSION}-${{ matrix.arch }}.exe"
-          InstallDir "$PROGRAMFILES\RPL"
-          RequestExecutionLevel admin
-          SetCompressor /SOLID lzma
-          
-          !define MUI_ABORTWARNING
-          !insertmacro MUI_PAGE_WELCOME
-          !insertmacro MUI_PAGE_LICENSE "LICENSE"
-          !insertmacro MUI_PAGE_DIRECTORY
-          !insertmacro MUI_PAGE_INSTFILES
-          !insertmacro MUI_PAGE_FINISH
-          !insertmacro MUI_UNPAGE_CONFIRM
-          !insertmacro MUI_UNPAGE_INSTFILES
-          !insertmacro MUI_LANGUAGE "English"
-          
-          Section "Install"
-              SetOutPath "$INSTDIR\bin"
-              File "rpl.exe"
-              
-              SetOutPath "$INSTDIR\examples"
-              File /nonfatal /r "examples\*.rpl"
-              
-              SetOutPath "$INSTDIR\docs"
-              File /nonfatal /r "documentation\*.*"
-              
-              SetOutPath "$INSTDIR"
-              File "LICENSE"
-              
-              ; Add to PATH using registry
-              ReadRegStr $0 HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "Path"
-              StrCpy $0 "$0;$INSTDIR\bin"
-              WriteRegExpandStr HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "Path" "$0"
-              SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
-              
-              WriteUninstaller "$INSTDIR\uninstall.exe"
-              WriteRegStr HKLM "${PRODUCT_UNINST_KEY}" "DisplayName" "${PRODUCT_FULLNAME}"
-              WriteRegStr HKLM "${PRODUCT_UNINST_KEY}" "UninstallString" "$INSTDIR\uninstall.exe"
-              WriteRegStr HKLM "${PRODUCT_UNINST_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"
-              WriteRegStr HKLM "${PRODUCT_UNINST_KEY}" "Publisher" "${PRODUCT_PUBLISHER}"
-          SectionEnd
-          
-          Section "Uninstall"
-              RMDir /r "$INSTDIR\bin"
-              RMDir /r "$INSTDIR\examples"
-              RMDir /r "$INSTDIR\docs"
-              Delete "$INSTDIR\LICENSE"
-              Delete "$INSTDIR\uninstall.exe"
-              RMDir "$INSTDIR"
-              DeleteRegKey HKLM "${PRODUCT_UNINST_KEY}"
-          SectionEnd
-          NSIS_EOF
-          
-          makensis staging/rpl-setup.nsi
+          cp installer/inno/rpl-setup.iss staging/
+          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DAppArch=${{ matrix.arch }} staging/rpl-setup.iss
 
       - name: 📤 Upload Windows Installer
         uses: actions/upload-artifact@v5
