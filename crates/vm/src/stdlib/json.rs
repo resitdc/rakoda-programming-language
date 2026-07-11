@@ -100,8 +100,11 @@ pub fn register(vm: &mut VM) {
             Ok(Value::String(s_idx))
         },
     };
-    let stringify_idx = vm.heap.alloc(HeapData::FungsiBawaan(stringify_func));
+    let stringify_idx = vm.heap.alloc(HeapData::FungsiBawaan(stringify_func.clone()));
     module_dict.insert("stringify".to_string(), Value::FungsiBawaan(stringify_idx));
+
+    let buat_idx = vm.heap.alloc(HeapData::FungsiBawaan(stringify_func));
+    module_dict.insert("buat".to_string(), Value::FungsiBawaan(buat_idx));
 
     let dict_idx = vm.heap.alloc(HeapData::Kamus(module_dict));
     vm.set_global("json".to_string(), Value::Kamus(dict_idx));

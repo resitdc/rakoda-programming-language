@@ -1,0 +1,14 @@
+[package]
+name = "runtime"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = { workspace = true }
+lexer = { path = "../lexer" }
+parser = { path = "../parser" }
+ast = { path = "../ast" }
+vm = { path = "../vm" }
+errors = { version = "0.1.0", path = "../errors" }
+interpreter = { path = "../interpreter" }
+web = { path = "../web" }

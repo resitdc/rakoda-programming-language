@@ -64,6 +64,28 @@ pub fn register(vm: &mut VM) {
     let panjang_idx = vm.heap.alloc(HeapData::FungsiBawaan(panjang_func));
     module_dict.insert("panjang".to_string(), Value::FungsiBawaan(panjang_idx));
 
+    let ambil_func = FungsiBawaanVM {
+        nama: "ambil".to_string(),
+        func: |ctx, args| {
+            if args.len() != 2 {
+                return Err("Fungsi 'ambil' membutuhkan 2 argumen: array dan indeks".to_string());
+            }
+            if let (Value::Array(idx), Value::Angka(index)) = (&args[0], &args[1]) {
+                let arr = ctx.get_heap_mut().get_array_mut(*idx);
+                let i = *index as usize;
+                if i < arr.len() {
+                    Ok(arr[i])
+                } else {
+                    Err(format!("Indeks {} di luar batas array (panjang {})", i, arr.len()))
+                }
+            } else {
+                Err("Argumen harus berupa array dan angka".to_string())
+            }
+        },
+    };
+    let ambil_idx = vm.heap.alloc(HeapData::FungsiBawaan(ambil_func));
+    module_dict.insert("ambil".to_string(), Value::FungsiBawaan(ambil_idx));
+
     let dict_idx = vm.heap.alloc(HeapData::Kamus(module_dict));
     vm.set_global("list".to_string(), Value::Kamus(dict_idx));
 }

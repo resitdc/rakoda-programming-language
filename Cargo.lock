@@ -1098,14 +1098,22 @@ name = "rpl"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "ast",
  "clap",
+ "notify",
+ "runtime",
+ "tokio",
+]
+
+[[package]]
+name = "runtime"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ast",
  "errors",
  "interpreter",
  "lexer",
- "notify",
  "parser",
- "tokio",
  "vm",
  "web",
 ]

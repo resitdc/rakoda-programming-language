@@ -1,15 +1,11 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
-use std::fs;
-use anyhow::{Context, Result};
-use lexer::Lexer;
-use parser::Parser as RplParser;
-use interpreter::Interpreter;
+use anyhow::Result;
 
 #[derive(Parser)]
 #[command(name = "rpl")]
 #[command(about = "Interpreter Rakoda Programming Language (RPL)", long_about = None)]
-#[command(version = "0.1.0")]
+#[command(version = runtime::version())]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -35,70 +31,6 @@ enum Commands {
     },
 }
 
-fn run_file(file: &PathBuf, use_vm: bool) -> Result<bool> {
-    let kode_sumber = fs::read_to_string(file)
-        .with_context(|| format!("Gagal membaca file: {}", file.display()))?;
-
-    let mut lexer = Lexer::new(&kode_sumber);
-    let tokens = match lexer.tokenize() {
-        Ok(t) => t,
-        Err(e) => {
-            eprintln!("{}", e.tampilkan(&kode_sumber));
-            return Ok(false);
-        }
-    };
-
-    let mut parser = RplParser::new(tokens);
-    let program = match parser.parse_program() {
-        Ok(p) => p,
-        Err(e) => {
-            eprintln!("{}", e.tampilkan(&kode_sumber));
-            return Ok(false);
-        }
-    };
-
-    let program = ast::optimizer::optimize_program(program);
-
-    if use_vm {
-        let mut machine = vm::VM::new();
-        vm::stdlib::register_all(&mut machine);
-
-        let compiler = vm::Compiler::new(&mut machine.heap);
-        match compiler.compile(program) {
-            Ok(chunk) => {
-                if let Err((msg, opt_lokasi)) = machine.execute(chunk) {
-                    if let Some(lokasi) = opt_lokasi {
-                        let e = errors::RplError::Runtime { pesan: msg, lokasi };
-                        eprintln!("{}", e.tampilkan(&kode_sumber));
-                    } else {
-                        eprintln!("\x1b[33mVM Error: {}\x1b[0m", msg);
-                    }
-                    return Ok(false);
-                }
-                return Ok(true);
-            }
-            Err(e) => {
-                eprintln!("Compiler Error: {}", e);
-                return Ok(false);
-            }
-        }
-    }
-
-    let mut interpreter = Interpreter::baru();
-    match interpreter.eval_program(program) {
-        Ok(hasil) => {
-            if hasil != interpreter::objek::Objek::Kosong {
-                println!("{}", hasil);
-            }
-            Ok(true)
-        }
-        Err(e) => {
-            eprintln!("{}", e.tampilkan(&kode_sumber));
-            Ok(false)
-        }
-    }
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -107,9 +39,16 @@ async fn main() -> Result<()> {
         Commands::Run { file, watch, interpreter } => {
             let use_vm = !*interpreter;
             if !*watch {
-                let success = run_file(file, use_vm)?;
-                if !success {
-                    std::process::exit(1);
+                match runtime::run_file(file, use_vm) {
+                    Ok(success) => {
+                        if !success {
+                            std::process::exit(1);
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("{}", e);
+                        std::process::exit(1);
+                    }
                 }
             } else {
                 use notify::{Watcher, RecursiveMode};
@@ -118,7 +57,9 @@ async fn main() -> Result<()> {
 
                 print!("{}[2J{}[1;1H", 27 as char, 27 as char); // Clear screen
                 println!("\x1b[32m⏳ Memulai watch mode untuk {}...\x1b[0m", file.display());
-                let _ = run_file(file, use_vm);
+                if let Err(e) = runtime::run_file(file, use_vm) {
+                    eprintln!("{}", e);
+                }
                 println!("\n\x1b[32m👀 Menunggu perubahan file...\x1b[0m");
 
                 let (tx, rx) = channel();
@@ -135,7 +76,9 @@ async fn main() -> Result<()> {
                                     last_run = std::time::Instant::now();
                                     print!("{}[2J{}[1;1H", 27 as char, 27 as char); // Clear screen
                                     println!("\x1b[32m🔄 File berubah, menjalankan ulang...\x1b[0m\n");
-                                    let _ = run_file(file, use_vm);
+                                    if let Err(e) = runtime::run_file(file, use_vm) {
+                                        eprintln!("{}", e);
+                                    }
                                     println!("\n\x1b[32m👀 Menunggu perubahan file...\x1b[0m");
                                 }
                             }
@@ -149,7 +92,7 @@ async fn main() -> Result<()> {
             println!("Memulai sesi REPL RPL. Ketik 'berhenti' untuk keluar.");
         }
         Commands::Serve { file, port } => {
-            web::start_server(file.clone(), *port).await?;
+            runtime::serve(file.clone(), *port).await?;
         }
         Commands::Fmt { file } => {
             println!("Memformat file: {}", file.display());

@@ -51,6 +51,44 @@ pub fn register(vm: &mut VM) {
     let tulis_idx = vm.heap.alloc(HeapData::FungsiBawaan(tulis_func));
     module_dict.insert("tulis".to_string(), Value::FungsiBawaan(tulis_idx));
 
+    let ada_func = FungsiBawaanVM {
+        nama: "ada".to_string(),
+        func: |ctx, args| {
+            if args.len() != 1 {
+                return Err("Fungsi 'ada' membutuhkan 1 argumen: path".to_string());
+            }
+            if let Value::String(idx) = &args[0] {
+                let path = ctx.get_heap_mut().get_string(*idx).clone();
+                let exists = std::path::Path::new(&path).exists();
+                Ok(Value::Boolean(exists))
+            } else {
+                Err("Path harus berupa teks".to_string())
+            }
+        },
+    };
+    let ada_idx = vm.heap.alloc(HeapData::FungsiBawaan(ada_func));
+    module_dict.insert("ada".to_string(), Value::FungsiBawaan(ada_idx));
+
+    let hapus_func = FungsiBawaanVM {
+        nama: "hapus".to_string(),
+        func: |ctx, args| {
+            if args.len() != 1 {
+                return Err("Fungsi 'hapus' membutuhkan 1 argumen: path".to_string());
+            }
+            if let Value::String(idx) = &args[0] {
+                let path = ctx.get_heap_mut().get_string(*idx).clone();
+                match fs::remove_file(&path) {
+                    Ok(_) => Ok(Value::Kosong),
+                    Err(e) => Err(format!("Gagal menghapus file '{}': {}", path, e)),
+                }
+            } else {
+                Err("Path harus berupa teks".to_string())
+            }
+        },
+    };
+    let hapus_idx = vm.heap.alloc(HeapData::FungsiBawaan(hapus_func));
+    module_dict.insert("hapus".to_string(), Value::FungsiBawaan(hapus_idx));
+
     let dict_idx = vm.heap.alloc(HeapData::Kamus(module_dict));
     vm.set_global("file".to_string(), Value::Kamus(dict_idx));
 }

@@ -3,13 +3,13 @@ tampilkan("--- UJI HTTP GET ---")
 tampilkan("Mengambil data cuaca...")
 
 // Gunakan API dummy jsonplaceholder
-buat data_teks = http.get("https://jsonplaceholder.typicode.com/users/1")
+buat respon = http.get("https://jsonplaceholder.typicode.com/users/1")
 
-jika data_teks != kosong maka
-    tampilkan("Berhasil mengambil data dari API!")
+jika respon != kosong maka
+    tampilkan("Berhasil mengambil data dari API! Status: " + respon.status)
     
     // Kita gabungkan dengan fitur JSON!
-    buat user = json.parse(data_teks)
+    buat user = json.parse(respon.body)
     tampilkan("Nama User: " + user.name)
     tampilkan("Email User: " + user.email)
     tampilkan("Kota: " + user.address.city)

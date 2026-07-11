@@ -8,6 +8,7 @@ pub mod env;
 pub mod file;
 pub mod web;
 pub mod tugas;
+pub mod string;
 
 use crate::machine::VM;
 
@@ -22,4 +23,5 @@ pub fn register_all(vm: &mut VM) {
     file::register(vm);
     web::register(vm);
     tugas::register(vm);
+    string::register(vm);
 }
