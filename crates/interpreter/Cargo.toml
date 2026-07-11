@@ -1,7 +1,7 @@
 [package]
 name = "interpreter"
-version = "1.0.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
 errors = { path = "../errors" }
