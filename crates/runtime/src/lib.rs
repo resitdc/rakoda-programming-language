@@ -50,7 +50,7 @@ pub fn run_source(kode_sumber: &str, use_vm: bool, base_path: Option<PathBuf>) -
         let mut machine = vm::VM::new();
         vm::stdlib::register_all(&mut machine);
 
-        let compiler = vm::Compiler::new(&mut machine.heap);
+        let compiler = vm::Compiler::baru_dengan_base_path(&mut machine.heap, base_path);
         match compiler.compile(program) {
             Ok(chunk) => {
                 if let Err((msg, opt_lokasi)) = machine.execute(chunk) {

@@ -3,8 +3,8 @@ use crate::heap::Heap;
 
 pub trait VmContext {
     fn get_heap_mut(&mut self) -> &mut Heap;
-    fn execute_function(&mut self, func_idx: usize, args: Vec<Value>) -> Result<Value, String>;
-    fn spawn_task(&mut self, func_idx: usize) -> Result<usize, String>;
+    fn execute_function(&mut self, func: Value, args: Vec<Value>) -> Result<Value, String>;
+    fn spawn_task(&mut self, func: Value) -> Result<usize, String>;
     fn join_task(&mut self, task_id: usize) -> Result<Value, String>;
 }
 
@@ -43,8 +43,9 @@ pub enum Value {
     String(usize),
     Array(usize),
     Kamus(usize),
-    Fungsi(usize),
+    Fungsi(usize, usize),
     FungsiBawaan(usize),
+    Modul(usize),
 }
 
 impl Value {
@@ -53,8 +54,9 @@ impl Value {
             Value::Angka(val) => val.to_string(),
             Value::String(idx) => heap.get_string(*idx).clone(),
             Value::Boolean(val) => (if *val { "benar" } else { "salah" }).to_string(),
-            Value::Fungsi(idx) => format!("<fungsi {}>", heap.get_fungsi(*idx).nama),
+            Value::Fungsi(idx, _) => format!("<fungsi {}>", heap.get_fungsi(*idx).nama),
             Value::FungsiBawaan(idx) => format!("<fungsi bawaan {}>", heap.get_fungsi_bawaan(*idx).nama),
+            Value::Modul(_) => "<modul>".to_string(),
             Value::Array(idx) => {
                 let items: Vec<String> = heap.get_array(*idx).iter().map(|v| v.to_string(heap)).collect();
                 format!("[{}]", items.join(", "))
@@ -96,15 +98,18 @@ pub fn deep_copy_value(val: &Value, source: &Heap, dest: &mut Heap) -> Value {
             let new_idx = dest.alloc(crate::heap::HeapData::Kamus(new_dict));
             Value::Kamus(new_idx)
         }
-        Value::Fungsi(idx) => {
+        Value::Fungsi(idx, env) => {
             let f = source.get_fungsi(*idx).clone();
             let new_idx = dest.alloc(crate::heap::HeapData::Fungsi(f));
-            Value::Fungsi(new_idx)
+            Value::Fungsi(new_idx, *env)
         }
         Value::FungsiBawaan(idx) => {
             let f = source.get_fungsi_bawaan(*idx).clone();
             let new_idx = dest.alloc(crate::heap::HeapData::FungsiBawaan(f));
             Value::FungsiBawaan(new_idx)
+        }
+        Value::Modul(idx) => {
+            Value::Modul(*idx)
         }
     }
 }

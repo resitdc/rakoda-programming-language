@@ -14,8 +14,8 @@ pub fn register(vm: &mut crate::machine::VM) {
                     return Err("tugas.jalankan membutuhkan 1 argumen (fungsi)".to_string());
                 }
 
-                if let Value::Fungsi(func_idx) = args[0] {
-                    let task_id = ctx.spawn_task(func_idx)?;
+                if let Value::Fungsi(_, _) = args[0] {
+                    let task_id = ctx.spawn_task(args[0])?;
                     Ok(Value::Angka(task_id as f64))
                 } else {
                     Err("Argumen pertama tugas.jalankan harus berupa fungsi".to_string())

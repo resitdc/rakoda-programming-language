@@ -70,11 +70,11 @@ pub fn register(vm: &mut VM) {
                 return Err("Fungsi 'web.get' membutuhkan 2 argumen (path, handler)".to_string());
             }
             let path = args[0].to_string(ctx.get_heap_mut());
-            let func_idx = match args[1] {
-                Value::Fungsi(idx) => idx,
+            let func_val = match args[1] {
+                Value::Fungsi(idx, env) => Value::Fungsi(idx, env),
                 _ => return Err("Argumen kedua 'web.get' harus berupa fungsi".to_string()),
             };
-            ctx.get_heap_mut().web_routes.insert(path, func_idx);
+            ctx.get_heap_mut().web_routes.insert(path, func_val);
             Ok(Value::Kosong)
         },
     };
@@ -191,7 +191,7 @@ pub fn register(vm: &mut VM) {
                 // 3. Normal Routing
                 let route_opt = ctx.get_heap_mut().web_routes.get(&url).copied();
                 match route_opt {
-                    Some(func_idx) => {
+                    Some(func_val) => {
                         let req_kamus_idx = {
                             let mut req_map = HashMap::new();
                             let url_str = ctx.get_heap_mut().alloc(HeapData::String(url));
@@ -209,7 +209,7 @@ pub fn register(vm: &mut VM) {
                         };
                         
                         let req_val = Value::Kamus(req_kamus_idx);
-                        let hasil = ctx.execute_function(func_idx, vec![req_val]);
+                        let hasil = ctx.execute_function(func_val, vec![req_val]);
                         
                         match hasil {
                             Ok(val) => {

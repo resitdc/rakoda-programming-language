@@ -14,6 +14,7 @@ pub enum HeapData {
     Kamus(HashMap<String, Value>),
     Fungsi(FungsiVM),
     FungsiBawaan(FungsiBawaanVM),
+    Modul(HashMap<String, Value>),
     Free(usize), // Next free index
 }
 
@@ -63,7 +64,7 @@ pub struct Heap {
     pub objects: Vec<HeapObject>,
     pub free_list_head: Option<usize>,
     pub allocated_count: usize,
-    pub web_routes: HashMap<String, usize>,
+    pub web_routes: HashMap<String, Value>,
     pub web_config: WebConfig,
     pub web_state: WebState,
 }
@@ -154,6 +155,14 @@ impl Heap {
         }
     }
 
+    pub fn get_modul(&self, idx: usize) -> &HashMap<String, Value> {
+        if let HeapData::Modul(m) = &self.objects[idx].data {
+            m
+        } else {
+            panic!("Expected Modul at heap index {}", idx);
+        }
+    }
+
     pub fn get_fungsi(&self, idx: usize) -> &FungsiVM {
         if let HeapData::Fungsi(f) = &self.objects[idx].data {
             f
@@ -170,6 +179,8 @@ impl Heap {
         }
     }
 
+
+
     pub fn mark(&mut self, idx: usize) {
         if self.objects[idx].is_marked { return; }
         self.objects[idx].is_marked = true;
@@ -185,19 +196,21 @@ impl Heap {
                         if let Value::Array(i) = val { c.push(*i); }
                         if let Value::Kamus(i) = val { c.push(*i); }
                         if let Value::String(i) = val { c.push(*i); }
-                        if let Value::Fungsi(i) = val { c.push(*i); }
+                        if let Value::Fungsi(i, _) = val { c.push(*i); }
                         if let Value::FungsiBawaan(i) = val { c.push(*i); }
+                        if let Value::Modul(i) = val { c.push(*i); }
                     }
                     c
                 },
-                HeapData::Kamus(k) => {
+                HeapData::Kamus(k) | HeapData::Modul(k) => {
                     let mut c = Vec::new();
                     for val in k.values() {
                         if let Value::Array(i) = val { c.push(*i); }
                         if let Value::Kamus(i) = val { c.push(*i); }
                         if let Value::String(i) = val { c.push(*i); }
-                        if let Value::Fungsi(i) = val { c.push(*i); }
+                        if let Value::Fungsi(i, _) = val { c.push(*i); }
                         if let Value::FungsiBawaan(i) = val { c.push(*i); }
+                        if let Value::Modul(i) = val { c.push(*i); }
                     }
                     c
                 },
@@ -207,12 +220,13 @@ impl Heap {
                         if let Value::Array(i) = val { c.push(*i); }
                         if let Value::Kamus(i) = val { c.push(*i); }
                         if let Value::String(i) = val { c.push(*i); }
-                        if let Value::Fungsi(i) = val { c.push(*i); }
+                        if let Value::Fungsi(i, _) = val { c.push(*i); }
                         if let Value::FungsiBawaan(i) = val { c.push(*i); }
+                        if let Value::Modul(i) = val { c.push(*i); }
                     }
                     c
-                }
-                _ => vec![],
+                },
+                _ => Vec::new(),
             };
             
             for child in children {

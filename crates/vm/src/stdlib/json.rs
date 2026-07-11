@@ -90,7 +90,7 @@ pub fn register(vm: &mut VM) {
                         }
                         JsonValue::Object(map)
                     },
-                    Value::Fungsi(_) | Value::FungsiBawaan(_) => JsonValue::Null,
+                    Value::Fungsi(..) | Value::FungsiBawaan(_) | Value::Modul(_) => JsonValue::Null,
                 }
             }
             

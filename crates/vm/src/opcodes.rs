@@ -29,6 +29,8 @@ pub enum OpCode {
     SetupCatch,  // operand: 2 bytes (jump offset)
     PopCatch,
     Throw,
+    Negate,
+    LoadModule,  // operand: 2 bytes (index to constant pool string for module path)
 }
 
 impl OpCode {
@@ -62,6 +64,8 @@ impl OpCode {
             25 => Some(OpCode::SetupCatch),
             26 => Some(OpCode::PopCatch),
             27 => Some(OpCode::Throw),
+            28 => Some(OpCode::Negate),
+            29 => Some(OpCode::LoadModule),
             _ => None,
         }
     }

@@ -10,6 +10,8 @@ pub struct CallFrame {
     pub fungsi: usize, // index to Heap.fungsi
     pub ip: usize,
     pub stack_offset: usize,
+    pub env_id: usize,
+    pub is_module: bool,
 }
 
 impl CallFrame {
@@ -41,7 +43,8 @@ pub struct CatchHandler {
 pub struct VM {
     frames: Vec<CallFrame>,
     stack: Vec<Value>,
-    globals: HashMap<String, Value>,
+    pub environments: Vec<HashMap<String, Value>>,
+    pub modules_cache: HashMap<String, Value>,
     pub heap: Heap,
     pub tasks: HashMap<usize, std::thread::JoinHandle<(Result<Value, String>, Heap)>>,
     pub next_task_id: usize,
@@ -59,7 +62,8 @@ impl VM {
         Self {
             frames: Vec::with_capacity(64),
             stack: Vec::with_capacity(256),
-            globals: HashMap::new(),
+            environments: vec![HashMap::new()],
+            modules_cache: HashMap::new(),
             heap: Heap::new(),
             tasks: HashMap::new(),
             next_task_id: 1,
@@ -71,7 +75,8 @@ impl VM {
         VM {
             frames: self.frames.clone(),
             stack: self.stack.clone(),
-            globals: self.globals.clone(),
+            environments: self.environments.clone(),
+            modules_cache: self.modules_cache.clone(),
             heap: self.heap.clone(),
             tasks: HashMap::new(),
             next_task_id: 1,
@@ -80,18 +85,21 @@ impl VM {
     }
 
     pub fn set_global(&mut self, name: String, value: Value) {
-        self.globals.insert(name, value);
+        self.environments[0].insert(name, value);
     }
 
     pub fn gc_collect(&mut self) {
         let mut roots = Vec::new();
         for val in &self.stack { roots.push(*val); }
-        for val in self.globals.values() { roots.push(*val); }
-        for frame in &self.frames { roots.push(Value::Fungsi(frame.fungsi)); }
+        for env in &self.environments {
+            for val in env.values() { roots.push(*val); }
+        }
+        for val in self.modules_cache.values() { roots.push(*val); }
+        for frame in &self.frames { roots.push(Value::Fungsi(frame.fungsi, frame.env_id)); }
         
         for val in roots {
             match val {
-                Value::Array(i) | Value::Kamus(i) | Value::String(i) | Value::Fungsi(i) | Value::FungsiBawaan(i) => {
+                Value::Array(i) | Value::Kamus(i) | Value::String(i) | Value::Fungsi(i, _) | Value::FungsiBawaan(i) | Value::Modul(i) => {
                     self.heap.mark(i);
                 },
                 _ => {}
@@ -137,6 +145,8 @@ impl VM {
             fungsi: fungsi_idx,
             ip: 0,
             stack_offset: 0,
+            env_id: 0,
+            is_module: false,
         });
 
         self.run(0)
@@ -164,32 +174,53 @@ impl VM {
                     let frame = self.frames.pop().unwrap();
                     
                     self.stack.truncate(frame.stack_offset);
-                    self.stack.push(result);
+
+                    if frame.is_module {
+                        let env = self.environments[frame.env_id].clone();
+                        let modul_idx = self.heap.alloc(HeapData::Modul(env));
+                        let modul_val = Value::Modul(modul_idx);
+                        
+                        let path_str = self.heap.get_fungsi(frame.fungsi).nama.clone();
+                        self.modules_cache.insert(path_str, modul_val);
+                        
+                        self.stack.push(modul_val);
+                    } else {
+                        self.stack.push(result);
+                    }
 
                     if self.frames.len() == initial_frames {
                         return Ok(());
                     }
                 }
                 OpCode::LoadConst => {
-                    let constant = self.frames.last_mut().unwrap().read_constant(&self.heap);
+                    let mut constant = self.frames.last_mut().unwrap().read_constant(&self.heap);
+                    if let Value::Fungsi(idx, _) = constant {
+                        constant = Value::Fungsi(idx, self.frames.last().unwrap().env_id);
+                    }
                     self.stack.push(constant);
                 }
                 OpCode::LoadVar => {
-                    let name_val = self.frames.last_mut().unwrap().read_constant(&self.heap);
-                    if let Value::String(name_idx) = name_val {
+                    let (name_idx_val, env_id) = {
+                        let frame = self.frames.last_mut().unwrap();
+                        (frame.read_constant(&self.heap), frame.env_id)
+                    };
+                    if let Value::String(name_idx) = name_idx_val {
                         let name = self.heap.get_string(name_idx).clone();
-                        let val = self.globals.get(&name)
+                        let val = self.environments[env_id].get(&name)
                             .cloned()
                             .ok_or_else(|| self.err(format!("Variabel '{}' belum dibuat.", name)))?;
                         self.stack.push(val);
                     }
                 }
                 OpCode::StoreVar => {
-                    let name_val = self.frames.last_mut().unwrap().read_constant(&self.heap);
-                    if let Value::String(name_idx) = name_val {
+                    let (name_idx_val, env_id) = {
+                        let frame = self.frames.last_mut().unwrap();
+                        (frame.read_constant(&self.heap), frame.env_id)
+                    };
+                    if let Value::String(name_idx) = name_idx_val {
                         let name = self.heap.get_string(name_idx).clone();
                         let val = self.stack.pop().unwrap_or(Value::Kosong);
-                        self.globals.insert(name, val);
+                        self.environments[env_id].insert(name, val);
                     }
                 }
                 OpCode::Add => {
@@ -336,7 +367,7 @@ impl VM {
                     let fungsi_val = self.stack[self.stack.len() - arg_count - 1];
                     
                     match fungsi_val {
-                        Value::Fungsi(fungsi_idx) => {
+                        Value::Fungsi(fungsi_idx, env_id) => {
                             let (p_len, params) = {
                                 let f = self.heap.get_fungsi(fungsi_idx);
                                 (f.parameter.len(), f.parameter.clone())
@@ -348,7 +379,7 @@ impl VM {
                             
                             for i in 0..arg_count {
                                 let arg_val = self.stack[self.stack.len() - arg_count + i];
-                                self.globals.insert(params[i].clone(), arg_val);
+                                self.environments[env_id].insert(params[i].clone(), arg_val);
                             }
                             
                             let stack_offset = self.stack.len() - arg_count - 1;
@@ -356,6 +387,8 @@ impl VM {
                                 fungsi: fungsi_idx,
                                 ip: 0,
                                 stack_offset,
+                                env_id,
+                                is_module: false,
                             });
                         }
                         Value::FungsiBawaan(fungsi_idx) => {
@@ -372,8 +405,50 @@ impl VM {
                             let result = func_ptr(self, args).map_err(|e| self.err(e))?;
                             self.stack.push(result);
                         }
-                        _ => return Err(self.err(format!("Hanya fungsi yang dapat dipanggil. Ditemukan: {:?}", fungsi_val))),
+                        _ => return Err(self.err("Hanya fungsi yang dapat dipanggil".to_string())),
                     }
+                }
+                OpCode::Negate => {
+                    let a = self.stack.pop().unwrap();
+                    if let Value::Angka(a_val) = a {
+                        self.stack.push(Value::Angka(-a_val));
+                    } else {
+                        return Err(self.err("Prefix minus hanya dapat digunakan pada angka"));
+                    }
+                }
+                OpCode::LoadModule => {
+                    let path_idx_val = self.stack.pop().unwrap();
+                    let (path_str, func_idx) = if let Value::Fungsi(idx, _) = path_idx_val {
+                        let path = self.heap.get_fungsi(idx).nama.clone();
+                        (path, idx)
+                    } else {
+                        return Err(self.err("LoadModule requires a Fungsi constant".to_string()));
+                    };
+
+                    let is_html_template = path_str.ends_with(".rpl.html");
+                    if !is_html_template {
+                        if let Some(modul_val) = self.modules_cache.get(&path_str) {
+                            self.stack.push(*modul_val);
+                            continue;
+                        }
+                    }
+                    
+                    let env_id = if is_html_template {
+                        self.frames.last().unwrap().env_id
+                    } else {
+                        let new_env_id = self.environments.len();
+                        self.environments.push(HashMap::new());
+                        new_env_id
+                    };
+                        
+                    let stack_offset = self.stack.len();
+                    self.frames.push(CallFrame {
+                        fungsi: func_idx,
+                        ip: 0,
+                        stack_offset,
+                        env_id,
+                        is_module: !is_html_template,
+                    });
                 }
                 OpCode::GetIndex => {
                     let index = self.stack.pop().unwrap();
@@ -396,6 +471,15 @@ impl VM {
                                 self.stack.push(val);
                             } else {
                                 return Err(self.err("Indeks array harus berupa angka"));
+                            }
+                        }
+                        Value::Modul(m_idx) => {
+                            if let Value::String(key_idx) = index {
+                                let key_str = self.heap.get_string(key_idx).clone();
+                                let val = self.heap.get_modul(m_idx).get(&key_str).cloned().unwrap_or(Value::Kosong);
+                                self.stack.push(val);
+                            } else {
+                                return Err(self.err("Indeks modul harus berupa teks"));
                             }
                         }
                         _ => return Err(self.err("Operasi index tidak didukung untuk tipe ini")),
@@ -470,7 +554,13 @@ impl VmContext for VM {
         &mut self.heap
     }
 
-    fn execute_function(&mut self, func_idx: usize, args: Vec<Value>) -> Result<Value, String> {
+    fn execute_function(&mut self, func_val: Value, args: Vec<Value>) -> Result<Value, String> {
+        let (func_idx, env_id) = if let Value::Fungsi(idx, env) = func_val {
+            (idx, env)
+        } else {
+            return Err("Bukan fungsi".to_string());
+        };
+
         let func = self.heap.get_fungsi(func_idx).clone();
         
         // Push args
@@ -478,10 +568,10 @@ impl VmContext for VM {
             self.stack.push(*arg);
         }
         
-        // Insert into globals
+        // Insert into environment
         for i in 0..func.parameter.len() {
             if i < args.len() {
-                self.globals.insert(func.parameter[i].clone(), args[i]);
+                self.environments[env_id].insert(func.parameter[i].clone(), args[i]);
             }
         }
         
@@ -490,6 +580,8 @@ impl VmContext for VM {
             fungsi: func_idx,
             ip: 0,
             stack_offset,
+            env_id,
+            is_module: false,
         });
 
         let target_frames = self.frames.len() - 1;
@@ -502,11 +594,11 @@ impl VmContext for VM {
         }
     }
 
-    fn spawn_task(&mut self, func_idx: usize) -> Result<usize, String> {
+    fn spawn_task(&mut self, func_val: Value) -> Result<usize, String> {
         let mut vm_clone = self.clone_vm();
         
         let handle = std::thread::spawn(move || {
-            let res = vm_clone.execute_function(func_idx, vec![]);
+            let res = vm_clone.execute_function(func_val, vec![]);
             (res, vm_clone.heap)
         });
         

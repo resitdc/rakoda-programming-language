@@ -51,6 +51,7 @@ impl Chunk {
 pub struct Compiler<'a> {
     pub chunk: Chunk,
     pub heap: &'a mut Heap,
+    pub base_path: Option<std::path::PathBuf>,
 }
 
 impl<'a> Compiler<'a> {
@@ -58,6 +59,15 @@ impl<'a> Compiler<'a> {
         Self {
             chunk: Chunk::new(),
             heap,
+            base_path: None,
+        }
+    }
+
+    pub fn baru_dengan_base_path(heap: &'a mut Heap, base_path: Option<std::path::PathBuf>) -> Self {
+        Self {
+            chunk: Chunk::new(),
+            heap,
+            base_path,
         }
     }
 
@@ -151,7 +161,7 @@ impl<'a> Compiler<'a> {
                     chunk,
                 };
                 let fungsi_idx = self.heap.alloc(HeapData::Fungsi(fungsi));
-                let const_idx = self.chunk.write_constant(Value::Fungsi(fungsi_idx));
+                let const_idx = self.chunk.write_constant(Value::Fungsi(fungsi_idx, 0));
                 self.chunk.write_opcode(OpCode::LoadConst, lokasi);
                 self.chunk.write_u16(const_idx, lokasi);
 
@@ -254,7 +264,7 @@ impl<'a> Compiler<'a> {
             Expression::Prefix { operator, kanan, lokasi } => {
                 self.compile_expression(*kanan)?;
                 match operator {
-                    PrefixOperator::Minus => return Err("Prefix Minus not yet supported in VM".to_string()),
+                    PrefixOperator::Minus => self.chunk.write_opcode(OpCode::Negate, lokasi),
                     PrefixOperator::Bukan => self.chunk.write_opcode(OpCode::Not, lokasi),
                 }
             }
@@ -318,12 +328,66 @@ impl<'a> Compiler<'a> {
                     chunk,
                 };
                 let fungsi_idx = self.heap.alloc(crate::heap::HeapData::Fungsi(fungsi));
-                let const_idx = self.chunk.write_constant(Value::Fungsi(fungsi_idx));
+                let const_idx = self.chunk.write_constant(Value::Fungsi(fungsi_idx, 0));
                 self.chunk.write_opcode(OpCode::LoadConst, lokasi);
                 self.chunk.write_u16(const_idx, lokasi);
             }
-            Expression::Impor(..) => {
-                return Err("Impor modul belum didukung di VM".to_string());
+            Expression::Impor(path_str, lokasi) => {
+                let resolved_path = if let Some(base) = &self.base_path {
+                    if std::path::Path::new(&path_str).is_relative() {
+                        base.join(&path_str)
+                    } else {
+                        std::path::PathBuf::from(&path_str)
+                    }
+                } else {
+                    std::path::PathBuf::from(&path_str)
+                };
+                
+                let kode_asli = match std::fs::read_to_string(&resolved_path) {
+                    Ok(k) => k,
+                    Err(e) => return Err(format!("Gagal memuat modul '{}': {}", resolved_path.display(), e)),
+                };
+                
+                let is_html_template = path_str.ends_with(".rpl.html");
+                let kode_sumber = if is_html_template {
+                    interpreter::template::preprocess_template(&kode_asli)
+                } else {
+                    kode_asli
+                };
+                
+                let mut lexer = lexer::Lexer::new(&kode_sumber);
+                let tokens = lexer.tokenize().map_err(|e| format!("Error lexer di '{}': {:?}", path_str, e))?;
+                
+                let mut parser = parser::Parser::new(tokens);
+                let program = parser.parse_program().map_err(|e| format!("Error parser di '{}': {:?}", path_str, e))?;
+                
+                let new_base_path = resolved_path.parent().map(|p| p.to_path_buf());
+                let mut fn_compiler = Compiler::baru_dengan_base_path(self.heap, new_base_path);
+                
+                for stmt in program.statements {
+                    fn_compiler.compile_statement(stmt)?;
+                }
+                
+                let mut chunk = fn_compiler.chunk;
+                if chunk.code.last() != Some(&(OpCode::Return as u8)) {
+                    let const_idx = chunk.write_constant(Value::Kosong);
+                    chunk.write_opcode(OpCode::LoadConst, lokasi);
+                    chunk.write_u16(const_idx, lokasi);
+                    chunk.write_opcode(OpCode::Return, lokasi);
+                }
+                
+                let fungsi = crate::value::FungsiVM {
+                    nama: path_str.clone(),
+                    parameter: vec![],
+                    chunk,
+                };
+                let fungsi_idx = self.heap.alloc(crate::heap::HeapData::Fungsi(fungsi));
+                let func_val = Value::Fungsi(fungsi_idx, 0); // Dummy env_id 0 at compile time
+                let const_idx = self.chunk.write_constant(func_val);
+                
+                self.chunk.write_opcode(OpCode::LoadConst, lokasi);
+                self.chunk.write_u16(const_idx, lokasi);
+                self.chunk.write_opcode(OpCode::LoadModule, lokasi);
             }
         }
         Ok(())

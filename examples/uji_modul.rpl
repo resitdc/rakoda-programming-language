@@ -1,0 +1,4 @@
+buat nama_modul = "Modul Rahasia"
+buat hitung = fungsi(x, y) {
+    kembalikan x * y - 5
+}

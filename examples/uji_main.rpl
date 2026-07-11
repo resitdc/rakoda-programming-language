@@ -1,0 +1,7 @@
+buat rahasia = gabung "uji_modul.rpl"
+
+cetak "Modul dimuat: ", rahasia.nama_modul
+cetak "Hasil hitung: ", rahasia.hitung(10, -2) // Should print -25
+
+buat angka = -5
+cetak "Negasi: ", -angka // Should print 5
