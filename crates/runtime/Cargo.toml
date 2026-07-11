@@ -9,6 +9,6 @@ lexer = { path = "../lexer" }
 parser = { path = "../parser" }
 ast = { path = "../ast" }
 vm = { path = "../vm" }
-errors = { version = "1.0.0", path = "../errors" }
+errors = { path = "../errors" }
 interpreter = { path = "../interpreter" }
 web = { path = "../web" }
