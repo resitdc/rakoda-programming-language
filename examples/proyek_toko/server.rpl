@@ -1,0 +1,68 @@
+// server.rpl
+// Server Backend untuk Proyek Toko menggunakan Rakoda Programming Language
+
+tampilkan("Menghubungkan ke database...")
+db.hubungkan("sqlite://toko.db")
+
+// 1. Rute Frontend (HTML)
+web.get("/", fungsi(req)
+    web.render("tampilan/index.rpl.html")
+selesai)
+
+// 2. Rute API - GET Produk (Menampilkan Semua Data dengan JOIN)
+web.get("/api/produk", fungsi(req)
+    // Melakukan operasi JOIN untuk mendapatkan nama_kategori
+    buat kueri_sql = "
+        SELECT p.id, p.nama_produk, p.harga, k.nama_kategori 
+        FROM produk p
+        JOIN kategori k ON p.kategori_id = k.id
+        ORDER BY p.id DESC
+    "
+    buat data_produk = db.kueri(kueri_sql)
+    
+    // Secara otomatis akan dikembalikan dengan Content-Type: application/json dan Status 200 OK
+    kembalikan data_produk
+selesai)
+
+// 3. Rute API - POST Produk (Menambahkan Data Baru)
+web.post("/api/produk", fungsi(req)
+    // Mengambil data JSON dari body request
+    buat data = json.parse(req.tubuh)
+    
+    // Query Insert
+    buat sql_insert = `INSERT INTO produk (nama_produk, harga, kategori_id) VALUES ('${data.nama_produk}', ${data.harga}, ${data.kategori_id})`
+    db.kueri(sql_insert)
+    
+    // Mengembalikan status 201 Created dengan pesan JSON
+    kembalikan {
+        "status": 201,
+        "json": {
+            "pesan": "Produk berhasil ditambahkan!",
+            "sukses": benar
+        }
+    }
+selesai)
+
+// 4. Rute API - DELETE Produk (Menghapus Data)
+web.delete("/api/produk/:id", fungsi(req)
+    // Cek apakah parameter id tersedia
+    jika req.params == kosong atau req.params.id == kosong maka
+        kembalikan {
+            "status": 400,
+            "json": { "pesan": "ID Produk tidak diberikan" }
+        }
+    selesai
+    
+    buat id_produk = req.params.id
+    db.kueri(`DELETE FROM produk WHERE id = ${id_produk}`)
+    
+    kembalikan {
+        "status": 200,
+        "json": { "pesan": `Produk dengan ID ${id_produk} berhasil dihapus!` }
+    }
+selesai)
+
+// Menjalankan Server
+buat port = 3001
+tampilkan(`Server Toko API berjalan di http://localhost:${port}`)
+web.jalankan(port)

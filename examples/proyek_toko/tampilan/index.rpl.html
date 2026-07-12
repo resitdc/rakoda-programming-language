@@ -1,0 +1,165 @@
+<header.rpl>
+
+<div class="bg-white rounded-lg shadow-md p-6">
+    <h2 class="text-2xl font-bold mb-4 border-b pb-2">Daftar Produk</h2>
+    
+    <!-- Area Notifikasi -->
+    <div id="notifikasi" class="hidden mb-4 p-3 rounded-md text-white"></div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Kolom Form -->
+        <div class="md:col-span-1 bg-gray-50 p-4 rounded-md border">
+            <h3 class="text-lg font-semibold mb-3">Tambah Produk Baru</h3>
+            <form id="form-tambah" onsubmit="tambahProduk(event)">
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Nama Produk</label>
+                    <input type="text" id="nama" class="w-full p-2 border rounded-md" required>
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Harga (Rp)</label>
+                    <input type="number" id="harga" class="w-full p-2 border rounded-md" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">Kategori</label>
+                    <select id="kategori_id" class="w-full p-2 border rounded-md" required>
+                        <!-- Opsi kategori akan dimuat dengan AJAX -->
+                        <option value="1">Buku Pemrograman</option>
+                        <option value="2">Alat Tulis</option>
+                        <option value="3">Aksesoris Komputer</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-indigo-700 transition">
+                    Simpan Produk
+                </button>
+            </form>
+        </div>
+        
+        <!-- Kolom Tabel -->
+        <div class="md:col-span-2 overflow-x-auto">
+            <table class="min-w-full bg-white border rounded-md text-sm">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="py-2 px-4 border-b text-left">ID</th>
+                        <th class="py-2 px-4 border-b text-left">Nama Produk</th>
+                        <th class="py-2 px-4 border-b text-left">Harga</th>
+                        <th class="py-2 px-4 border-b text-left">Kategori</th>
+                        <th class="py-2 px-4 border-b text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="tabel-produk">
+                    <tr><td colspan="5" class="py-4 text-center text-gray-500">Memuat data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // URL Backend RPL API
+    const API_URL = '/api/produk';
+
+    // Format mata uang Rupiah
+    const formatRp = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(angka);
+
+    // Fungsi menampilkan notifikasi
+    function tampilkanNotifikasi(pesan, tipe = 'success') {
+        const notif = document.getElementById('notifikasi');
+        notif.textContent = pesan;
+        notif.className = `mb-4 p-3 rounded-md text-white block ${tipe === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+        setTimeout(() => notif.classList.add('hidden'), 3000);
+    }
+
+    // Fungsi memuat data produk
+    async function muatProduk() {
+        try {
+            const res = await fetch(API_URL);
+            const data = await res.json();
+            
+            const tabel = document.getElementById('tabel-produk');
+            tabel.innerHTML = '';
+            
+            if (data.length === 0) {
+                tabel.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-gray-500">Belum ada data produk.</td></tr>';
+                return;
+            }
+            
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 transition';
+                tr.innerHTML = `
+                    <td class="py-2 px-4 border-b">${item.id}</td>
+                    <td class="py-2 px-4 border-b font-medium">${item.nama_produk}</td>
+                    <td class="py-2 px-4 border-b text-green-600">${formatRp(item.harga)}</td>
+                    <td class="py-2 px-4 border-b">
+                        <span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-xs">
+                            ${item.nama_kategori}
+                        </span>
+                    </td>
+                    <td class="py-2 px-4 border-b text-center">
+                        <button onclick="hapusProduk(${item.id})" class="text-red-500 hover:text-red-700 hover:underline">Hapus</button>
+                    </td>
+                `;
+                tabel.appendChild(tr);
+            });
+        } catch (error) {
+            console.error("Gagal memuat produk:", error);
+            tampilkanNotifikasi("Gagal memuat data produk dari server", "error");
+        }
+    }
+
+    // Fungsi menambah produk
+    async function tambahProduk(e) {
+        e.preventDefault();
+        
+        const payload = {
+            nama_produk: document.getElementById('nama').value,
+            harga: parseInt(document.getElementById('harga').value),
+            kategori_id: parseInt(document.getElementById('kategori_id').value)
+        };
+        
+        try {
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            const result = await res.json();
+            if (res.status === 201) {
+                tampilkanNotifikasi(result.pesan, "success");
+                document.getElementById('form-tambah').reset();
+                muatProduk(); // Refresh tabel
+            } else {
+                tampilkanNotifikasi("Gagal menyimpan data", "error");
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            tampilkanNotifikasi("Terjadi kesalahan jaringan", "error");
+        }
+    }
+
+    // Fungsi menghapus produk
+    async function hapusProduk(id) {
+        if (!confirm('Yakin ingin menghapus produk ini?')) return;
+        
+        try {
+            const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+            
+            if (res.status === 200) {
+                const result = await res.json();
+                tampilkanNotifikasi(result.pesan, "success");
+                muatProduk(); // Refresh tabel
+            } else {
+                tampilkanNotifikasi("Gagal menghapus data", "error");
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            tampilkanNotifikasi("Terjadi kesalahan jaringan", "error");
+        }
+    }
+
+    // Muat data saat halaman pertama kali dibuka
+    window.onload = muatProduk;
+</script>
+
+<footer.rpl>

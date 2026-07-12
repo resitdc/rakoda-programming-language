@@ -1,0 +1,38 @@
+// db_init.rpl
+// Skrip untuk menginisialisasi database SQLite dan memasukkan data awal
+
+tampilkan("Menghubungkan ke database 'toko.db'...")
+db.hubungkan("sqlite://toko.db")
+
+tampilkan("Membuat tabel 'kategori'...")
+db.kueri("CREATE TABLE IF NOT EXISTS kategori (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nama_kategori TEXT NOT NULL
+)")
+
+tampilkan("Membuat tabel 'produk'...")
+db.kueri("CREATE TABLE IF NOT EXISTS produk (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nama_produk TEXT NOT NULL,
+    harga INTEGER NOT NULL,
+    kategori_id INTEGER,
+    FOREIGN KEY(kategori_id) REFERENCES kategori(id)
+)")
+
+tampilkan("Membersihkan data lama (jika ada)...")
+db.kueri("DELETE FROM produk")
+db.kueri("DELETE FROM kategori")
+
+tampilkan("Menambahkan data kategori awal...")
+db.kueri("INSERT INTO kategori (id, nama_kategori) VALUES (1, 'Buku Pemrograman')")
+db.kueri("INSERT INTO kategori (id, nama_kategori) VALUES (2, 'Alat Tulis')")
+db.kueri("INSERT INTO kategori (id, nama_kategori) VALUES (3, 'Aksesoris Komputer')")
+
+tampilkan("Menambahkan data produk awal...")
+db.kueri("INSERT INTO produk (nama_produk, harga, kategori_id) VALUES ('Buku Belajar RPL', 75000, 1)")
+db.kueri("INSERT INTO produk (nama_produk, harga, kategori_id) VALUES ('Buku Mahir Rust', 120000, 1)")
+db.kueri("INSERT INTO produk (nama_produk, harga, kategori_id) VALUES ('Buku Panduan Web', 95000, 1)")
+db.kueri("INSERT INTO produk (nama_produk, harga, kategori_id) VALUES ('Pulpen Hitam', 5000, 2)")
+db.kueri("INSERT INTO produk (nama_produk, harga, kategori_id) VALUES ('Mouse Wireless', 150000, 3)")
+
+tampilkan("Inisialisasi selesai! Data siap digunakan.")
