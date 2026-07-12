@@ -391,8 +391,27 @@ pub fn register(vm: &mut VM) {
                             
                             let mut body = String::new();
                             let _ = request.as_reader().read_to_string(&mut body);
-                            let body_str = ctx.get_heap_mut().alloc(HeapData::String(body));
+                            let body_str = ctx.get_heap_mut().alloc(HeapData::String(body.clone()));
                             req_map.insert("tubuh".to_string(), Value::String(body_str));
+                            
+                            // Cek header Content-Type
+                            let mut is_json = false;
+                            for header in request.headers() {
+                                if header.field.equiv("Content-Type") {
+                                    if header.value.as_str().contains("application/json") {
+                                        is_json = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            // Auto parsing JSON
+                            if is_json && !body.is_empty() {
+                                if let Ok(json_val) = serde_json::from_str::<serde_json::Value>(&body) {
+                                    let rpl_val = crate::stdlib::json::convert_to_value(ctx, &json_val);
+                                    req_map.insert("json".to_string(), rpl_val);
+                                }
+                            }
                             
                             // Add kueri
                             let mut kueri_map = HashMap::new();

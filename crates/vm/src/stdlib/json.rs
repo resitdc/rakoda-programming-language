@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use crate::heap::HeapData;
 use serde_json::Value as JsonValue;
 
-fn convert_to_value(ctx: &mut dyn VmContext, json: &JsonValue) -> Value {
+pub fn convert_to_value(ctx: &mut dyn VmContext, json: &JsonValue) -> Value {
     match json {
         JsonValue::Null => Value::Kosong,
         JsonValue::Bool(b) => Value::Boolean(*b),
