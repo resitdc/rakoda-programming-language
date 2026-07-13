@@ -22,8 +22,6 @@ enum Commands {
         file: PathBuf,
         #[arg(short, long)]
         watch: bool,
-        #[arg(long)]
-        interpreter: bool,
     },
     Repl,
     Serve {
@@ -59,23 +57,11 @@ fn main() -> Result<()> {
     }
 
     match &cli.command {
-        Some(Commands::Run {
-            file,
-            watch,
-            interpreter,
-        }) => {
-            let use_vm = !*interpreter;
+        Some(Commands::Run { file, watch }) => {
             if !*watch {
-                match runtime::run_file(file, use_vm) {
-                    Ok(success) => {
-                        if !success {
-                            std::process::exit(1);
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("{}", e);
-                        std::process::exit(1);
-                    }
+                if let Err(e) = runtime::run_file(file) {
+                    eprintln!("{}", e);
+                    std::process::exit(1);
                 }
             } else {
                 use notify::{RecursiveMode, Watcher};
@@ -87,7 +73,7 @@ fn main() -> Result<()> {
                     "\x1b[32m⏳ Memulai watch mode untuk {}...\x1b[0m",
                     file.display()
                 );
-                if let Err(e) = runtime::run_file(file, use_vm) {
+                if let Err(e) = runtime::run_file(file) {
                     eprintln!("{}", e);
                 }
                 println!("\n\x1b[32m👀 Menunggu perubahan file...\x1b[0m");
@@ -107,7 +93,7 @@ fn main() -> Result<()> {
                                 last_run = std::time::Instant::now();
                                 print!("{}[2J{}[1;1H", 27 as char, 27 as char); // Clear screen
                                 println!("\x1b[32m🔄 File berubah, menjalankan ulang...\x1b[0m\n");
-                                if let Err(e) = runtime::run_file(file, use_vm) {
+                                if let Err(e) = runtime::run_file(file) {
                                     eprintln!("{}", e);
                                 }
                                 println!("\n\x1b[32m👀 Menunggu perubahan file...\x1b[0m");

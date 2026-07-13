@@ -433,35 +433,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 
 [[package]]
-name = "cookie"
-version = "0.18.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ddef33a339a91ea89fb53151bd0a4689cfce27055c291dfa69945475d22c747"
-dependencies = [
- "percent-encoding",
- "time",
- "version_check",
-]
-
-[[package]]
-name = "cookie_store"
-version = "0.22.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15b2c103cf610ec6cae3da84a766285b42fd16aad564758459e6ecf128c75206"
-dependencies = [
- "cookie",
- "document-features",
- "idna",
- "indexmap",
- "log",
- "serde",
- "serde_derive",
- "serde_json",
- "time",
- "url",
-]
-
-[[package]]
 name = "core-foundation"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -646,15 +617,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "document-features"
-version = "0.2.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4b8a88685455ed29a21542a33abd9cb6510b6b129abadabdcef0f4c55bc8f61"
-dependencies = [
- "litrs",
 ]
 
 [[package]]
@@ -1262,26 +1224,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "interpreter"
-version = "3.0.0"
-dependencies = [
- "ast",
- "base64",
- "chrono",
- "dotenvy",
- "errors",
- "http",
- "lexer",
- "md-5 0.10.6",
- "parser",
- "rand 0.10.2",
- "serde_json",
- "sha2 0.10.9",
- "stdlib",
- "ureq",
-]
-
-[[package]]
 name = "io-enum"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1404,12 +1346,6 @@ name = "litemap"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92daf443525c4cce67b150400bc2316076100ce0b3686209eb8cf3c31612e6f0"
-
-[[package]]
-name = "litrs"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11d3d7f243d5c5a8b9bb5d6dd2b1602c0cb0b9db1621bafc7ed66e35ff9fe092"
 
 [[package]]
 name = "lock_api"
@@ -2207,9 +2143,9 @@ dependencies = [
  "anyhow",
  "ast",
  "errors",
- "interpreter",
  "lexer",
  "parser",
+ "stdlib",
  "typechecker",
  "vm",
  "web",
@@ -2678,7 +2614,6 @@ dependencies = [
  "powerfmt",
  "serde_core",
  "time-core",
- "time-macros",
 ]
 
 [[package]]
@@ -2686,16 +2621,6 @@ name = "time-core"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1c906769ad99c88eaa54e728060edef082f8e358ff32030cb7c7d315e81109"
-
-[[package]]
-name = "time-macros"
-version = "0.2.31"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c431b87111666e491a90baa837f914fb45cd5dc3c268591b0220ff5057f2085f"
-dependencies = [
- "num-conv",
- "time-core",
-]
 
 [[package]]
 name = "tinystr"
@@ -3018,16 +2943,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dea7109cdcd5864d4eeb1b58a1648dc9bf520360d7af16ec26d0a9354bafcfc0"
 dependencies = [
  "base64",
- "cookie_store",
  "flate2",
- "getrandom 0.4.3",
  "log",
- "mime_guess",
  "percent-encoding",
  "rustls",
  "rustls-pki-types",
- "serde",
- "serde_json",
  "ureq-proto",
  "utf8-zero",
  "webpki-roots",
@@ -3117,7 +3037,6 @@ dependencies = [
  "errors",
  "flate2",
  "futures-util",
- "interpreter",
  "lexer",
  "md-5 0.10.6",
  "multipart",
@@ -3247,12 +3166,14 @@ name = "web"
 version = "3.0.0"
 dependencies = [
  "anyhow",
+ "ast",
  "axum",
  "errors",
- "interpreter",
  "lexer",
  "parser",
+ "stdlib",
  "tokio",
+ "vm",
 ]
 
 [[package]]

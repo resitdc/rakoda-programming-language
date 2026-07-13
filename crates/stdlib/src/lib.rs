@@ -8,6 +8,7 @@ pub mod kripto;
 pub mod list;
 pub mod matematika;
 pub mod string;
+pub mod template;
 pub mod waktu;
 
 pub use jenis::NilaiRpl;

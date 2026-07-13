@@ -6,7 +6,9 @@ edition.workspace = true
 [dependencies]
 axum = "0.7"
 tokio = { version = "1.0", features = ["full"] }
-interpreter = { path = "../interpreter" }
+vm = { path = "../vm" }
+stdlib = { path = "../stdlib" }
+ast = { path = "../ast" }
 parser = { path = "../parser" }
 lexer = { path = "../lexer" }
 errors = { path = "../errors" }

@@ -10,6 +10,6 @@ parser = { path = "../parser" }
 ast = { path = "../ast" }
 vm = { path = "../vm" }
 errors = { path = "../errors" }
-interpreter = { path = "../interpreter" }
+stdlib = { path = "../stdlib" }
 web = { path = "../web" }
 typechecker = { path = "../typechecker" }

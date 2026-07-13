@@ -52,6 +52,8 @@ pub struct VM {
     pub next_task_id: usize,
     pub catch_handlers: Vec<CatchHandler>,
     pub next_gc_threshold: usize,
+    pub capture_output: bool,
+    pub output_buffer: String,
 }
 
 impl Default for VM {
@@ -72,6 +74,8 @@ impl VM {
             next_task_id: 1,
             catch_handlers: Vec::new(),
             next_gc_threshold: 1000,
+            capture_output: false,
+            output_buffer: String::new(),
         }
     }
 
@@ -86,6 +90,8 @@ impl VM {
             next_task_id: 1,
             catch_handlers: self.catch_handlers.clone(),
             next_gc_threshold: 1000,
+            capture_output: false,
+            output_buffer: String::new(),
         }
     }
 
@@ -385,7 +391,13 @@ impl VM {
                 }
                 OpCode::Print => {
                     let a = self.stack.pop().unwrap();
-                    println!("{}", a.to_string(&self.heap));
+                    let s = a.to_string(&self.heap);
+                    if self.capture_output {
+                        self.output_buffer.push_str(&s);
+                        self.output_buffer.push('\n');
+                    } else {
+                        println!("{}", s);
+                    }
                 }
                 OpCode::JumpIfFalse => {
                     let offset = self.frames.last_mut().unwrap().read_short(&self.heap) as usize;

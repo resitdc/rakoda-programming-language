@@ -127,7 +127,7 @@ pub fn register(vm: &mut VM) {
                     }
                 };
 
-                let code = interpreter::template::preprocess_template_to_function(&file_content);
+                let code = stdlib::template::preprocess_template_to_function(&file_content);
                 ctx.get_heap_mut()
                     .web_cache
                     .lock()

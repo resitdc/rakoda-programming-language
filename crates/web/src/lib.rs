@@ -1,6 +1,5 @@
 use anyhow::Result;
-use axum::{Router, response::Html, routing::get};
-use interpreter::Interpreter;
+use axum::{response::Html, routing::get, Router};
 use lexer::Lexer;
 use parser::Parser as RplParser;
 use std::fs;
@@ -54,7 +53,7 @@ async fn handle_request(file: PathBuf) -> Html<String> {
     };
 
     let kode_sumber = if file.to_string_lossy().ends_with(".rpl.html") {
-        interpreter::template::preprocess_template(&kode_asli)
+        stdlib::template::preprocess_template(&kode_asli)
     } else {
         kode_asli
     };
@@ -72,11 +71,30 @@ async fn handle_request(file: PathBuf) -> Html<String> {
         return Html(format!("<pre>{}</pre>", e.tampilkan(&kode_sumber)));
     }
 
-    let mut interpreter = Interpreter::baru_dengan_capture();
-    interpreter.base_path = file.parent().map(|p| p.to_path_buf());
-    if let Err(e) = interpreter.eval_program(program) {
-        return Html(format!("<pre>{}</pre>", e.tampilkan(&kode_sumber)));
-    }
+    let program = ast::optimizer::optimize_program(program);
 
-    Html(interpreter.output_buffer)
+    let mut machine = vm::VM::new();
+    machine.capture_output = true;
+    vm::stdlib::register_all(&mut machine);
+
+    let base_path = file.parent().map(|p| p.to_path_buf());
+    let compiler = vm::Compiler::baru_dengan_base_path(&mut machine.heap, base_path);
+
+    match compiler.compile(program) {
+        Ok(chunk) => {
+            if let Err((msg, opt_lokasi)) = machine.execute(chunk) {
+                if let Some(lokasi) = opt_lokasi {
+                    let e = errors::RplError::Runtime {
+                        pesan: msg,
+                        lokasi,
+                    };
+                    return Html(format!("<pre>{}</pre>", e.tampilkan(&kode_sumber)));
+                } else {
+                    return Html(format!("<pre>VM Error: {}</pre>", msg));
+                }
+            }
+            Html(machine.output_buffer.clone())
+        }
+        Err(e) => Html(format!("<pre>Compiler Error: {}</pre>", e)),
+    }
 }

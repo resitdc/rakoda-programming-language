@@ -482,7 +482,7 @@ impl<'a> Compiler<'a> {
 
                 let is_html_template = path_str.ends_with(".rpl.html");
                 let kode_sumber = if is_html_template {
-                    interpreter::template::preprocess_template(&kode_asli)
+                    stdlib::template::preprocess_template(&kode_asli)
                 } else {
                     kode_asli
                 };
