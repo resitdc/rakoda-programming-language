@@ -5,8 +5,7 @@ use rusqlite::Connection as SqliteConnection;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-pub type SessionMap =
-    Arc<Mutex<HashMap<String, (Option<std::time::Instant>, usize)>>>;
+pub type SessionMap = Arc<Mutex<HashMap<String, (Option<std::time::Instant>, usize)>>>;
 
 pub enum DatabaseConnection {
     Sqlite(SqliteConnection),
@@ -38,15 +37,13 @@ pub struct WebConfig {
     pub proxies: HashMap<String, String>,
 }
 
-
 #[derive(Clone)]
 pub struct WebState {
     // SessionID -> (Expired, Data)
     // Value represents Kamus data in memory but wait, Value itself is an index.
     // So session data needs to be stored somewhere. We can store it as a Kamus inside WebState itself instead of in the VM Heap?
     // Actually, storing it in the VM Heap is fine, but since we are modifying WebState across requests, we can just store `HashMap<String, usize>` where usize is the Kamus Heap index.
-    pub sessions:
-        SessionMap,
+    pub sessions: SessionMap,
 
     pub active_session_id: Option<String>,
     pub active_cookies: HashMap<String, String>,

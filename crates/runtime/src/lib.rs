@@ -49,6 +49,26 @@ pub fn run_source(
 
     let program = ast::optimizer::optimize_program(program);
 
+    // Type checking (Phase 3: terintegrasi ke pipeline eksekusi)
+    // Saat ini type checker hanya memberikan peringatan (warn), bukan error fatal.
+    // Ini memungkinkan iterasi bertahap tanpa mematahkan program valid yang
+    // menggunakan modul built-in (matematika, string, dll) yang belum dikenal TC.
+    let mut typechecker = typechecker::TypeChecker::new();
+    let check_result = typechecker.check(&program);
+    if !check_result.errors.is_empty() {
+        eprintln!("\x1b[1;33m⚠️  Peringatan pengecekan tipe:\x1b[0m");
+        for e in &check_result.errors {
+            eprintln!(
+                "  \x1b[1;36m--> \x1b[0mbaris {}, kolom {}: \x1b[1;33m{}\x1b[0m",
+                e.lokasi.baris, e.lokasi.kolom, e.pesan
+            );
+            if let Some(ref saran) = e.saran {
+                eprintln!("  \x1b[1;32m💡 bantuan:\x1b[0m {}", saran);
+            }
+        }
+        eprintln!();
+    }
+
     if use_vm {
         let mut machine = vm::VM::new();
         vm::stdlib::register_all(&mut machine);

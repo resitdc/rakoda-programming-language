@@ -21,9 +21,10 @@ pub fn register(vm: &mut VM) {
                 let mut cookie_str = format!("{}={}; Path=/", key, val);
 
                 if args.len() >= 3
-                    && let Value::Angka(max_age) = &args[2] {
-                        cookie_str.push_str(&format!("; Max-Age={}", *max_age as i64));
-                    }
+                    && let Value::Angka(max_age) = &args[2]
+                {
+                    cookie_str.push_str(&format!("; Max-Age={}", *max_age as i64));
+                }
 
                 ctx.get_heap_mut().web_state.cookies_to_set.push(cookie_str);
                 Ok(Value::Kosong)

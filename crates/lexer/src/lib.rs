@@ -256,10 +256,7 @@ impl Lexer {
 
             let span = self.make_span(lokasi_awal);
 
-            tokens.push(SpannedToken {
-                span,
-                token,
-            });
+            tokens.push(SpannedToken { span, token });
         }
 
         tokens.push(SpannedToken {

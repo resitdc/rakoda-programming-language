@@ -1,3 +1,5 @@
+#![allow(clippy::missing_transmute_annotations)]
+
 pub mod compiler;
 pub mod heap;
 pub mod machine;

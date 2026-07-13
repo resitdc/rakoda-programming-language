@@ -1,35 +1,39 @@
+//! Thin adapter: wraps stdlib crate's json module for VM use.
+//! Also provides serde_json::Value↔Value converter needed by web module.
 use crate::heap::HeapData;
 use crate::machine::VM;
+use crate::stdlib::adapter;
 use crate::value::{FungsiBawaanVM, Value, VmContext};
-use serde_json::Value as JsonValue;
+use serde_json;
 use std::collections::HashMap;
 
-pub fn convert_to_value(ctx: &mut dyn VmContext, json: &JsonValue) -> Value {
+/// Convert serde_json::Value → RPL Value (used by web request parsing).
+pub fn convert_to_value(vm: &mut VM, json: &serde_json::Value) -> Value {
     match json {
-        JsonValue::Null => Value::Kosong,
-        JsonValue::Bool(b) => Value::Boolean(*b),
-        JsonValue::Number(num) => {
-            if let Some(n) = num.as_f64() {
-                Value::Angka(n)
+        serde_json::Value::Null => Value::Kosong,
+        serde_json::Value::Bool(b) => Value::Boolean(*b),
+        serde_json::Value::Number(n) => {
+            if let Some(f) = n.as_f64() {
+                Value::Angka(f)
             } else {
                 Value::Kosong
             }
         }
-        JsonValue::String(s) => {
-            let idx = ctx.get_heap_mut().alloc(HeapData::String(s.clone()));
+        serde_json::Value::String(s) => {
+            let idx = vm.heap.alloc(HeapData::String(s.clone()));
             Value::String(idx)
         }
-        JsonValue::Array(arr) => {
-            let elements = arr.iter().map(|v| convert_to_value(ctx, v)).collect();
-            let idx = ctx.get_heap_mut().alloc(HeapData::Array(elements));
+        serde_json::Value::Array(arr) => {
+            let items: Vec<Value> = arr.iter().map(|v| convert_to_value(vm, v)).collect();
+            let idx = vm.heap.alloc(HeapData::Array(items));
             Value::Array(idx)
         }
-        JsonValue::Object(obj) => {
-            let mut map = HashMap::new();
-            for (k, v) in obj {
-                map.insert(k.clone(), convert_to_value(ctx, v));
+        serde_json::Value::Object(map) => {
+            let mut hash = HashMap::new();
+            for (k, v) in map {
+                hash.insert(k.clone(), convert_to_value(vm, v));
             }
-            let idx = ctx.get_heap_mut().alloc(HeapData::Kamus(map));
+            let idx = vm.heap.alloc(HeapData::Kamus(hash));
             Value::Kamus(idx)
         }
     }
@@ -38,81 +42,32 @@ pub fn convert_to_value(ctx: &mut dyn VmContext, json: &JsonValue) -> Value {
 pub fn register(vm: &mut VM) {
     let mut module_dict = HashMap::new();
 
-    let parse_func = FungsiBawaanVM {
-        nama: "parse".to_string(),
-        func: |ctx, args| {
-            if args.is_empty() {
-                return Err("Fungsi 'parse' membutuhkan 1 argumen: json string".to_string());
-            }
-            if let Value::String(idx) = &args[0] {
-                let s = ctx.get_heap_mut().get_string(*idx).clone();
-                match serde_json::from_str::<JsonValue>(&s) {
-                    Ok(json_val) => Ok(convert_to_value(ctx, &json_val)),
-                    Err(e) => Err(format!("Gagal mem-parsing JSON: {}", e)),
-                }
-            } else {
-                Err("Argumen harus berupa teks".to_string())
-            }
-        },
-    };
-    let parse_idx = vm.heap.alloc(HeapData::FungsiBawaan(parse_func));
-    module_dict.insert("parse".to_string(), Value::FungsiBawaan(parse_idx));
-
-    let stringify_func = FungsiBawaanVM {
-        nama: "stringify".to_string(),
-        func: |ctx, args| {
-            if args.is_empty() {
-                return Err("Fungsi 'stringify' membutuhkan 1 argumen: data".to_string());
-            }
-
-            fn convert_from_value(ctx: &mut dyn VmContext, val: &Value) -> JsonValue {
-                match val {
-                    Value::Kosong => JsonValue::Null,
-                    Value::Boolean(b) => JsonValue::Bool(*b),
-                    Value::Angka(n) => {
-                        if let Some(num) = serde_json::Number::from_f64(*n) {
-                            JsonValue::Number(num)
-                        } else {
-                            JsonValue::Null
-                        }
-                    }
-                    Value::String(idx) => {
-                        JsonValue::String(ctx.get_heap_mut().get_string(*idx).clone())
-                    }
-                    Value::Array(idx) => {
-                        let array_clone = ctx.get_heap_mut().get_array(*idx).clone();
-                        let elements = array_clone
+    for (nama, func) in stdlib::json::fungsi_json() {
+        let fungsi = FungsiBawaanVM {
+            nama: nama.to_string(),
+            func: unsafe {
+                std::mem::transmute(
+                    move |ctx: &mut dyn VmContext, args: Vec<Value>| -> Result<Value, String> {
+                        let heap = ctx.get_heap_mut();
+                        let nilai_args: Vec<stdlib::jenis::NilaiRpl> = args
                             .iter()
-                            .map(|v| convert_from_value(ctx, v))
+                            .map(|v| adapter::value_ke_nilai(v, heap))
                             .collect();
-                        JsonValue::Array(elements)
-                    }
-                    Value::Kamus(idx) => {
-                        let mut map = serde_json::Map::new();
-                        let kamus_clone = ctx.get_heap_mut().get_kamus(*idx).clone();
-                        for (k, v) in kamus_clone {
-                            map.insert(k, convert_from_value(ctx, &v));
+                        match func(&nilai_args) {
+                            Ok(result) => {
+                                let heap2 = ctx.get_heap_mut();
+                                Ok(adapter::nilai_ke_value(&result, heap2))
+                            }
+                            Err(e) => Err(e),
                         }
-                        JsonValue::Object(map)
-                    }
-                    Value::Fungsi(..) | Value::FungsiBawaan(_) | Value::Modul(_) => JsonValue::Null,
-                }
-            }
+                    },
+                )
+            },
+        };
+        let idx = vm.heap.alloc(HeapData::FungsiBawaan(fungsi));
+        module_dict.insert(nama.to_string(), Value::FungsiBawaan(idx));
+    }
 
-            let json_val = convert_from_value(ctx, &args[0]);
-            let s = json_val.to_string();
-            let s_idx = ctx.get_heap_mut().alloc(HeapData::String(s));
-            Ok(Value::String(s_idx))
-        },
-    };
-    let stringify_idx = vm
-        .heap
-        .alloc(HeapData::FungsiBawaan(stringify_func.clone()));
-    module_dict.insert("stringify".to_string(), Value::FungsiBawaan(stringify_idx));
-
-    let buat_idx = vm.heap.alloc(HeapData::FungsiBawaan(stringify_func));
-    module_dict.insert("buat".to_string(), Value::FungsiBawaan(buat_idx));
-
-    let dict_idx = vm.heap.alloc(HeapData::Kamus(module_dict));
-    vm.set_global("json".to_string(), Value::Kamus(dict_idx));
+    let module_idx = vm.heap.alloc(HeapData::Modul(module_dict));
+    vm.set_global("json".to_string(), Value::Modul(module_idx));
 }

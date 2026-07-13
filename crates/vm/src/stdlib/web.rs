@@ -722,9 +722,10 @@ fn find_route(
 ) -> (Option<Value>, HashMap<String, String>) {
     // Try exact match first
     if let Some(method_map) = heap.web_routes.get(url)
-        && let Some(func) = method_map.get(method) {
-            return (Some(*func), HashMap::new());
-        }
+        && let Some(func) = method_map.get(method)
+    {
+        return (Some(*func), HashMap::new());
+    }
 
     // Try pattern match with :param
     let url_parts: Vec<&str> = url.trim_matches('/').split('/').collect();
@@ -751,10 +752,9 @@ fn find_route(
             }
         }
 
-        if matched
-            && let Some(func) = method_map.get(method) {
-                return (Some(*func), params);
-            }
+        if matched && let Some(func) = method_map.get(method) {
+            return (Some(*func), params);
+        }
     }
 
     (None, HashMap::new())
@@ -871,7 +871,7 @@ async fn handle_socket(
             tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
             let ram_mb = {
                 let vm = vm_state_metrics.lock().unwrap();
-                vm.heap.allocated_count as f64 * 0.05 
+                vm.heap.allocated_count as f64 * 0.05
             };
 
             let uptime_secs = start_time.elapsed().as_secs();
@@ -898,81 +898,82 @@ async fn handle_socket(
     while let Some(Ok(msg)) = ws_rx.next().await {
         if let axum::extract::ws::Message::Text(text) = msg
             && let Ok(cmd) = serde_json::from_str::<serde_json::Value>(&text)
-                && let Some(action) = cmd.get("action").and_then(|v| v.as_str()) {
-                    match action {
-                        "clear_sessions" => {
-                            if let Ok(mut sess_map) =
-                                vm_state.lock().unwrap().heap.web_state.sessions.lock()
-                            {
-                                sess_map.clear();
-                            }
-                        }
-                        "delete_session" => {
-                            if let Some(data) = cmd.get("data")
-                                && let (Some(sid), Some(key)) = (
-                                    data.get("session_id").and_then(|v| v.as_str()),
-                                    data.get("key").and_then(|v| v.as_str()),
-                                )
-                                    && let Ok(sess_map) =
-                                        vm_state.lock().unwrap().heap.web_state.sessions.lock()
-                                        && let Some((_, kamus_idx)) = sess_map.get(sid) {
-                                            let mut vm = vm_state.lock().unwrap();
-                                            vm.heap.get_kamus_mut(*kamus_idx).remove(key);
-                                        }
-                        }
-                        "clear_cache" => {
-                            if let Ok(mut cache) = vm_state.lock().unwrap().heap.web_cache.lock() {
-                                cache.static_files.clear();
-                                cache.templates_code.clear();
-                            }
-                        }
-                        "delete_cache" => {
-                            if let Some(data) = cmd.get("data")
-                                && let Some(key) = data.get("key").and_then(|v| v.as_str())
-                                    && let Ok(mut cache) =
-                                        vm_state.lock().unwrap().heap.web_cache.lock()
-                                    {
-                                        cache.static_files.remove(key);
-                                        cache.templates_code.remove(key);
-                                    }
-                        }
-                        "replay_request" => {
-                            if let Some(data) = cmd.get("data") {
-                                let method = data
-                                    .get("method")
-                                    .and_then(|v| v.as_str())
-                                    .unwrap_or("GET")
-                                    .to_string();
-                                let url = data
-                                    .get("url")
-                                    .and_then(|v| v.as_str())
-                                    .unwrap_or("/")
-                                    .to_string();
-                                let body = data
-                                    .get("body")
-                                    .and_then(|v| v.as_str())
-                                    .unwrap_or("")
-                                    .to_string();
-
-                                let port = 3001;
-                                let client_url = format!("http://localhost:{}{}", port, url);
-                                tokio::spawn(async move {
-                                    let method_str = method.as_str();
-                                    if method_str == "POST" {
-                                        let _ = ureq::post(&client_url).send(&body);
-                                    } else if method_str == "PUT" {
-                                        let _ = ureq::put(&client_url).send(&body);
-                                    } else if method_str == "DELETE" {
-                                        let _ = ureq::delete(&client_url).call();
-                                    } else {
-                                        let _ = ureq::get(&client_url).call();
-                                    }
-                                });
-                            }
-                        }
-                        _ => {}
+            && let Some(action) = cmd.get("action").and_then(|v| v.as_str())
+        {
+            match action {
+                "clear_sessions" => {
+                    if let Ok(mut sess_map) =
+                        vm_state.lock().unwrap().heap.web_state.sessions.lock()
+                    {
+                        sess_map.clear();
                     }
                 }
+                "delete_session" => {
+                    if let Some(data) = cmd.get("data")
+                        && let (Some(sid), Some(key)) = (
+                            data.get("session_id").and_then(|v| v.as_str()),
+                            data.get("key").and_then(|v| v.as_str()),
+                        )
+                        && let Ok(sess_map) =
+                            vm_state.lock().unwrap().heap.web_state.sessions.lock()
+                        && let Some((_, kamus_idx)) = sess_map.get(sid)
+                    {
+                        let mut vm = vm_state.lock().unwrap();
+                        vm.heap.get_kamus_mut(*kamus_idx).remove(key);
+                    }
+                }
+                "clear_cache" => {
+                    if let Ok(mut cache) = vm_state.lock().unwrap().heap.web_cache.lock() {
+                        cache.static_files.clear();
+                        cache.templates_code.clear();
+                    }
+                }
+                "delete_cache" => {
+                    if let Some(data) = cmd.get("data")
+                        && let Some(key) = data.get("key").and_then(|v| v.as_str())
+                        && let Ok(mut cache) = vm_state.lock().unwrap().heap.web_cache.lock()
+                    {
+                        cache.static_files.remove(key);
+                        cache.templates_code.remove(key);
+                    }
+                }
+                "replay_request" => {
+                    if let Some(data) = cmd.get("data") {
+                        let method = data
+                            .get("method")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("GET")
+                            .to_string();
+                        let url = data
+                            .get("url")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("/")
+                            .to_string();
+                        let body = data
+                            .get("body")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_string();
+
+                        let port = 3001;
+                        let client_url = format!("http://localhost:{}{}", port, url);
+                        tokio::spawn(async move {
+                            let method_str = method.as_str();
+                            if method_str == "POST" {
+                                let _ = ureq::post(&client_url).send(&body);
+                            } else if method_str == "PUT" {
+                                let _ = ureq::put(&client_url).send(&body);
+                            } else if method_str == "DELETE" {
+                                let _ = ureq::delete(&client_url).call();
+                            } else {
+                                let _ = ureq::get(&client_url).call();
+                            }
+                        });
+                    }
+                }
+                _ => {}
+            }
+        }
     }
 
     send_task.abort();

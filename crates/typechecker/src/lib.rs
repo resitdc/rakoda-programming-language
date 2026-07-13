@@ -65,26 +65,31 @@ impl RplType {
             (RplType::String, RplType::String) => true,
             (RplType::Boolean, RplType::Boolean) => true,
             (RplType::Array(a), RplType::Array(b)) => a.kompatibel_dengan(b),
-            (RplType::Fungsi { return_type: ra, .. }, RplType::Fungsi { return_type: rb, .. }) => {
-                ra.kompatibel_dengan(rb)
-            }
+            (
+                RplType::Fungsi {
+                    return_type: ra, ..
+                },
+                RplType::Fungsi {
+                    return_type: rb, ..
+                },
+            ) => ra.kompatibel_dengan(rb),
             _ => false,
         }
     }
 
     /// Operator yang bisa digunakan pada tipe ini.
     pub fn operator_valid(&self, op: &InfixOperator) -> bool {
-        match (self, op) {
-            (RplType::Angka, _) => true,
-            (RplType::String, InfixOperator::Tambah) => true,
-            (RplType::String, InfixOperator::SamaDengan)
-            | (RplType::String, InfixOperator::TidakSamaDengan) => true,
-            (RplType::Boolean, InfixOperator::SamaDengan)
-            | (RplType::Boolean, InfixOperator::TidakSamaDengan)
-            | (RplType::Boolean, InfixOperator::Dan)
-            | (RplType::Boolean, InfixOperator::Atau) => true,
-            _ => false,
-        }
+        matches!(
+            (self, op),
+            (RplType::Angka, _)
+                | (RplType::String, InfixOperator::Tambah)
+                | (RplType::String, InfixOperator::SamaDengan)
+                | (RplType::String, InfixOperator::TidakSamaDengan)
+                | (RplType::Boolean, InfixOperator::SamaDengan)
+                | (RplType::Boolean, InfixOperator::TidakSamaDengan)
+                | (RplType::Boolean, InfixOperator::Dan)
+                | (RplType::Boolean, InfixOperator::Atau)
+        )
     }
 }
 
@@ -93,7 +98,10 @@ impl std::fmt::Display for RplType {
         match self {
             RplType::Array(t) => write!(f, "daftar[{}]", t),
             RplType::Kamus(_) => write!(f, "kamus"),
-            RplType::Fungsi { params, return_type } => {
+            RplType::Fungsi {
+                params,
+                return_type,
+            } => {
                 let p: Vec<String> = params
                     .iter()
                     .map(|(n, t)| format!("{}: {}", n, t))
@@ -114,7 +122,8 @@ impl std::fmt::Display for RplType {
 #[derive(Debug, Clone)]
 struct Symbol {
     tipe: RplType,
-    /// Apakah ini konstanta (variabel yang sudah di-assign tidak bisa diubah tipe-nya)
+    // Lokasi deklarasi disimpan untuk pelacakan error (belum digunakan)
+    #[allow(dead_code)]
     dideklarasikan_di: Lokasi,
 }
 
@@ -122,6 +131,12 @@ struct Symbol {
 #[derive(Debug, Clone)]
 pub struct SymbolTable {
     scopes: Vec<HashMap<String, Symbol>>,
+}
+
+impl Default for SymbolTable {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SymbolTable {
@@ -245,7 +260,11 @@ impl TypeChecker {
 
     fn check_statement(&mut self, stmt: &Statement) {
         match stmt {
-            Statement::DeklarasiVariabel { nama, nilai, lokasi } => {
+            Statement::DeklarasiVariabel {
+                nama,
+                nilai,
+                lokasi,
+            } => {
                 let tipe = self.infer_expression(nilai);
                 // Jika nilai adalah kosong literal, biarkan tipe fleksibel
                 let tipe_final = if let Expression::Kosong(_) = nilai {
@@ -257,7 +276,11 @@ impl TypeChecker {
                     self.error(e, *lokasi, None);
                 }
             }
-            Statement::Assignment { nama, nilai, lokasi } => {
+            Statement::Assignment {
+                nama,
+                nilai,
+                lokasi,
+            } => {
                 let tipe_nilai = self.infer_expression(nilai);
                 match self.symbols.cari(nama) {
                     Some(tipe_var) => {
@@ -280,7 +303,10 @@ impl TypeChecker {
                         self.error(
                             format!("Variabel '{}' belum dibuat sebelum digunakan", nama),
                             *lokasi,
-                            Some(format!("Buat variabel '{}' terlebih dahulu dengan 'buat {} = ...'", nama, nama)),
+                            Some(format!(
+                                "Buat variabel '{}' terlebih dahulu dengan 'buat {} = ...'",
+                                nama, nama
+                            )),
                         );
                     }
                 }
@@ -348,7 +374,10 @@ impl TypeChecker {
                             tipe_kondisi
                         ),
                         *lokasi,
-                        Some("Gunakan perbandingan seperti 'x > 5' atau 'nama == \"Budi\"'".to_string()),
+                        Some(
+                            "Gunakan perbandingan seperti 'x > 5' atau 'nama == \"Budi\"'"
+                                .to_string(),
+                        ),
                     );
                 }
 
@@ -440,22 +469,20 @@ impl TypeChecker {
             Expression::String(_, _) => RplType::String,
             Expression::Boolean(_, _) => RplType::Boolean,
             Expression::Kosong(_) => RplType::Kosong,
-            Expression::Identifier(nama, lokasi) => {
-                match self.symbols.cari(nama) {
-                    Some(tipe) => tipe.clone(),
-                    None => {
-                        self.error(
-                            format!("Variabel '{}' belum dibuat", nama),
-                            *lokasi,
-                            Some(format!(
-                                "Buat variabel '{}' terlebih dahulu dengan 'buat {} = ...'",
-                                nama, nama
-                            )),
-                        );
-                        RplType::TidakDiketahui
-                    }
+            Expression::Identifier(nama, lokasi) => match self.symbols.cari(nama) {
+                Some(tipe) => tipe.clone(),
+                None => {
+                    self.error(
+                        format!("Variabel '{}' belum dibuat", nama),
+                        *lokasi,
+                        Some(format!(
+                            "Buat variabel '{}' terlebih dahulu dengan 'buat {} = ...'",
+                            nama, nama
+                        )),
+                    );
+                    RplType::TidakDiketahui
                 }
-            }
+            },
             Expression::Prefix {
                 operator,
                 kanan,
@@ -495,9 +522,7 @@ impl TypeChecker {
                 let tipe_kanan = self.infer_expression(kanan);
 
                 // Cek kompatibilitas operator
-                if !tipe_kiri.operator_valid(operator)
-                    && tipe_kiri != RplType::TidakDiketahui
-                {
+                if !tipe_kiri.operator_valid(operator) && tipe_kiri != RplType::TidakDiketahui {
                     self.error(
                         format!(
                             "Operator '{}' tidak bisa digunakan untuk tipe '{}'",
@@ -554,7 +579,7 @@ impl TypeChecker {
             Expression::Call {
                 fungsi,
                 argumen,
-                lokasi,
+                lokasi: _,
             } => {
                 let tipe_fungsi = self.infer_expression(fungsi);
                 // Check argumen
@@ -586,22 +611,26 @@ impl TypeChecker {
                     None => RplType::Array(Box::new(RplType::TidakDiketahui)),
                 }
             }
-            Expression::Kamus { pasangan, lokasi: _ } => {
+            Expression::Kamus {
+                pasangan,
+                lokasi: _,
+            } => {
                 let mut map = HashMap::new();
                 for (key, value) in pasangan {
-                    let k = match key {
-                        Expression::String(s, _) => s.clone(),
-                        Expression::Identifier(s, _) => s.clone(),
-                        _ => {
-                            self.error(
+                    let k =
+                        match key {
+                            Expression::String(s, _) => s.clone(),
+                            Expression::Identifier(s, _) => s.clone(),
+                            _ => {
+                                self.error(
                                 "Kunci kamus harus berupa teks".to_string(),
-                                key.lokasi().clone(),
+                                *key.lokasi(),
                                 Some("Gunakan teks sebagai kunci, contoh: { \"nama\": \"Budi\" }"
                                     .to_string()),
                             );
-                            continue;
-                        }
-                    };
+                                continue;
+                            }
+                        };
                     let v = self.infer_expression(value);
                     map.insert(k, v);
                 }
@@ -624,8 +653,10 @@ impl TypeChecker {
                         self.error(
                             format!("Tipe '{}' tidak bisa diakses dengan indeks [ ]", tipe_kiri),
                             *lokasi,
-                            Some("Hanya daftar, kamus, dan teks yang bisa diakses dengan [ ]"
-                                .to_string()),
+                            Some(
+                                "Hanya daftar, kamus, dan teks yang bisa diakses dengan [ ]"
+                                    .to_string(),
+                            ),
                         );
                         RplType::TidakDiketahui
                     }

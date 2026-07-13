@@ -1,0 +1,18 @@
+[package]
+name = "stdlib"
+version.workspace = true
+edition.workspace = true
+description = "Standard Library Unifikasi untuk RPL - shared implementation antara interpreter dan VM"
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde_json = { workspace = true }
+sha2 = "0.10"
+md5 = "0.7"
+rand = "0.9.2"
+chrono = "0.4"
+dotenvy = "0.15"
+ureq = "3"
+http = "1"

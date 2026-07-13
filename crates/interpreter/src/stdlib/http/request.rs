@@ -2,12 +2,7 @@ use crate::objek::Objek;
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use std::collections::HashMap;
 use std::time::Duration;
-
-pub(crate) struct HttpConfig {
-    pub timeout: Option<Duration>,
-    pub max_retries: u32,
-    pub retry_delay_ms: u64,
-}
+use stdlib::http::HttpConfig;
 
 pub(crate) fn apply_config<B>(
     mut req: ureq::RequestBuilder<B>,

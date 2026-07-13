@@ -22,7 +22,7 @@ pub fn register(vm: &mut VM) {
                 Value::Kamus(idx) => {
                     let kamus = vm.get_heap_mut().get_kamus(idx).clone();
 
-                            let mut provider = "sqlite".to_string();
+                    let mut provider = "sqlite".to_string();
                     let mut host = "localhost".to_string();
                     let mut nama = "test.db".to_string();
                     let mut username = "root".to_string();
@@ -99,22 +99,21 @@ pub fn register(vm: &mut VM) {
 
             let mut sqlite_params: Vec<rusqlite::types::Value> = vec![];
             if args.len() > 1
-                && let Value::Array(arr_idx) = &args[1] {
-                    let arr = vm.get_heap_mut().get_array(*arr_idx).clone();
-                    for val in arr {
-                        sqlite_params.push(match val {
-                            Value::Angka(n) => rusqlite::types::Value::Real(n),
-                            Value::String(idx) => rusqlite::types::Value::Text(
-                                vm.get_heap_mut().get_string(idx).clone(),
-                            ),
-                            Value::Boolean(b) => {
-                                rusqlite::types::Value::Integer(if b { 1 } else { 0 })
-                            }
-                            Value::Kosong => rusqlite::types::Value::Null,
-                            _ => rusqlite::types::Value::Text(val.to_string(vm.get_heap_mut())),
-                        });
-                    }
+                && let Value::Array(arr_idx) = &args[1]
+            {
+                let arr = vm.get_heap_mut().get_array(*arr_idx).clone();
+                for val in arr {
+                    sqlite_params.push(match val {
+                        Value::Angka(n) => rusqlite::types::Value::Real(n),
+                        Value::String(idx) => {
+                            rusqlite::types::Value::Text(vm.get_heap_mut().get_string(idx).clone())
+                        }
+                        Value::Boolean(b) => rusqlite::types::Value::Integer(if b { 1 } else { 0 }),
+                        Value::Kosong => rusqlite::types::Value::Null,
+                        _ => rusqlite::types::Value::Text(val.to_string(vm.get_heap_mut())),
+                    });
                 }
+            }
 
             let conn_mutex = match &vm.get_heap_mut().db_connection {
                 Some(c) => c.clone(),
@@ -146,28 +145,29 @@ pub fn register(vm: &mut VM) {
                     // Fallback to string replacement for now if params exist
                     let mut final_sql = sql.clone();
                     if args.len() > 1
-                        && let Value::Array(arr_idx) = &args[1] {
-                            let arr = vm.get_heap_mut().get_array(*arr_idx).clone();
-                            for val in arr {
-                                let val_str = match val {
-                                    Value::Angka(n) => n.to_string(),
-                                    Value::String(idx) => format!(
-                                        "'{}'",
-                                        vm.get_heap_mut().get_string(idx).replace("'", "''")
-                                    ),
-                                    Value::Boolean(b) => {
-                                        if b {
-                                            "1".to_string()
-                                        } else {
-                                            "0".to_string()
-                                        }
+                        && let Value::Array(arr_idx) = &args[1]
+                    {
+                        let arr = vm.get_heap_mut().get_array(*arr_idx).clone();
+                        for val in arr {
+                            let val_str = match val {
+                                Value::Angka(n) => n.to_string(),
+                                Value::String(idx) => format!(
+                                    "'{}'",
+                                    vm.get_heap_mut().get_string(idx).replace("'", "''")
+                                ),
+                                Value::Boolean(b) => {
+                                    if b {
+                                        "1".to_string()
+                                    } else {
+                                        "0".to_string()
                                     }
-                                    Value::Kosong => "NULL".to_string(),
-                                    _ => "''".to_string(),
-                                };
-                                final_sql = final_sql.replacen("?", &val_str, 1);
-                            }
+                                }
+                                Value::Kosong => "NULL".to_string(),
+                                _ => "''".to_string(),
+                            };
+                            final_sql = final_sql.replacen("?", &val_str, 1);
                         }
+                    }
                     c.query_drop(&final_sql)
                         .map_err(|e| format!("MySQL Error: {}", e))?;
                     c.affected_rows() as f64
@@ -176,28 +176,29 @@ pub fn register(vm: &mut VM) {
                     // Fallback to string replacement for now if params exist
                     let mut final_sql = sql.clone();
                     if args.len() > 1
-                        && let Value::Array(arr_idx) = &args[1] {
-                            let arr = vm.get_heap_mut().get_array(*arr_idx).clone();
-                            for val in arr {
-                                let val_str = match val {
-                                    Value::Angka(n) => n.to_string(),
-                                    Value::String(idx) => format!(
-                                        "'{}'",
-                                        vm.get_heap_mut().get_string(idx).replace("'", "''")
-                                    ),
-                                    Value::Boolean(b) => {
-                                        if b {
-                                            "TRUE".to_string()
-                                        } else {
-                                            "FALSE".to_string()
-                                        }
+                        && let Value::Array(arr_idx) = &args[1]
+                    {
+                        let arr = vm.get_heap_mut().get_array(*arr_idx).clone();
+                        for val in arr {
+                            let val_str = match val {
+                                Value::Angka(n) => n.to_string(),
+                                Value::String(idx) => format!(
+                                    "'{}'",
+                                    vm.get_heap_mut().get_string(idx).replace("'", "''")
+                                ),
+                                Value::Boolean(b) => {
+                                    if b {
+                                        "TRUE".to_string()
+                                    } else {
+                                        "FALSE".to_string()
                                     }
-                                    Value::Kosong => "NULL".to_string(),
-                                    _ => "''".to_string(),
-                                };
-                                final_sql = final_sql.replacen("?", &val_str, 1);
-                            }
+                                }
+                                Value::Kosong => "NULL".to_string(),
+                                _ => "''".to_string(),
+                            };
+                            final_sql = final_sql.replacen("?", &val_str, 1);
                         }
+                    }
                     c.execute(&final_sql, &[])
                         .map_err(|e| format!("Postgres Error: {}", e))? as f64
                 }
@@ -238,22 +239,21 @@ pub fn register(vm: &mut VM) {
             };
             let mut sqlite_params: Vec<rusqlite::types::Value> = vec![];
             if args.len() > 1
-                && let Value::Array(arr_idx) = &args[1] {
-                    let arr = vm.get_heap_mut().get_array(*arr_idx).clone();
-                    for val in arr {
-                        sqlite_params.push(match val {
-                            Value::Angka(n) => rusqlite::types::Value::Real(n),
-                            Value::String(idx) => rusqlite::types::Value::Text(
-                                vm.get_heap_mut().get_string(idx).clone(),
-                            ),
-                            Value::Boolean(b) => {
-                                rusqlite::types::Value::Integer(if b { 1 } else { 0 })
-                            }
-                            Value::Kosong => rusqlite::types::Value::Null,
-                            _ => rusqlite::types::Value::Text(val.to_string(vm.get_heap_mut())),
-                        });
-                    }
+                && let Value::Array(arr_idx) = &args[1]
+            {
+                let arr = vm.get_heap_mut().get_array(*arr_idx).clone();
+                for val in arr {
+                    sqlite_params.push(match val {
+                        Value::Angka(n) => rusqlite::types::Value::Real(n),
+                        Value::String(idx) => {
+                            rusqlite::types::Value::Text(vm.get_heap_mut().get_string(idx).clone())
+                        }
+                        Value::Boolean(b) => rusqlite::types::Value::Integer(if b { 1 } else { 0 }),
+                        Value::Kosong => rusqlite::types::Value::Null,
+                        _ => rusqlite::types::Value::Text(val.to_string(vm.get_heap_mut())),
+                    });
                 }
+            }
 
             enum DbValue {
                 Null,
@@ -317,28 +317,29 @@ pub fn register(vm: &mut VM) {
                         use mysql::prelude::Queryable;
                         let mut final_sql = sql.clone();
                         if args.len() > 1
-                            && let Value::Array(arr_idx) = &args[1] {
-                                let arr = vm.get_heap_mut().get_array(*arr_idx).clone();
-                                for val in arr {
-                                    let val_str = match val {
-                                        Value::Angka(n) => n.to_string(),
-                                        Value::String(idx) => format!(
-                                            "'{}'",
-                                            vm.get_heap_mut().get_string(idx).replace("'", "''")
-                                        ),
-                                        Value::Boolean(b) => {
-                                            if b {
-                                                "1".to_string()
-                                            } else {
-                                                "0".to_string()
-                                            }
+                            && let Value::Array(arr_idx) = &args[1]
+                        {
+                            let arr = vm.get_heap_mut().get_array(*arr_idx).clone();
+                            for val in arr {
+                                let val_str = match val {
+                                    Value::Angka(n) => n.to_string(),
+                                    Value::String(idx) => format!(
+                                        "'{}'",
+                                        vm.get_heap_mut().get_string(idx).replace("'", "''")
+                                    ),
+                                    Value::Boolean(b) => {
+                                        if b {
+                                            "1".to_string()
+                                        } else {
+                                            "0".to_string()
                                         }
-                                        Value::Kosong => "NULL".to_string(),
-                                        _ => "''".to_string(),
-                                    };
-                                    final_sql = final_sql.replacen("?", &val_str, 1);
-                                }
+                                    }
+                                    Value::Kosong => "NULL".to_string(),
+                                    _ => "''".to_string(),
+                                };
+                                final_sql = final_sql.replacen("?", &val_str, 1);
                             }
+                        }
                         let rows: Vec<mysql::Row> = c
                             .query(&final_sql)
                             .map_err(|e| format!("MySQL Error: {}", e))?;
@@ -370,28 +371,29 @@ pub fn register(vm: &mut VM) {
                     DatabaseConnection::Postgres(c) => {
                         let mut final_sql = sql.clone();
                         if args.len() > 1
-                            && let Value::Array(arr_idx) = &args[1] {
-                                let arr = vm.get_heap_mut().get_array(*arr_idx).clone();
-                                for val in arr {
-                                    let val_str = match val {
-                                        Value::Angka(n) => n.to_string(),
-                                        Value::String(idx) => format!(
-                                            "'{}'",
-                                            vm.get_heap_mut().get_string(idx).replace("'", "''")
-                                        ),
-                                        Value::Boolean(b) => {
-                                            if b {
-                                                "TRUE".to_string()
-                                            } else {
-                                                "FALSE".to_string()
-                                            }
+                            && let Value::Array(arr_idx) = &args[1]
+                        {
+                            let arr = vm.get_heap_mut().get_array(*arr_idx).clone();
+                            for val in arr {
+                                let val_str = match val {
+                                    Value::Angka(n) => n.to_string(),
+                                    Value::String(idx) => format!(
+                                        "'{}'",
+                                        vm.get_heap_mut().get_string(idx).replace("'", "''")
+                                    ),
+                                    Value::Boolean(b) => {
+                                        if b {
+                                            "TRUE".to_string()
+                                        } else {
+                                            "FALSE".to_string()
                                         }
-                                        Value::Kosong => "NULL".to_string(),
-                                        _ => "''".to_string(),
-                                    };
-                                    final_sql = final_sql.replacen("?", &val_str, 1);
-                                }
+                                    }
+                                    Value::Kosong => "NULL".to_string(),
+                                    _ => "''".to_string(),
+                                };
+                                final_sql = final_sql.replacen("?", &val_str, 1);
                             }
+                        }
                         let rows = c
                             .query(&final_sql, &[])
                             .map_err(|e| format!("Postgres Error: {}", e))?;

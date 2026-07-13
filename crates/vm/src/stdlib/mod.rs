@@ -1,3 +1,4 @@
+pub mod adapter;
 pub mod cookie;
 pub mod core;
 pub mod db;

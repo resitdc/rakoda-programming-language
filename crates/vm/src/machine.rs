@@ -465,11 +465,11 @@ impl VM {
                     };
 
                     let is_html_template = path_str.ends_with(".rpl.html");
-                    if !is_html_template
-                        && let Some(modul_val) = self.modules_cache.get(&path_str) {
-                            self.stack.push(*modul_val);
-                            continue;
-                        }
+                    if !is_html_template && let Some(modul_val) = self.modules_cache.get(&path_str)
+                    {
+                        self.stack.push(*modul_val);
+                        continue;
+                    }
 
                     let env_id = if is_html_template {
                         self.frames.last().unwrap().env_id
@@ -746,9 +746,10 @@ impl VmContext for VM {
 
     fn current_function_info(&self) -> (String, Option<String>) {
         if let Some(frame) = self.frames.last()
-            && let crate::heap::HeapData::Fungsi(f) = &self.heap.objects[frame.fungsi].data {
-                return (f.nama.clone(), f.file.clone());
-            }
+            && let crate::heap::HeapData::Fungsi(f) = &self.heap.objects[frame.fungsi].data
+        {
+            return (f.nama.clone(), f.file.clone());
+        }
         ("utama".to_string(), None)
     }
 }

@@ -95,11 +95,12 @@ impl<'a> Compiler<'a> {
         let len = program.statements.len();
         for (i, stmt) in program.statements.into_iter().enumerate() {
             if i == len - 1
-                && let Statement::Expression(expr) = &stmt {
-                    self.compile_expression(expr.clone())?;
-                    self.chunk.write_opcode(OpCode::Return, dummy_lokasi);
-                    continue;
-                }
+                && let Statement::Expression(expr) = &stmt
+            {
+                self.compile_expression(expr.clone())?;
+                self.chunk.write_opcode(OpCode::Return, dummy_lokasi);
+                continue;
+            }
             self.compile_statement(stmt)?;
         }
         if self.chunk.code.last() != Some(&(OpCode::Return as u8)) {
@@ -203,11 +204,12 @@ impl<'a> Compiler<'a> {
                 let body_len = body.len();
                 for (i, stmt) in body.into_iter().enumerate() {
                     if i == body_len - 1
-                        && let Statement::Expression(expr) = &stmt {
-                            fn_compiler.compile_expression(expr.clone())?;
-                            fn_compiler.chunk.write_opcode(OpCode::Return, lokasi);
-                            continue;
-                        }
+                        && let Statement::Expression(expr) = &stmt
+                    {
+                        fn_compiler.compile_expression(expr.clone())?;
+                        fn_compiler.chunk.write_opcode(OpCode::Return, lokasi);
+                        continue;
+                    }
                     fn_compiler.compile_statement(stmt)?;
                 }
 
@@ -413,11 +415,12 @@ impl<'a> Compiler<'a> {
                 let body_len = body.len();
                 for (i, stmt) in body.into_iter().enumerate() {
                     if i == body_len - 1
-                        && let Statement::Expression(expr) = &stmt {
-                            fn_compiler.compile_expression(expr.clone())?;
-                            fn_compiler.chunk.write_opcode(OpCode::Return, lokasi);
-                            continue;
-                        }
+                        && let Statement::Expression(expr) = &stmt
+                    {
+                        fn_compiler.compile_expression(expr.clone())?;
+                        fn_compiler.chunk.write_opcode(OpCode::Return, lokasi);
+                        continue;
+                    }
                     fn_compiler.compile_statement(stmt)?;
                 }
 
@@ -490,7 +493,7 @@ impl<'a> Compiler<'a> {
                     .map_err(|e| format!("Error lexer di '{}': {:?}", path_str, e))?;
 
                 let mut parser = parser::Parser::new(tokens);
-                let mut program = parser.parse_program();
+                let program = parser.parse_program();
                 if let Some(e) = program.errors.into_iter().next() {
                     return Err(format!("Error parser di '{}': {:?}", path_str, e));
                 }

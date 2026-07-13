@@ -117,26 +117,28 @@ pub fn preprocess_template_to_function(input: &str) -> String {
                     k += 1;
                 }
 
-                if k < chars.len() && chars[k] == '>'
-                    && (tag_name.ends_with(".rpl") || tag_name.ends_with(".rpl.html")) {
-                        let mut final_path = tag_name.clone();
-                        if final_path.ends_with(".rpl") && !final_path.ends_with(".rpl.html") {
-                            final_path.push_str(".html");
-                        }
-
-                        let path = if final_path.contains('/') {
-                            final_path
-                        } else {
-                            format!("tampilan/{}", final_path)
-                        };
-
-                        output.push_str(&format!(
-                            "  _html = _html + web.render(\"{}\", data)\n",
-                            path
-                        ));
-                        i = k + 1;
-                        continue;
+                if k < chars.len()
+                    && chars[k] == '>'
+                    && (tag_name.ends_with(".rpl") || tag_name.ends_with(".rpl.html"))
+                {
+                    let mut final_path = tag_name.clone();
+                    if final_path.ends_with(".rpl") && !final_path.ends_with(".rpl.html") {
+                        final_path.push_str(".html");
                     }
+
+                    let path = if final_path.contains('/') {
+                        final_path
+                    } else {
+                        format!("tampilan/{}", final_path)
+                    };
+
+                    output.push_str(&format!(
+                        "  _html = _html + web.render(\"{}\", data)\n",
+                        path
+                    ));
+                    i = k + 1;
+                    continue;
+                }
             }
 
             // Kumpulkan HTML murni

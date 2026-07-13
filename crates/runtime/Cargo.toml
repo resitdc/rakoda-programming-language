@@ -12,3 +12,4 @@ vm = { path = "../vm" }
 errors = { path = "../errors" }
 interpreter = { path = "../interpreter" }
 web = { path = "../web" }
+typechecker = { path = "../typechecker" }

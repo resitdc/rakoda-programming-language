@@ -102,17 +102,16 @@ fn main() -> Result<()> {
                     match res {
                         Ok(event) => {
                             if event.kind.is_modify()
-                                && last_run.elapsed() > Duration::from_millis(500) {
-                                    last_run = std::time::Instant::now();
-                                    print!("{}[2J{}[1;1H", 27 as char, 27 as char); // Clear screen
-                                    println!(
-                                        "\x1b[32m🔄 File berubah, menjalankan ulang...\x1b[0m\n"
-                                    );
-                                    if let Err(e) = runtime::run_file(file, use_vm) {
-                                        eprintln!("{}", e);
-                                    }
-                                    println!("\n\x1b[32m👀 Menunggu perubahan file...\x1b[0m");
+                                && last_run.elapsed() > Duration::from_millis(500)
+                            {
+                                last_run = std::time::Instant::now();
+                                print!("{}[2J{}[1;1H", 27 as char, 27 as char); // Clear screen
+                                println!("\x1b[32m🔄 File berubah, menjalankan ulang...\x1b[0m\n");
+                                if let Err(e) = runtime::run_file(file, use_vm) {
+                                    eprintln!("{}", e);
                                 }
+                                println!("\n\x1b[32m👀 Menunggu perubahan file...\x1b[0m");
+                            }
                         }
                         Err(e) => eprintln!("Watch error: {:?}", e),
                     }
@@ -214,13 +213,14 @@ fn main() -> Result<()> {
                                 .arg("-9")
                                 .arg(pid)
                                 .status()
-                                && status.success() {
-                                    println!(
-                                        "\x1b[32mBerhasil mematikan proses (PID: {}) di port {}.\x1b[0m",
-                                        pid, port
-                                    );
-                                    success = true;
-                                }
+                            && status.success()
+                        {
+                            println!(
+                                "\x1b[32mBerhasil mematikan proses (PID: {}) di port {}.\x1b[0m",
+                                pid, port
+                            );
+                            success = true;
+                        }
                     }
                     if !success {
                         println!("\x1b[31mGagal mematikan proses di port {}.\x1b[0m", port);
@@ -293,10 +293,7 @@ fn main() -> Result<()> {
                         program.statements.len()
                     );
                 } else {
-                    eprintln!(
-                        "\x1b[1;31m✗ Ditemukan {} error:\x1b[0m",
-                        errors.len()
-                    );
+                    eprintln!("\x1b[1;31m✗ Ditemukan {} error:\x1b[0m", errors.len());
                     for (i, e) in errors.iter().enumerate() {
                         eprintln!("  {}", e);
                         if i < errors.len() - 1 {
@@ -306,10 +303,7 @@ fn main() -> Result<()> {
                     std::process::exit(1);
                 }
             } else if !errors.is_empty() {
-                eprintln!(
-                    "\x1b[1;31m✗ Ditemukan {} error:\x1b[0m",
-                    errors.len()
-                );
+                eprintln!("\x1b[1;31m✗ Ditemukan {} error:\x1b[0m", errors.len());
                 for (i, e) in errors.iter().enumerate() {
                     eprintln!("  {}", e);
                     if i < errors.len() - 1 {

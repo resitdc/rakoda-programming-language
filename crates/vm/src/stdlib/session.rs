@@ -90,9 +90,10 @@ pub fn register(vm: &mut VM) {
                     {
                         // Check if expired
                         if let Some(exp) = exp_opt
-                            && Instant::now() > *exp {
-                                expired = true;
-                            }
+                            && Instant::now() > *exp
+                        {
+                            expired = true;
+                        }
                         if !expired {
                             found = true;
                             k_idx = *kamus_idx;
@@ -109,10 +110,9 @@ pub fn register(vm: &mut VM) {
                         return Ok(Value::Kosong);
                     }
 
-                    if found
-                        && let Some(val) = ctx.get_heap_mut().get_kamus(k_idx).get(&key) {
-                            return Ok(*val);
-                        }
+                    if found && let Some(val) = ctx.get_heap_mut().get_kamus(k_idx).get(&key) {
+                        return Ok(*val);
+                    }
                 }
                 Ok(Value::Kosong)
             } else {

@@ -1,9 +1,14 @@
+//! Thin adapter: wraps stdlib crate's json module for interpreter use.
+//! Also provides Objek↔serde_json::Value converters needed by HTTP module.
+
 use crate::lingkungan::Lingkungan;
 use crate::objek::Objek;
+use crate::stdlib::adapter::bungkus_fungsi;
 use serde_json::Value;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use stdlib;
 
 pub(crate) fn to_json(obj: &Objek) -> Value {
     match obj {
@@ -61,32 +66,11 @@ pub(crate) fn from_json(val: &Value) -> Objek {
 pub fn register(env: &Rc<RefCell<Lingkungan>>) {
     let module_env = Lingkungan::baru();
 
-    // json.buat(object) -> string
-    module_env.borrow_mut().set(
-        "buat".to_string(),
-        Objek::FungsiBawaan(|args| {
-            if let Some(arg) = args.first() {
-                let json_val = to_json(arg);
-                if let Ok(s) = serde_json::to_string(&json_val) {
-                    return Objek::String(s);
-                }
-            }
-            Objek::Kosong
-        }),
-    );
-
-    // json.parse(string) -> object
-    module_env.borrow_mut().set(
-        "parse".to_string(),
-        Objek::FungsiBawaan(|args| {
-            if args.len() == 1
-                && let Objek::String(s) = &args[0]
-                    && let Ok(val) = serde_json::from_str::<Value>(s) {
-                        return from_json(&val);
-                    }
-            Objek::Kosong
-        }),
-    );
+    for (nama, f) in stdlib::json::fungsi_json() {
+        module_env
+            .borrow_mut()
+            .set(nama.to_string(), Objek::MetodeBawaan(bungkus_fungsi(f)));
+    }
 
     env.borrow_mut()
         .set("json".to_string(), Objek::Modul(module_env));

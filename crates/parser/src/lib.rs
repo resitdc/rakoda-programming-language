@@ -54,6 +54,7 @@ pub struct Parser {
     /// Error-error yang terkumpul selama parsing.
     errors: Vec<RplError>,
     /// Mode strict: kalo true, parse error = return Err. Kalo false, dikumpulin.
+    #[allow(dead_code)]
     tolerant: bool,
 }
 
@@ -102,7 +103,11 @@ impl Parser {
     }
 
     fn push_error(&mut self, pesan: String, lokasi: Lokasi, saran: Option<String>) {
-        self.errors.push(RplError::Sintaks { pesan, lokasi, saran });
+        self.errors.push(RplError::Sintaks {
+            pesan,
+            lokasi,
+            saran,
+        });
     }
 
     /// Error recovery: maju sampai ketemu sync token atau EOF.
@@ -181,7 +186,10 @@ impl Parser {
                 self.push_error(
                     "Lupa memberikan nama variabel?".to_string(),
                     self.current_lokasi(),
-                    Some("Setiap variabel harus memiliki nama yang jelas, contoh: buat nama = 10".to_string()),
+                    Some(
+                        "Setiap variabel harus memiliki nama yang jelas, contoh: buat nama = 10"
+                            .to_string(),
+                    ),
                 );
                 return Statement::Error(lokasi);
             }
@@ -455,7 +463,10 @@ impl Parser {
                 self.push_error(
                     "Nama variabel error tidak valid.".to_string(),
                     self.current_lokasi(),
-                    Some("Berikan nama variabel untuk menangkap error, contoh: tangkap (error)".to_string()),
+                    Some(
+                        "Berikan nama variabel untuk menangkap error, contoh: tangkap (error)"
+                            .to_string(),
+                    ),
                 );
                 return Statement::Error(lokasi);
             }
@@ -901,16 +912,11 @@ mod tests {
     #[test]
     fn test_error_tolerant_multiple_errors() {
         // Dua error sintaks: hilang koma di array, dan 'selesai' tidak valid
-        let program = test_parse(
-            "buat x = 10\nbuat y = x + \nbuat z = [1 2 3]\ntampilkan z",
-        );
+        let program = test_parse("buat x = 10\nbuat y = x + \nbuat z = [1 2 3]\ntampilkan z");
         // Harus tetap menghasilkan statements (AST parsial)
         assert!(!program.statements.is_empty());
         // Harus ada error yang terkumpul
-        assert!(
-            !program.errors.is_empty(),
-            "Seharusnya ada error sintaks"
-        );
+        assert!(!program.errors.is_empty(), "Seharusnya ada error sintaks");
         println!("Jumlah error: {}", program.errors.len());
         for e in &program.errors {
             println!("  Error: {:?}", e);
@@ -920,9 +926,7 @@ mod tests {
     #[test]
     fn test_error_isolated_statement() {
         // Error di satu statement tidak menghentikan parsing statement berikutnya
-        let program = test_parse(
-            "buat x = 10\ntampilkan x\nbuat y =\ntampilkan \"selesai\"",
-        );
+        let program = test_parse("buat x = 10\ntampilkan x\nbuat y =\ntampilkan \"selesai\"");
         // Minimal 2 statement valid
         assert!(program.statements.len() >= 4);
         // Error harus ada

@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 ast = { path = "../ast" }
+stdlib = { path = "../stdlib" }
 serde_json = "1.0"
 ureq = "3.3.0"
 dotenvy = "0.15.7"

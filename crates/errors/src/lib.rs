@@ -32,10 +32,7 @@ impl Span {
 
     /// Buat span dari posisi tunggal (untuk token yang hanya satu karakter)
     pub fn titik(start: Pos) -> Self {
-        Self {
-            start,
-            end: start,
-        }
+        Self { start, end: start }
     }
 }
 

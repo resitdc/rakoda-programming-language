@@ -1,4 +1,4 @@
-use errors::{Lokasi, Pos, Span};
+use errors::{Lokasi, Span};
 // ini penting gaes, ini kamusnya
 
 #[derive(Debug, PartialEq, Clone)]

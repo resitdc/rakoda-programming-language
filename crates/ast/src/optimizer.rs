@@ -30,17 +30,11 @@ fn optimize_statement(stmt: Statement) -> Vec<Statement> {
             lokasi,
         }],
         Statement::Tampilkan { nilai, lokasi } => {
-            let nilai = nilai
-                .into_iter()
-                .map(|e| optimize_expression(e))
-                .collect();
+            let nilai = nilai.into_iter().map(optimize_expression).collect();
             vec![Statement::Tampilkan { nilai, lokasi }]
         }
         Statement::Cetak { nilai, lokasi } => {
-            let nilai = nilai
-                .into_iter()
-                .map(|e| optimize_expression(e))
-                .collect();
+            let nilai = nilai.into_iter().map(optimize_expression).collect();
             vec![Statement::Cetak { nilai, lokasi }]
         }
         Statement::Kembalikan { nilai, lokasi } => {

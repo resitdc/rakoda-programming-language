@@ -1,123 +1,80 @@
+//! Thin adapter: wraps shared stdlib's waktu module for VM use.
+//! Pure functions delegated to crates/stdlib. `tunggu` and `string` are VM-specific.
+
 use crate::heap::HeapData;
 use crate::machine::VM;
-use crate::value::{FungsiBawaanVM, Value};
-use chrono::Local;
+use crate::stdlib::adapter;
+use crate::value::{FungsiBawaanVM, Value, VmContext};
 use std::collections::HashMap;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn register(vm: &mut VM) {
     let mut module_dict = HashMap::new();
 
-    let sekarang_func = FungsiBawaanVM {
-        nama: "sekarang".to_string(),
-        func: |_heap, args| {
-            if !args.is_empty() {
-                return Err("Fungsi 'sekarang' tidak menerima argumen".to_string());
-            }
-            match SystemTime::now().duration_since(UNIX_EPOCH) {
-                Ok(n) => Ok(Value::Angka(n.as_millis() as f64)),
-                Err(_) => Err("Waktu sistem error".to_string()),
-            }
-        },
-    };
-    let sekarang_idx = vm.heap.alloc(HeapData::FungsiBawaan(sekarang_func));
-    module_dict.insert("sekarang".to_string(), Value::FungsiBawaan(sekarang_idx));
+    // Pure delegation for sekarang, tahun, bulan, tanggal, jam, menit, detik, format
+    for (nama, func) in &stdlib::waktu::fungsi_waktu() {
+        let fungsi = FungsiBawaanVM {
+            nama: nama.to_string(),
+            func: unsafe {
+                std::mem::transmute(
+                    move |ctx: &mut dyn VmContext, args: Vec<Value>| -> Result<Value, String> {
+                        let heap = ctx.get_heap_mut();
+                        let nilai_args: Vec<stdlib::NilaiRpl> = args
+                            .iter()
+                            .map(|v| adapter::value_ke_nilai(v, heap))
+                            .collect();
+                        match func(&nilai_args) {
+                            Ok(result) => {
+                                let heap2 = ctx.get_heap_mut();
+                                Ok(adapter::nilai_ke_value(&result, heap2))
+                            }
+                            Err(e) => Err(e),
+                        }
+                    },
+                )
+            },
+        };
+        let idx = vm.heap.alloc(HeapData::FungsiBawaan(fungsi));
+        module_dict.insert(nama.to_string(), Value::FungsiBawaan(idx));
+    }
 
-    let string_func = FungsiBawaanVM {
-        nama: "string".to_string(),
-        func: |ctx, args| {
-            if !args.is_empty() {
-                return Err("Fungsi 'string' tidak menerima argumen".to_string());
+    // "tunggu" — I/O specific (sleep), not in shared stdlib
+    fn tunggu_wrapper(_ctx: &mut dyn VmContext, args: Vec<Value>) -> Result<Value, String> {
+        if args.len() != 1 {
+            return Err("waktu.tunggu membutuhkan 1 argumen (milidetik)".to_string());
+        }
+        match &args[0] {
+            Value::Angka(ms) => {
+                std::thread::sleep(std::time::Duration::from_millis(*ms as u64));
             }
-            let now = Local::now();
-            let s = now.format("%Y-%m-%d %H:%M:%S").to_string();
-            let new_idx = ctx.get_heap_mut().alloc(HeapData::String(s));
-            Ok(Value::String(new_idx))
-        },
-    };
-    let string_idx = vm.heap.alloc(HeapData::FungsiBawaan(string_func));
-    module_dict.insert("string".to_string(), Value::FungsiBawaan(string_idx));
-
-    let tunggu_func = FungsiBawaanVM {
-        nama: "tunggu".to_string(),
-        func: |_ctx, args| {
-            if args.len() != 1 {
-                return Err("Fungsi 'tunggu' membutuhkan 1 argumen (angka milidetik)".to_string());
-            }
-            if let Value::Angka(ms) = args[0] {
+            v => {
+                let ms: f64 = v
+                    .to_string(_ctx.get_heap_mut())
+                    .parse()
+                    .map_err(|e| format!("waktu.tunggu: gagal mengubah ke angka: {}", e))?;
                 std::thread::sleep(std::time::Duration::from_millis(ms as u64));
-                Ok(Value::Kosong)
-            } else {
-                Err("Argumen fungsi 'tunggu' harus berupa angka".to_string())
             }
-        },
+        }
+        Ok(Value::Kosong)
+    }
+    let tunggu = FungsiBawaanVM {
+        nama: "tunggu".to_string(),
+        func: tunggu_wrapper,
     };
-    let tunggu_idx = vm.heap.alloc(HeapData::FungsiBawaan(tunggu_func));
+    let tunggu_idx = vm.heap.alloc(HeapData::FungsiBawaan(tunggu));
     module_dict.insert("tunggu".to_string(), Value::FungsiBawaan(tunggu_idx));
 
-    let format_func = FungsiBawaanVM {
-        nama: "format".to_string(),
-        func: |ctx, _args| {
-            let dt = chrono::Local::now();
-            let s = dt.format("%Y-%m-%d %H:%M:%S").to_string();
-            let new_idx = ctx.get_heap_mut().alloc(HeapData::String(s));
-            Ok(Value::String(new_idx))
-        },
+    // "string" — VM-specific: returns formatted date string in heap
+    fn string_wrapper(ctx: &mut dyn VmContext, _args: Vec<Value>) -> Result<Value, String> {
+        let s = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        let idx = ctx.get_heap_mut().alloc(HeapData::String(s));
+        Ok(Value::String(idx))
+    }
+    let string = FungsiBawaanVM {
+        nama: "string".to_string(),
+        func: string_wrapper,
     };
-    let format_idx = vm.heap.alloc(HeapData::FungsiBawaan(format_func));
-    module_dict.insert("format".to_string(), Value::FungsiBawaan(format_idx));
-
-    use chrono::Datelike;
-    use chrono::Timelike;
-
-    let tahun_func = FungsiBawaanVM {
-        nama: "tahun".to_string(),
-        func: |_ctx, _args| Ok(Value::Angka(chrono::Local::now().year() as f64)),
-    };
-    let tahun_idx = vm.heap.alloc(HeapData::FungsiBawaan(tahun_func));
-    module_dict.insert("tahun".to_string(), Value::FungsiBawaan(tahun_idx));
-
-    let bulan_func = FungsiBawaanVM {
-        nama: "bulan".to_string(),
-        func: |_ctx, _args| Ok(Value::Angka(chrono::Local::now().month() as f64)),
-    };
-    let bulan_idx = vm.heap.alloc(HeapData::FungsiBawaan(bulan_func));
-    module_dict.insert("bulan".to_string(), Value::FungsiBawaan(bulan_idx));
-
-    let tanggal_func = FungsiBawaanVM {
-        nama: "tanggal".to_string(),
-        func: |_ctx, _args| Ok(Value::Angka(chrono::Local::now().day() as f64)),
-    };
-    let tanggal_idx = vm.heap.alloc(HeapData::FungsiBawaan(tanggal_func));
-    module_dict.insert("tanggal".to_string(), Value::FungsiBawaan(tanggal_idx));
-
-    let jam_func = FungsiBawaanVM {
-        nama: "jam".to_string(),
-        func: |_ctx, _args| Ok(Value::Angka(chrono::Local::now().hour() as f64)),
-    };
-    let jam_idx = vm.heap.alloc(HeapData::FungsiBawaan(jam_func));
-    module_dict.insert("jam".to_string(), Value::FungsiBawaan(jam_idx));
-
-    let menit_func = FungsiBawaanVM {
-        nama: "menit".to_string(),
-        func: |_ctx, _args| Ok(Value::Angka(chrono::Local::now().minute() as f64)),
-    };
-    let menit_idx = vm.heap.alloc(HeapData::FungsiBawaan(menit_func));
-    module_dict.insert("menit".to_string(), Value::FungsiBawaan(menit_idx));
-
-    let detik_func = FungsiBawaanVM {
-        nama: "detik".to_string(),
-        func: |_ctx, _args| Ok(Value::Angka(chrono::Local::now().second() as f64)),
-    };
-    let detik_idx = vm.heap.alloc(HeapData::FungsiBawaan(detik_func));
-    module_dict.insert("detik".to_string(), Value::FungsiBawaan(detik_idx));
-
-    let sekarang_func = FungsiBawaanVM {
-        nama: "sekarang".to_string(),
-        func: |_ctx, _args| Ok(Value::Angka(chrono::Local::now().timestamp() as f64)),
-    };
-    let sekarang_idx = vm.heap.alloc(HeapData::FungsiBawaan(sekarang_func));
-    module_dict.insert("sekarang".to_string(), Value::FungsiBawaan(sekarang_idx));
+    let string_idx = vm.heap.alloc(HeapData::FungsiBawaan(string));
+    module_dict.insert("string".to_string(), Value::FungsiBawaan(string_idx));
 
     let dict_idx = vm.heap.alloc(HeapData::Kamus(module_dict));
     vm.set_global("waktu".to_string(), Value::Kamus(dict_idx));
