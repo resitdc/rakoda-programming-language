@@ -1,12 +1,12 @@
-use crate::machine::VM;
-use crate::value::{Value, FungsiBawaanVM};
-use std::collections::HashMap;
 use crate::heap::HeapData;
+use crate::machine::VM;
+use crate::value::{FungsiBawaanVM, Value};
+use std::collections::HashMap;
 use std::fs;
 
 pub fn register(vm: &mut VM) {
     let mut module_dict = HashMap::new();
-    
+
     let baca_func = FungsiBawaanVM {
         nama: "baca".to_string(),
         func: |ctx, args| {
@@ -19,7 +19,7 @@ pub fn register(vm: &mut VM) {
                     Ok(content) => {
                         let new_idx = ctx.get_heap_mut().alloc(HeapData::String(content));
                         Ok(Value::String(new_idx))
-                    },
+                    }
                     Err(e) => Err(format!("Gagal membaca file '{}': {}", path, e)),
                 }
             } else {
@@ -73,14 +73,19 @@ pub fn register(vm: &mut VM) {
         nama: "pindah".to_string(),
         func: |ctx, args| {
             if args.len() != 2 {
-                return Err("Fungsi 'pindah' membutuhkan 2 argumen: path_asal dan path_tujuan".to_string());
+                return Err(
+                    "Fungsi 'pindah' membutuhkan 2 argumen: path_asal dan path_tujuan".to_string(),
+                );
             }
             if let (Value::String(asal_idx), Value::String(tujuan_idx)) = (&args[0], &args[1]) {
                 let asal = ctx.get_heap_mut().get_string(*asal_idx).clone();
                 let tujuan = ctx.get_heap_mut().get_string(*tujuan_idx).clone();
                 match fs::rename(&asal, &tujuan) {
                     Ok(_) => Ok(Value::Kosong),
-                    Err(e) => Err(format!("Gagal memindahkan file dari '{}' ke '{}': {}", asal, tujuan, e)),
+                    Err(e) => Err(format!(
+                        "Gagal memindahkan file dari '{}' ke '{}': {}",
+                        asal, tujuan, e
+                    )),
                 }
             } else {
                 Err("Path asal dan tujuan harus berupa teks".to_string())

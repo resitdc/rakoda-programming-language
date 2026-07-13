@@ -1,13 +1,13 @@
+use crate::heap::HeapData;
 use crate::machine::VM;
-use crate::value::{Value, FungsiBawaanVM};
-use std::collections::HashMap;
-use crate::heap::{HeapData};
-use std::time::{SystemTime, UNIX_EPOCH};
+use crate::value::{FungsiBawaanVM, Value};
 use chrono::Local;
+use std::collections::HashMap;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn register(vm: &mut VM) {
     let mut module_dict = HashMap::new();
-    
+
     let sekarang_func = FungsiBawaanVM {
         nama: "sekarang".to_string(),
         func: |_heap, args| {
@@ -72,63 +72,49 @@ pub fn register(vm: &mut VM) {
 
     let tahun_func = FungsiBawaanVM {
         nama: "tahun".to_string(),
-        func: |_ctx, _args| {
-            Ok(Value::Angka(chrono::Local::now().year() as f64))
-        },
+        func: |_ctx, _args| Ok(Value::Angka(chrono::Local::now().year() as f64)),
     };
     let tahun_idx = vm.heap.alloc(HeapData::FungsiBawaan(tahun_func));
     module_dict.insert("tahun".to_string(), Value::FungsiBawaan(tahun_idx));
 
     let bulan_func = FungsiBawaanVM {
         nama: "bulan".to_string(),
-        func: |_ctx, _args| {
-            Ok(Value::Angka(chrono::Local::now().month() as f64))
-        },
+        func: |_ctx, _args| Ok(Value::Angka(chrono::Local::now().month() as f64)),
     };
     let bulan_idx = vm.heap.alloc(HeapData::FungsiBawaan(bulan_func));
     module_dict.insert("bulan".to_string(), Value::FungsiBawaan(bulan_idx));
 
     let tanggal_func = FungsiBawaanVM {
         nama: "tanggal".to_string(),
-        func: |_ctx, _args| {
-            Ok(Value::Angka(chrono::Local::now().day() as f64))
-        },
+        func: |_ctx, _args| Ok(Value::Angka(chrono::Local::now().day() as f64)),
     };
     let tanggal_idx = vm.heap.alloc(HeapData::FungsiBawaan(tanggal_func));
     module_dict.insert("tanggal".to_string(), Value::FungsiBawaan(tanggal_idx));
 
     let jam_func = FungsiBawaanVM {
         nama: "jam".to_string(),
-        func: |_ctx, _args| {
-            Ok(Value::Angka(chrono::Local::now().hour() as f64))
-        },
+        func: |_ctx, _args| Ok(Value::Angka(chrono::Local::now().hour() as f64)),
     };
     let jam_idx = vm.heap.alloc(HeapData::FungsiBawaan(jam_func));
     module_dict.insert("jam".to_string(), Value::FungsiBawaan(jam_idx));
 
     let menit_func = FungsiBawaanVM {
         nama: "menit".to_string(),
-        func: |_ctx, _args| {
-            Ok(Value::Angka(chrono::Local::now().minute() as f64))
-        },
+        func: |_ctx, _args| Ok(Value::Angka(chrono::Local::now().minute() as f64)),
     };
     let menit_idx = vm.heap.alloc(HeapData::FungsiBawaan(menit_func));
     module_dict.insert("menit".to_string(), Value::FungsiBawaan(menit_idx));
 
     let detik_func = FungsiBawaanVM {
         nama: "detik".to_string(),
-        func: |_ctx, _args| {
-            Ok(Value::Angka(chrono::Local::now().second() as f64))
-        },
+        func: |_ctx, _args| Ok(Value::Angka(chrono::Local::now().second() as f64)),
     };
     let detik_idx = vm.heap.alloc(HeapData::FungsiBawaan(detik_func));
     module_dict.insert("detik".to_string(), Value::FungsiBawaan(detik_idx));
 
     let sekarang_func = FungsiBawaanVM {
         nama: "sekarang".to_string(),
-        func: |_ctx, _args| {
-            Ok(Value::Angka(chrono::Local::now().timestamp() as f64))
-        },
+        func: |_ctx, _args| Ok(Value::Angka(chrono::Local::now().timestamp() as f64)),
     };
     let sekarang_idx = vm.heap.alloc(HeapData::FungsiBawaan(sekarang_func));
     module_dict.insert("sekarang".to_string(), Value::FungsiBawaan(sekarang_idx));

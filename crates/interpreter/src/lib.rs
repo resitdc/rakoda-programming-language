@@ -1,12 +1,12 @@
-pub mod objek;
 pub mod lingkungan;
-pub mod template;
+pub mod objek;
 pub mod stdlib;
+pub mod template;
 
+use std::cell::RefCell;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::cell::RefCell;
 
 use ast::{Expression, InfixOperator, PrefixOperator, Program, Statement};
 use errors::RplError;
@@ -31,7 +31,7 @@ impl Interpreter {
             base_path: None,
         }
     }
-    
+
     pub fn baru_dengan_capture() -> Self {
         let lingkungan = Lingkungan::baru();
         crate::stdlib::register_all(&lingkungan);
@@ -43,7 +43,11 @@ impl Interpreter {
         }
     }
 
-    pub fn baru_nested(parent: Rc<RefCell<Lingkungan>>, capture_output: bool, base_path: Option<PathBuf>) -> Self {
+    pub fn baru_nested(
+        parent: Rc<RefCell<Lingkungan>>,
+        capture_output: bool,
+        base_path: Option<PathBuf>,
+    ) -> Self {
         Self {
             lingkungan: Lingkungan::baru_nested(parent),
             output_buffer: String::new(),
@@ -63,7 +67,10 @@ impl Interpreter {
             }
             if let Objek::Pengecualian(err) = hasil {
                 return Err(RplError::Runtime {
-                    pesan: format!("Pengecualian tidak ditangkap: {}", err.to_string_pretty(0, true)),
+                    pesan: format!(
+                        "Pengecualian tidak ditangkap: {}",
+                        err.to_string_pretty(0, true)
+                    ),
                     lokasi: errors::Lokasi::new(0, 0),
                 });
             }
@@ -79,13 +86,14 @@ impl Interpreter {
                 for n in nilai {
                     let hasil_eval = self.eval_expression(n)?;
                     if self.capture_output {
-                        self.output_buffer.push_str(&hasil_eval.to_string_pretty(0, true));
+                        self.output_buffer
+                            .push_str(&hasil_eval.to_string_pretty(0, true));
                         self.output_buffer.push(' ');
                     } else {
                         print!("{} ", hasil_eval.to_string_pretty(0, true));
                     }
                 }
-                
+
                 if self.capture_output {
                     self.output_buffer.push('\n');
                 } else {
@@ -109,7 +117,11 @@ impl Interpreter {
                 self.lingkungan.borrow_mut().set(nama, obj);
                 Ok(Objek::Kosong)
             }
-            Statement::Assignment { nama, nilai, lokasi } => {
+            Statement::Assignment {
+                nama,
+                nilai,
+                lokasi,
+            } => {
                 if self.lingkungan.borrow().get(&nama).is_none() {
                     return Err(RplError::VariabelTidakDitemukan {
                         nama,
@@ -129,9 +141,14 @@ impl Interpreter {
                     Ok(Objek::Kembalikan(Box::new(Objek::Kosong)))
                 }
             }
-            Statement::Jika { kondisi, konsekuensi, alternatif, .. } => {
+            Statement::Jika {
+                kondisi,
+                konsekuensi,
+                alternatif,
+                ..
+            } => {
                 let kondisi_eval = self.eval_expression(kondisi)?;
-                
+
                 if is_truthy(&kondisi_eval) {
                     self.eval_block(konsekuensi)
                 } else if let Some(alt) = alternatif {
@@ -148,7 +165,7 @@ impl Interpreter {
                         break;
                     }
                     hasil = self.eval_block(body.clone())?;
-                    
+
                     if let Objek::Kembalikan(_) = hasil {
                         return Ok(hasil);
                     }
@@ -158,7 +175,12 @@ impl Interpreter {
                 }
                 Ok(hasil)
             }
-            Statement::DeklarasiFungsi { nama, parameter, body, .. } => {
+            Statement::DeklarasiFungsi {
+                nama,
+                parameter,
+                body,
+                ..
+            } => {
                 let fungsi = Objek::Fungsi {
                     parameter,
                     body,
@@ -167,7 +189,12 @@ impl Interpreter {
                 self.lingkungan.borrow_mut().set(nama, fungsi);
                 Ok(Objek::Kosong)
             }
-            Statement::CobaTangkap { coba_body, error_ident, tangkap_body, .. } => {
+            Statement::CobaTangkap {
+                coba_body,
+                error_ident,
+                tangkap_body,
+                ..
+            } => {
                 let mut hasil = Objek::Kosong;
                 let mut terlempar = false;
                 let mut nilai_error = Objek::Kosong;
@@ -188,9 +215,9 @@ impl Interpreter {
                     // Create new environment for catch block
                     let lingkungan_lama = Rc::clone(&self.lingkungan);
                     self.lingkungan = Lingkungan::baru_nested(Rc::clone(&lingkungan_lama));
-                    
+
                     self.lingkungan.borrow_mut().set(error_ident, nilai_error);
-                    
+
                     let mut hasil_tangkap = Objek::Kosong;
                     for stmt in tangkap_body {
                         hasil_tangkap = self.eval_statement(stmt)?;
@@ -203,7 +230,7 @@ impl Interpreter {
                             return Ok(hasil_tangkap);
                         }
                     }
-                    
+
                     self.lingkungan = lingkungan_lama;
                     Ok(hasil_tangkap)
                 } else {
@@ -240,23 +267,24 @@ impl Interpreter {
             Expression::String(val, _) => Ok(Objek::String(val)),
             Expression::Boolean(val, _) => Ok(Objek::Boolean(val)),
             Expression::Kosong(_) => Ok(Objek::Kosong),
-            Expression::FungsiAnonim { parameter, body, .. } => {
-                Ok(Objek::Fungsi {
-                    parameter,
-                    body,
-                    env: Rc::clone(&self.lingkungan),
-                })
-            }
-            Expression::Identifier(nama, lokasi) => {
-                match self.lingkungan.borrow().get(&nama) {
-                    Some(val) => Ok(val),
-                    None => Err(RplError::VariabelTidakDitemukan { 
-                        nama: nama.clone(),
-                        lokasi,
-                        saran: Some(format!("Gunakan perintah 'buat {} = ...' terlebih dahulu sebelum memakainya.", nama)),
-                    }),
-                }
-            }
+            Expression::FungsiAnonim {
+                parameter, body, ..
+            } => Ok(Objek::Fungsi {
+                parameter,
+                body,
+                env: Rc::clone(&self.lingkungan),
+            }),
+            Expression::Identifier(nama, lokasi) => match self.lingkungan.borrow().get(&nama) {
+                Some(val) => Ok(val),
+                None => Err(RplError::VariabelTidakDitemukan {
+                    nama: nama.clone(),
+                    lokasi,
+                    saran: Some(format!(
+                        "Gunakan perintah 'buat {} = ...' terlebih dahulu sebelum memakainya.",
+                        nama
+                    )),
+                }),
+            },
             Expression::Impor(path_str, lokasi) => {
                 let resolved_path = if let Some(base) = &self.base_path {
                     if Path::new(&path_str).is_relative() {
@@ -267,34 +295,45 @@ impl Interpreter {
                 } else {
                     PathBuf::from(&path_str)
                 };
-                
-                let (kode_asli, final_path) = match fs::read_to_string(&resolved_path) {
-                    Ok(k) => (k, resolved_path),
-                    Err(e) => {
-                        let mut current_dir = std::env::current_dir().unwrap_or_default();
-                        if let Some(base) = &self.base_path {
-                            current_dir = base.clone();
+
+                let (kode_asli, final_path) =
+                    match fs::read_to_string(&resolved_path) {
+                        Ok(k) => (k, resolved_path),
+                        Err(e) => {
+                            let mut current_dir = std::env::current_dir().unwrap_or_default();
+                            if let Some(base) = &self.base_path {
+                                current_dir = base.clone();
+                            }
+
+                            let module_path = current_dir
+                                .join("rpl_modules")
+                                .join(&path_str)
+                                .join("main.rpl");
+                            match fs::read_to_string(&module_path) {
+                                Ok(k) => (k, module_path),
+                                Err(_) => return Err(RplError::Sintaks {
+                                    pesan: format!(
+                                        "Gagal memuat modul '{}': {}",
+                                        resolved_path.display(),
+                                        e
+                                    ),
+                                    lokasi,
+                                    saran: Some(
+                                        "Pastikan path file sudah benar dan file dapat diakses."
+                                            .to_string(),
+                                    ),
+                                }),
+                            }
                         }
-                        
-                        let module_path = current_dir.join("rpl_modules").join(&path_str).join("main.rpl");
-                        match fs::read_to_string(&module_path) {
-                            Ok(k) => (k, module_path),
-                            Err(_) => return Err(RplError::Sintaks {
-                                pesan: format!("Gagal memuat modul '{}': {}", resolved_path.display(), e),
-                                lokasi,
-                                saran: Some("Pastikan path file sudah benar dan file dapat diakses.".to_string()),
-                            }),
-                        }
-                    }
-                };
-                
+                    };
+
                 let is_html_template = path_str.ends_with(".rpl.html");
                 let kode_sumber = if is_html_template {
                     template::preprocess_template(&kode_asli)
                 } else {
                     kode_asli
                 };
-                
+
                 let mut lexer = lexer::Lexer::new(&kode_sumber);
                 let tokens = lexer.tokenize().map_err(|mut e| {
                     if let RplError::Sintaks { pesan, .. } = &mut e {
@@ -302,7 +341,7 @@ impl Interpreter {
                     }
                     e
                 })?;
-                
+
                 let mut parser = parser::Parser::new(tokens);
                 let program = parser.parse_program().map_err(|mut e| {
                     if let RplError::Sintaks { pesan, .. } = &mut e {
@@ -310,33 +349,39 @@ impl Interpreter {
                     }
                     e
                 })?;
-                
+
                 let new_base_path = final_path.parent().map(|p| p.to_path_buf());
-                
+
                 let mut mod_interpreter = if is_html_template {
-                    Interpreter::baru_nested(self.lingkungan.clone(), self.capture_output, new_base_path)
+                    Interpreter::baru_nested(
+                        self.lingkungan.clone(),
+                        self.capture_output,
+                        new_base_path,
+                    )
                 } else {
                     let mut i = Interpreter::baru();
                     i.base_path = new_base_path;
                     i
                 };
-                
+
                 mod_interpreter.eval_program(program)?;
-                
+
                 if is_html_template && self.capture_output {
                     self.output_buffer.push_str(&mod_interpreter.output_buffer);
                 }
-                
+
                 let modul_obj = Objek::Modul(mod_interpreter.lingkungan);
-                
+
                 if let Some(stem) = final_path.file_stem().and_then(|s| s.to_str()) {
                     let mut real_stem = stem;
                     if real_stem.ends_with(".rpl") {
                         real_stem = real_stem.trim_end_matches(".rpl");
                     }
-                    self.lingkungan.borrow_mut().set(real_stem.to_string(), modul_obj.clone());
+                    self.lingkungan
+                        .borrow_mut()
+                        .set(real_stem.to_string(), modul_obj.clone());
                 }
-                
+
                 Ok(modul_obj)
             }
             Expression::Array { elemen, .. } => {
@@ -351,7 +396,7 @@ impl Interpreter {
                 for (k_expr, v_expr) in pasangan {
                     let k = self.eval_expression(k_expr)?;
                     let v = self.eval_expression(v_expr)?;
-                    
+
                     let k_str = match k {
                         Objek::String(s) => s,
                         _ => format!("{}", k),
@@ -360,10 +405,14 @@ impl Interpreter {
                 }
                 Ok(Objek::Kamus(Rc::new(RefCell::new(hasil))))
             }
-            Expression::Index { kiri, indeks, lokasi } => {
+            Expression::Index {
+                kiri,
+                indeks,
+                lokasi,
+            } => {
                 let kiri_obj = self.eval_expression(*kiri)?;
                 let indeks_obj = self.eval_expression(*indeks)?;
-                
+
                 match kiri_obj {
                     Objek::Array(elemen_rc) => {
                         let elemen = elemen_rc.borrow();
@@ -393,7 +442,7 @@ impl Interpreter {
                             Objek::String(s) => s,
                             _ => format!("{}", indeks_obj),
                         };
-                        
+
                         match pasangan.get(&kunci) {
                             Some(val) => Ok(val.clone()),
                             None => Ok(Objek::Kosong),
@@ -420,36 +469,49 @@ impl Interpreter {
                     }),
                 }
             }
-            Expression::Prefix { operator, kanan, lokasi } => {
+            Expression::Prefix {
+                operator,
+                kanan,
+                lokasi,
+            } => {
                 let kanan_obj = self.eval_expression(*kanan)?;
                 self.eval_prefix_expression(operator, kanan_obj, lokasi)
             }
-            Expression::Infix { kiri, operator, kanan, lokasi } => {
+            Expression::Infix {
+                kiri,
+                operator,
+                kanan,
+                lokasi,
+            } => {
                 let kiri_obj = self.eval_expression(*kiri)?;
                 let kanan_obj = self.eval_expression(*kanan)?;
                 self.eval_infix_expression(operator, kiri_obj, kanan_obj, lokasi)
             }
-            Expression::Call { fungsi, argumen, lokasi } => {
+            Expression::Call {
+                fungsi,
+                argumen,
+                lokasi,
+            } => {
                 let nama_fungsi = match &*fungsi {
                     Expression::Identifier(nama, _) => nama.clone(),
                     _ => "fungsi_anonim".to_string(),
                 };
-                
+
                 let fungsi_obj = self.eval_expression(*fungsi)?;
-                
+
                 let mut arg_eval = Vec::new();
                 for arg in argumen {
                     arg_eval.push(self.eval_expression(arg)?);
                 }
 
                 match fungsi_obj {
-                    Objek::FungsiBawaan(func) => {
-                        Ok(func(arg_eval))
-                    }
-                    Objek::MetodeBawaan(func) => {
-                        Ok(func(arg_eval))
-                    }
-                    Objek::Fungsi { parameter, body, env } => {
+                    Objek::FungsiBawaan(func) => Ok(func(arg_eval)),
+                    Objek::MetodeBawaan(func) => Ok(func(arg_eval)),
+                    Objek::Fungsi {
+                        parameter,
+                        body,
+                        env,
+                    } => {
                         if arg_eval.len() != parameter.len() {
                             return Err(RplError::Sintaks {
                                 pesan: format!("Fungsi '{}' mengharapkan {} data (argumen), tapi kamu memberikan {}.", nama_fungsi, parameter.len(), arg_eval.len()),
@@ -460,7 +522,9 @@ impl Interpreter {
 
                         let func_env = Lingkungan::baru_nested(env);
                         for (i, param_nama) in parameter.iter().enumerate() {
-                            func_env.borrow_mut().set(param_nama.clone(), arg_eval[i].clone());
+                            func_env
+                                .borrow_mut()
+                                .set(param_nama.clone(), arg_eval[i].clone());
                         }
 
                         let env_sebelumnya = Rc::clone(&self.lingkungan);
@@ -476,19 +540,28 @@ impl Interpreter {
                             _ => Ok(Objek::Kosong),
                         }
                     }
-                    _ => {
-                        Err(RplError::TipeData {
-                            pesan: format!("'{}' bukanlah sebuah fungsi yang bisa dipanggil.", nama_fungsi),
-                            lokasi,
-                            saran: Some(format!("Mungkin '{}' adalah variabel biasa? Pastikan hanya menggunakan '()' pada nama fungsi.", nama_fungsi)),
-                        })
-                    }
+                    _ => Err(RplError::TipeData {
+                        pesan: format!(
+                            "'{}' bukanlah sebuah fungsi yang bisa dipanggil.",
+                            nama_fungsi
+                        ),
+                        lokasi,
+                        saran: Some(format!(
+                            "Mungkin '{}' adalah variabel biasa? Pastikan hanya menggunakan '()' pada nama fungsi.",
+                            nama_fungsi
+                        )),
+                    }),
                 }
             }
         }
     }
 
-    fn eval_prefix_expression(&self, operator: PrefixOperator, kanan: Objek, lokasi: errors::Lokasi) -> Result<Objek, RplError> {
+    fn eval_prefix_expression(
+        &self,
+        operator: PrefixOperator,
+        kanan: Objek,
+        lokasi: errors::Lokasi,
+    ) -> Result<Objek, RplError> {
         match operator {
             PrefixOperator::Bukan => {
                 Ok(Objek::Boolean(!is_truthy(&kanan)))
@@ -506,7 +579,13 @@ impl Interpreter {
         }
     }
 
-    fn eval_infix_expression(&self, operator: InfixOperator, kiri: Objek, kanan: Objek, lokasi: errors::Lokasi) -> Result<Objek, RplError> {
+    fn eval_infix_expression(
+        &self,
+        operator: InfixOperator,
+        kiri: Objek,
+        kanan: Objek,
+        lokasi: errors::Lokasi,
+    ) -> Result<Objek, RplError> {
         match (kiri, kanan) {
             (Objek::Angka(kiri_val), Objek::Angka(kanan_val)) => {
                 self.eval_angka_infix(operator, kiri_val, kanan_val, lokasi)
@@ -528,7 +607,10 @@ impl Interpreter {
                         Some("Teks hanya bisa digabungkan dengan tanda tambah '+'. Tidak bisa dikurang, dikali, atau dibandingkan (<, >).".to_string())
                     };
                     Err(RplError::TipeData {
-                        pesan: format!("Operator '{}' membutuhkan tipe data yang seragam. Ditemukan: Teks dan Tipe Data Lain.", operator),
+                        pesan: format!(
+                            "Operator '{}' membutuhkan tipe data yang seragam. Ditemukan: Teks dan Tipe Data Lain.",
+                            operator
+                        ),
                         lokasi,
                         saran,
                     })
@@ -548,43 +630,57 @@ impl Interpreter {
                         Some("Teks hanya bisa digabungkan dengan tanda tambah '+'. Tidak bisa dikurang, dikali, atau dibandingkan (<, >).".to_string())
                     };
                     Err(RplError::TipeData {
-                        pesan: format!("Operator '{}' membutuhkan tipe data yang seragam. Ditemukan: Tipe Data Lain dan Teks.", operator),
+                        pesan: format!(
+                            "Operator '{}' membutuhkan tipe data yang seragam. Ditemukan: Tipe Data Lain dan Teks.",
+                            operator
+                        ),
                         lokasi,
                         saran,
                     })
                 }
             }
-            (kiri_obj, kanan_obj) => {
-                match operator {
-                    InfixOperator::SamaDengan => Ok(Objek::Boolean(kiri_obj == kanan_obj)),
-                    InfixOperator::TidakSamaDengan => Ok(Objek::Boolean(kiri_obj != kanan_obj)),
-                    InfixOperator::Dan => Ok(Objek::Boolean(is_truthy(&kiri_obj) && is_truthy(&kanan_obj))),
-                    InfixOperator::Atau => Ok(Objek::Boolean(is_truthy(&kiri_obj) || is_truthy(&kanan_obj))),
-                    _ => {
-                        let (saran, pesan_spesifik) = if let (Objek::String(_), Objek::Angka(_)) | (Objek::Angka(_), Objek::String(_)) = (&kiri_obj, &kanan_obj) {
-                            (
+            (kiri_obj, kanan_obj) => match operator {
+                InfixOperator::SamaDengan => Ok(Objek::Boolean(kiri_obj == kanan_obj)),
+                InfixOperator::TidakSamaDengan => Ok(Objek::Boolean(kiri_obj != kanan_obj)),
+                InfixOperator::Dan => Ok(Objek::Boolean(
+                    is_truthy(&kiri_obj) && is_truthy(&kanan_obj),
+                )),
+                InfixOperator::Atau => Ok(Objek::Boolean(
+                    is_truthy(&kiri_obj) || is_truthy(&kanan_obj),
+                )),
+                _ => {
+                    let (saran, pesan_spesifik) = if let (Objek::String(_), Objek::Angka(_))
+                    | (Objek::Angka(_), Objek::String(_)) =
+                        (&kiri_obj, &kanan_obj)
+                    {
+                        (
                                 Some("Gunakan fungsi `angka()` untuk mengubah Teks menjadi Angka, atau `teks()` untuk mengubah Angka menjadi Teks.".to_string()),
                                 format!("Operator '{}' membutuhkan tipe data yang seragam. Ditemukan: Teks dan Angka.", operator)
                             )
-                        } else {
-                            (
+                    } else {
+                        (
                                 Some("Pastikan tipe datanya sama atau mendukung operasi tersebut (misalnya Angka dengan Angka).".to_string()),
                                 format!("Kamu mencoba menghitung {} dengan {} menggunakan operator '{}'", kiri_obj, kanan_obj, operator)
                             )
-                        };
+                    };
 
-                        Err(RplError::TipeData {
-                            pesan: pesan_spesifik,
-                            lokasi,
-                            saran,
-                        })
-                    }
+                    Err(RplError::TipeData {
+                        pesan: pesan_spesifik,
+                        lokasi,
+                        saran,
+                    })
                 }
-            }
+            },
         }
     }
 
-    fn eval_angka_infix(&self, operator: InfixOperator, kiri: f64, kanan: f64, lokasi: errors::Lokasi) -> Result<Objek, RplError> {
+    fn eval_angka_infix(
+        &self,
+        operator: InfixOperator,
+        kiri: f64,
+        kanan: f64,
+        lokasi: errors::Lokasi,
+    ) -> Result<Objek, RplError> {
         match operator {
             InfixOperator::Tambah => Ok(Objek::Angka(kiri + kanan)),
             InfixOperator::Kurang => Ok(Objek::Angka(kiri - kanan)),
@@ -611,7 +707,13 @@ impl Interpreter {
         }
     }
 
-    fn eval_string_infix(&self, operator: InfixOperator, kiri: String, kanan: String, lokasi: errors::Lokasi) -> Result<Objek, RplError> {
+    fn eval_string_infix(
+        &self,
+        operator: InfixOperator,
+        kiri: String,
+        kanan: String,
+        lokasi: errors::Lokasi,
+    ) -> Result<Objek, RplError> {
         match operator {
             InfixOperator::Tambah => Ok(Objek::String(format!("{}{}", kiri, kanan))),
             InfixOperator::SamaDengan => Ok(Objek::Boolean(kiri == kanan)),

@@ -20,7 +20,9 @@ fn token_precedence(token: &Token) -> Precedence {
     match token {
         Token::Dan | Token::Atau => Precedence::AndOr,
         Token::SamaDengan | Token::TidakSamaDengan | Token::Bukan => Precedence::Equals,
-        Token::LebihDari | Token::KurangDari | Token::Minimal | Token::Maksimal => Precedence::LessGreater,
+        Token::LebihDari | Token::KurangDari | Token::Minimal | Token::Maksimal => {
+            Precedence::LessGreater
+        }
         Token::Tambah | Token::Kurang => Precedence::Sum,
         Token::Kali | Token::Bagi | Token::Mod => Precedence::Product,
         Token::KurungBuka => Precedence::Call,
@@ -69,8 +71,11 @@ impl Parser {
                     expected.to_indonesian_string(),
                     self.current().token.to_indonesian_string()
                 ),
-                lokasi: self.current().lokasi.clone(),
-                saran: Some(format!("Periksa kembali struktur kodemu. Apakah kamu lupa menambahkan {} di sini?", expected.to_indonesian_string())),
+                lokasi: self.current().lokasi,
+                saran: Some(format!(
+                    "Periksa kembali struktur kodemu. Apakah kamu lupa menambahkan {} di sini?",
+                    expected.to_indonesian_string()
+                )),
             })
         }
     }
@@ -109,28 +114,36 @@ impl Parser {
     }
 
     fn parse_deklarasi_variabel(&mut self) -> Result<Statement, RplError> {
-        let lokasi = self.current().lokasi.clone();
+        let lokasi = self.current().lokasi;
         self.advance();
 
-        let nama = match &self.current().token {
-            Token::Identifier(n) => n.clone(),
-            _ => return Err(RplError::Sintaks {
-                pesan: "Lupa memberikan nama variabel?".to_string(),
-                lokasi: self.current().lokasi.clone(),
-                saran: Some("Setiap variabel harus memiliki nama yang jelas, contoh: buat nama = 10".to_string()),
-            }),
-        };
+        let nama =
+            match &self.current().token {
+                Token::Identifier(n) => n.clone(),
+                _ => return Err(RplError::Sintaks {
+                    pesan: "Lupa memberikan nama variabel?".to_string(),
+                    lokasi: self.current().lokasi,
+                    saran: Some(
+                        "Setiap variabel harus memiliki nama yang jelas, contoh: buat nama = 10"
+                            .to_string(),
+                    ),
+                }),
+            };
         self.advance();
 
         self.expect(Token::Assign)?;
 
         let nilai = self.parse_expression(Precedence::Lowest)?;
 
-        Ok(Statement::DeklarasiVariabel { nama, nilai, lokasi })
+        Ok(Statement::DeklarasiVariabel {
+            nama,
+            nilai,
+            lokasi,
+        })
     }
 
     fn parse_assignment(&mut self) -> Result<Statement, RplError> {
-        let lokasi = self.current().lokasi.clone();
+        let lokasi = self.current().lokasi;
         let nama = match &self.current().token {
             Token::Identifier(n) => n.clone(),
             _ => unreachable!(),
@@ -140,24 +153,29 @@ impl Parser {
 
         let nilai = self.parse_expression(Precedence::Lowest)?;
 
-        Ok(Statement::Assignment { nama, nilai, lokasi })
+        Ok(Statement::Assignment {
+            nama,
+            nilai,
+            lokasi,
+        })
     }
 
     fn parse_kembalikan(&mut self) -> Result<Statement, RplError> {
-        let lokasi = self.current().lokasi.clone();
+        let lokasi = self.current().lokasi;
         self.advance();
 
-        let nilai = if self.current().token == Token::EOF || self.current().token == Token::KurawalTutup {
-            None
-        } else {
-            Some(self.parse_expression(Precedence::Lowest)?)
-        };
+        let nilai =
+            if self.current().token == Token::EOF || self.current().token == Token::KurawalTutup {
+                None
+            } else {
+                Some(self.parse_expression(Precedence::Lowest)?)
+            };
 
         Ok(Statement::Kembalikan { nilai, lokasi })
     }
 
     fn parse_tampilkan_statement(&mut self, is_cetak: bool) -> Result<Statement, RplError> {
-        let lokasi = self.current().lokasi.clone();
+        let lokasi = self.current().lokasi;
         self.advance(); // lewati 'tampilkan' atau 'cetak'
 
         let mut nilai = Vec::new();
@@ -194,7 +212,7 @@ impl Parser {
         }
 
         let mut statements = Vec::new();
-        
+
         loop {
             let current = &self.current().token;
             if current == &Token::EOF {
@@ -205,7 +223,10 @@ impl Parser {
                     break;
                 }
             } else {
-                if current == &Token::Selesai || current == &Token::JikaTidak || current == &Token::Tangkap {
+                if current == &Token::Selesai
+                    || current == &Token::JikaTidak
+                    || current == &Token::Tangkap
+                {
                     break;
                 }
             }
@@ -214,7 +235,8 @@ impl Parser {
 
         if is_kurawal {
             self.expect(Token::KurawalTutup)?;
-        } else if self.current().token != Token::JikaTidak && self.current().token != Token::Tangkap {
+        } else if self.current().token != Token::JikaTidak && self.current().token != Token::Tangkap
+        {
             self.expect(Token::Selesai)?;
         }
 
@@ -222,7 +244,7 @@ impl Parser {
     }
 
     fn parse_jika(&mut self) -> Result<Statement, RplError> {
-        let lokasi = self.current().lokasi.clone();
+        let lokasi = self.current().lokasi;
         self.advance();
 
         let kondisi = self.parse_expression(Precedence::Lowest)?;
@@ -239,30 +261,43 @@ impl Parser {
             None
         };
 
-        Ok(Statement::Jika { kondisi, konsekuensi, alternatif, lokasi })
+        Ok(Statement::Jika {
+            kondisi,
+            konsekuensi,
+            alternatif,
+            lokasi,
+        })
     }
 
     fn parse_selama(&mut self) -> Result<Statement, RplError> {
-        let lokasi = self.current().lokasi.clone();
+        let lokasi = self.current().lokasi;
         self.advance();
 
         let kondisi = self.parse_expression(Precedence::Lowest)?;
         let body = self.parse_block()?;
 
-        Ok(Statement::Selama { kondisi, body, lokasi })
+        Ok(Statement::Selama {
+            kondisi,
+            body,
+            lokasi,
+        })
     }
 
     fn parse_fungsi(&mut self) -> Result<Statement, RplError> {
-        let lokasi = self.current().lokasi.clone();
+        let lokasi = self.current().lokasi;
         self.advance();
 
         let nama = match &self.current().token {
             Token::Identifier(n) => n.clone(),
-            _ => return Err(RplError::Sintaks {
-                pesan: "Lupa memberikan nama fungsi?".to_string(),
-                lokasi: self.current().lokasi.clone(),
-                saran: Some("Setiap fungsi harus memiliki nama. Contoh: fungsi sapa()".to_string()),
-            }),
+            _ => {
+                return Err(RplError::Sintaks {
+                    pesan: "Lupa memberikan nama fungsi?".to_string(),
+                    lokasi: self.current().lokasi,
+                    saran: Some(
+                        "Setiap fungsi harus memiliki nama. Contoh: fungsi sapa()".to_string(),
+                    ),
+                });
+            }
         };
         self.advance();
 
@@ -277,7 +312,7 @@ impl Parser {
                     }
                     _ => return Err(RplError::Sintaks {
                         pesan: "Nama parameter tidak valid.".to_string(),
-                        lokasi: self.current().lokasi.clone(),
+                        lokasi: self.current().lokasi,
                         saran: Some("Pastikan nama data (parameter) di dalam kurung menggunakan huruf, contoh: fungsi tambah(a, b)".to_string()),
                     }),
                 }
@@ -293,36 +328,51 @@ impl Parser {
 
         let body = self.parse_block()?;
 
-        Ok(Statement::DeklarasiFungsi { nama, parameter, body, lokasi })
+        Ok(Statement::DeklarasiFungsi {
+            nama,
+            parameter,
+            body,
+            lokasi,
+        })
     }
 
     fn parse_coba(&mut self) -> Result<Statement, RplError> {
-        let lokasi = self.current().lokasi.clone();
+        let lokasi = self.current().lokasi;
         self.advance();
 
         let coba_body = self.parse_block()?;
 
         self.expect(Token::Tangkap)?;
-        
+
         self.expect(Token::KurungBuka)?;
         let error_ident = match &self.current().token {
             Token::Identifier(n) => n.clone(),
-            _ => return Err(RplError::Sintaks {
-                pesan: "Nama variabel error tidak valid.".to_string(),
-                lokasi: self.current().lokasi.clone(),
-                saran: Some("Berikan nama variabel untuk menangkap error, contoh: tangkap (error)".to_string()),
-            }),
+            _ => {
+                return Err(RplError::Sintaks {
+                    pesan: "Nama variabel error tidak valid.".to_string(),
+                    lokasi: self.current().lokasi,
+                    saran: Some(
+                        "Berikan nama variabel untuk menangkap error, contoh: tangkap (error)"
+                            .to_string(),
+                    ),
+                });
+            }
         };
         self.advance();
         self.expect(Token::KurungTutup)?;
 
         let tangkap_body = self.parse_block()?;
 
-        Ok(Statement::CobaTangkap { coba_body, error_ident, tangkap_body, lokasi })
+        Ok(Statement::CobaTangkap {
+            coba_body,
+            error_ident,
+            tangkap_body,
+            lokasi,
+        })
     }
 
     fn parse_lempar(&mut self) -> Result<Statement, RplError> {
-        let lokasi = self.current().lokasi.clone();
+        let lokasi = self.current().lokasi;
         self.advance();
 
         let nilai = self.parse_expression(Precedence::Lowest)?;
@@ -333,7 +383,9 @@ impl Parser {
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, RplError> {
         let mut left = self.parse_prefix()?;
 
-        while self.current().token != Token::EOF && precedence < token_precedence(&self.current().token) {
+        while self.current().token != Token::EOF
+            && precedence < token_precedence(&self.current().token)
+        {
             left = self.parse_infix(left)?;
         }
 
@@ -370,7 +422,7 @@ impl Parser {
             Token::Fungsi => {
                 self.advance();
                 self.expect(Token::KurungBuka)?;
-                
+
                 let mut parameter = Vec::new();
                 if self.current().token != Token::KurungTutup {
                     loop {
@@ -381,7 +433,7 @@ impl Parser {
                             }
                             _ => return Err(RplError::Sintaks {
                                 pesan: "Nama parameter tidak valid.".to_string(),
-                                lokasi: self.current().lokasi.clone(),
+                                lokasi: self.current().lokasi,
                                 saran: Some("Pastikan nama data (parameter) di dalam kurung menggunakan huruf, contoh: fungsi(a, b)".to_string()),
                             }),
                         }
@@ -436,13 +488,13 @@ impl Parser {
 
     fn parse_infix(&mut self, left: Expression) -> Result<Expression, RplError> {
         let token = self.current().clone();
-        
+
         if token.token == Token::KurungBuka {
             return self.parse_call_arguments(left);
         }
 
         if token.token == Token::KurungSikuBuka {
-            let lokasi = self.current().lokasi.clone();
+            let lokasi = self.current().lokasi;
             self.advance(); // lewati '['
             let indeks = self.parse_expression(Precedence::Lowest)?;
             self.expect(Token::KurungSikuTutup)?;
@@ -454,9 +506,9 @@ impl Parser {
         }
 
         if token.token == Token::Titik {
-            let lokasi = self.current().lokasi.clone();
+            let lokasi = self.current().lokasi;
             self.advance(); // lewati '.'
-            
+
             let properti = match &self.current().token {
                 Token::Identifier(n) => n.clone(),
                 Token::Buat => "buat".to_string(),
@@ -483,7 +535,7 @@ impl Parser {
                 Token::Bukan => "bukan".to_string(),
                 _ => return Err(RplError::Sintaks {
                     pesan: "Lupa menyebutkan bagian apa yang ingin diakses?".to_string(),
-                    lokasi: self.current().lokasi.clone(),
+                    lokasi: self.current().lokasi,
                     saran: Some("Setelah tanda titik '.', kamu harus menuliskan nama data yang ingin diambil. Contoh: objek.nama".to_string()),
                 }),
             };
@@ -491,7 +543,7 @@ impl Parser {
             // Desugar dot notation a.b to a["b"]
             return Ok(Expression::Index {
                 kiri: Box::new(left),
-                indeks: Box::new(Expression::String(properti, lokasi.clone())),
+                indeks: Box::new(Expression::String(properti, lokasi)),
                 lokasi,
             });
         }
@@ -526,9 +578,9 @@ impl Parser {
     }
 
     fn parse_call_arguments(&mut self, fungsi: Expression) -> Result<Expression, RplError> {
-        let lokasi = self.current().lokasi.clone();
+        let lokasi = self.current().lokasi;
         self.advance();
-        
+
         let mut argumen = Vec::new();
         if self.current().token != Token::KurungTutup {
             loop {
@@ -542,11 +594,15 @@ impl Parser {
         }
         self.expect(Token::KurungTutup)?;
 
-        Ok(Expression::Call { fungsi: Box::new(fungsi), argumen, lokasi })
+        Ok(Expression::Call {
+            fungsi: Box::new(fungsi),
+            argumen,
+            lokasi,
+        })
     }
 
     fn parse_array(&mut self) -> Result<Expression, RplError> {
-        let lokasi = self.current().lokasi.clone();
+        let lokasi = self.current().lokasi;
         self.advance(); // lewati '['
 
         let mut elemen = Vec::new();
@@ -560,27 +616,27 @@ impl Parser {
                 }
             }
         }
-        
+
         self.expect(Token::KurungSikuTutup)?;
         Ok(Expression::Array { elemen, lokasi })
     }
 
     fn parse_kamus(&mut self) -> Result<Expression, RplError> {
-        let lokasi = self.current().lokasi.clone();
+        let lokasi = self.current().lokasi;
         self.advance(); // lewati '{'
 
         let mut pasangan = Vec::new();
         if self.current().token != Token::KurawalTutup {
             loop {
                 let mut key = self.parse_expression(Precedence::Lowest)?;
-                
+
                 // Jika key adalah identifier, konversi menjadi string agar praktis (seperti JS)
                 if let Expression::Identifier(nama, lok) = key.clone() {
                     key = Expression::String(nama, lok);
                 }
-                
+
                 self.expect(Token::TitikDua)?;
-                
+
                 let value = self.parse_expression(Precedence::Lowest)?;
                 pasangan.push((key, value));
 
@@ -631,9 +687,15 @@ mod tests {
         let program = test_parse("buat x = 10 + 5 * 2");
         match &program.statements[0] {
             Statement::DeklarasiVariabel { nilai, .. } => {
-                if let Expression::Infix { operator, kanan, .. } = nilai {
+                if let Expression::Infix {
+                    operator, kanan, ..
+                } = nilai
+                {
                     assert_eq!(*operator, InfixOperator::Tambah);
-                    if let Expression::Infix { operator: op_kanan, .. } = &**kanan {
+                    if let Expression::Infix {
+                        operator: op_kanan, ..
+                    } = &**kanan
+                    {
                         assert_eq!(*op_kanan, InfixOperator::Kali);
                     } else {
                         panic!("Kanan harusnya infix (*)");

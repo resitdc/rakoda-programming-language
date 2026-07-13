@@ -1,7 +1,7 @@
-use crate::opcodes::OpCode;
-use crate::value::{Value, FungsiVM};
-use ast::{Program, Statement, Expression, InfixOperator, PrefixOperator};
 use crate::heap::{Heap, HeapData};
+use crate::opcodes::OpCode;
+use crate::value::{FungsiVM, Value};
+use ast::{Expression, InfixOperator, PrefixOperator, Program, Statement};
 use errors::Lokasi;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -65,7 +65,10 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    pub fn baru_dengan_base_path(heap: &'a mut Heap, base_path: Option<std::path::PathBuf>) -> Self {
+    pub fn baru_dengan_base_path(
+        heap: &'a mut Heap,
+        base_path: Option<std::path::PathBuf>,
+    ) -> Self {
         Self {
             chunk: Chunk::new(),
             heap,
@@ -73,8 +76,12 @@ impl<'a> Compiler<'a> {
             current_file: None,
         }
     }
-    
-    pub fn baru_dengan_file(heap: &'a mut Heap, base_path: Option<std::path::PathBuf>, current_file: Option<String>) -> Self {
+
+    pub fn baru_dengan_file(
+        heap: &'a mut Heap,
+        base_path: Option<std::path::PathBuf>,
+        current_file: Option<String>,
+    ) -> Self {
         Self {
             chunk: Chunk::new(),
             heap,
@@ -87,13 +94,12 @@ impl<'a> Compiler<'a> {
         let dummy_lokasi = Lokasi { baris: 1, kolom: 1 };
         let len = program.statements.len();
         for (i, stmt) in program.statements.into_iter().enumerate() {
-            if i == len - 1 {
-                if let Statement::Expression(expr) = &stmt {
+            if i == len - 1
+                && let Statement::Expression(expr) = &stmt {
                     self.compile_expression(expr.clone())?;
                     self.chunk.write_opcode(OpCode::Return, dummy_lokasi);
                     continue;
                 }
-            }
             self.compile_statement(stmt)?;
         }
         if self.chunk.code.last() != Some(&(OpCode::Return as u8)) {
@@ -109,7 +115,16 @@ impl<'a> Compiler<'a> {
                 self.compile_expression(expr)?;
                 self.chunk.write_opcode(OpCode::Pop, lok);
             }
-            Statement::DeklarasiVariabel { nama, nilai, lokasi } | Statement::Assignment { nama, nilai, lokasi } => {
+            Statement::DeklarasiVariabel {
+                nama,
+                nilai,
+                lokasi,
+            }
+            | Statement::Assignment {
+                nama,
+                nilai,
+                lokasi,
+            } => {
                 self.compile_expression(nilai)?;
                 let name_idx = self.heap.alloc(HeapData::String(nama));
                 let const_idx = self.chunk.write_constant(Value::String(name_idx));
@@ -128,57 +143,74 @@ impl<'a> Compiler<'a> {
                     self.chunk.write_opcode(OpCode::Print, lokasi);
                 }
             }
-            Statement::Jika { kondisi, konsekuensi, alternatif, lokasi } => {
+            Statement::Jika {
+                kondisi,
+                konsekuensi,
+                alternatif,
+                lokasi,
+            } => {
                 self.compile_expression(kondisi)?;
-                
+
                 let jump_if_false_offset = self.emit_jump(OpCode::JumpIfFalse, lokasi);
-                
+
                 for stmt in konsekuensi {
                     self.compile_statement(stmt)?;
                 }
 
                 let jump_offset = self.emit_jump(OpCode::Jump, lokasi);
-                
+
                 self.patch_jump(jump_if_false_offset);
-                
+
                 if let Some(alt) = alternatif {
                     for stmt in alt {
                         self.compile_statement(stmt)?;
                     }
                 }
-                
+
                 self.patch_jump(jump_offset);
             }
-            Statement::Selama { kondisi, body, lokasi } => {
+            Statement::Selama {
+                kondisi,
+                body,
+                lokasi,
+            } => {
                 let loop_start = self.chunk.code.len();
-                
+
                 self.compile_expression(kondisi)?;
-                
+
                 let jump_if_false_offset = self.emit_jump(OpCode::JumpIfFalse, lokasi);
-                
+
                 for stmt in body {
                     self.compile_statement(stmt)?;
                 }
-                
+
                 let jump_back = self.emit_jump(OpCode::Jump, lokasi);
                 self.patch_jump_to(jump_back, loop_start);
-                
+
                 self.patch_jump(jump_if_false_offset);
             }
-            Statement::DeklarasiFungsi { nama, parameter, body, lokasi } => {
-                let mut fn_compiler = Compiler::baru_dengan_file(self.heap, self.base_path.clone(), self.current_file.clone());
+            Statement::DeklarasiFungsi {
+                nama,
+                parameter,
+                body,
+                lokasi,
+            } => {
+                let mut fn_compiler = Compiler::baru_dengan_file(
+                    self.heap,
+                    self.base_path.clone(),
+                    self.current_file.clone(),
+                );
                 let body_len = body.len();
                 for (i, stmt) in body.into_iter().enumerate() {
-                    if i == body_len - 1 {
-                        if let Statement::Expression(expr) = &stmt {
+                    if i == body_len - 1
+                        && let Statement::Expression(expr) = &stmt {
                             fn_compiler.compile_expression(expr.clone())?;
                             fn_compiler.chunk.write_opcode(OpCode::Return, lokasi);
                             continue;
                         }
-                    }
                     fn_compiler.compile_statement(stmt)?;
                 }
-                
+
                 let mut chunk = fn_compiler.chunk;
                 if chunk.code.last() != Some(&(OpCode::Return as u8)) {
                     let const_idx = chunk.write_constant(Value::Kosong);
@@ -186,7 +218,7 @@ impl<'a> Compiler<'a> {
                     chunk.write_u16(const_idx, lokasi);
                     chunk.write_opcode(OpCode::Return, lokasi);
                 }
-                
+
                 let fungsi = FungsiVM {
                     nama: nama.clone(),
                     parameter,
@@ -213,7 +245,12 @@ impl<'a> Compiler<'a> {
                 }
                 self.chunk.write_opcode(OpCode::Return, lokasi);
             }
-            Statement::CobaTangkap { coba_body, error_ident, tangkap_body, lokasi } => {
+            Statement::CobaTangkap {
+                coba_body,
+                error_ident,
+                tangkap_body,
+                lokasi,
+            } => {
                 let setup_catch_offset = self.emit_jump(OpCode::SetupCatch, lokasi);
 
                 for stmt in coba_body {
@@ -275,7 +312,12 @@ impl<'a> Compiler<'a> {
                 self.chunk.write_opcode(OpCode::LoadVar, lokasi);
                 self.chunk.write_u16(const_idx, lokasi);
             }
-            Expression::Infix { kiri, operator, kanan, lokasi } => {
+            Expression::Infix {
+                kiri,
+                operator,
+                kanan,
+                lokasi,
+            } => {
                 self.compile_expression(*kiri)?;
                 self.compile_expression(*kanan)?;
                 match operator {
@@ -289,19 +331,29 @@ impl<'a> Compiler<'a> {
                     InfixOperator::Minimal => self.chunk.write_opcode(OpCode::GreaterEqual, lokasi),
                     InfixOperator::Maksimal => self.chunk.write_opcode(OpCode::LessEqual, lokasi),
                     InfixOperator::SamaDengan => self.chunk.write_opcode(OpCode::Equal, lokasi),
-                    InfixOperator::TidakSamaDengan => self.chunk.write_opcode(OpCode::NotEqual, lokasi),
+                    InfixOperator::TidakSamaDengan => {
+                        self.chunk.write_opcode(OpCode::NotEqual, lokasi)
+                    }
                     InfixOperator::Dan => self.chunk.write_opcode(OpCode::And, lokasi),
                     InfixOperator::Atau => self.chunk.write_opcode(OpCode::Or, lokasi),
                 }
             }
-            Expression::Prefix { operator, kanan, lokasi } => {
+            Expression::Prefix {
+                operator,
+                kanan,
+                lokasi,
+            } => {
                 self.compile_expression(*kanan)?;
                 match operator {
                     PrefixOperator::Minus => self.chunk.write_opcode(OpCode::Negate, lokasi),
                     PrefixOperator::Bukan => self.chunk.write_opcode(OpCode::Not, lokasi),
                 }
             }
-            Expression::Call { fungsi, argumen, lokasi } => {
+            Expression::Call {
+                fungsi,
+                argumen,
+                lokasi,
+            } => {
                 self.compile_expression(*fungsi)?;
                 let arg_count = argumen.len();
                 if arg_count > 255 {
@@ -313,7 +365,11 @@ impl<'a> Compiler<'a> {
                 self.chunk.write_opcode(OpCode::Call, lokasi);
                 self.chunk.write(arg_count as u8, lokasi);
             }
-            Expression::Index { kiri, indeks, lokasi } => {
+            Expression::Index {
+                kiri,
+                indeks,
+                lokasi,
+            } => {
                 self.compile_expression(*kiri)?;
                 self.compile_expression(*indeks)?;
                 self.chunk.write_opcode(OpCode::GetIndex, lokasi);
@@ -341,20 +397,27 @@ impl<'a> Compiler<'a> {
                 self.chunk.write_opcode(OpCode::MakeKamus, lokasi);
                 self.chunk.write_u16(count as u16, lokasi);
             }
-            Expression::FungsiAnonim { parameter, body, lokasi } => {
-                let mut fn_compiler = Compiler::baru_dengan_file(self.heap, self.base_path.clone(), self.current_file.clone());
+            Expression::FungsiAnonim {
+                parameter,
+                body,
+                lokasi,
+            } => {
+                let mut fn_compiler = Compiler::baru_dengan_file(
+                    self.heap,
+                    self.base_path.clone(),
+                    self.current_file.clone(),
+                );
                 let body_len = body.len();
                 for (i, stmt) in body.into_iter().enumerate() {
-                    if i == body_len - 1 {
-                        if let Statement::Expression(expr) = &stmt {
+                    if i == body_len - 1
+                        && let Statement::Expression(expr) = &stmt {
                             fn_compiler.compile_expression(expr.clone())?;
                             fn_compiler.chunk.write_opcode(OpCode::Return, lokasi);
                             continue;
                         }
-                    }
                     fn_compiler.compile_statement(stmt)?;
                 }
-                
+
                 let mut chunk = fn_compiler.chunk;
                 if chunk.code.last() != Some(&(OpCode::Return as u8)) {
                     let const_idx = chunk.write_constant(Value::Kosong);
@@ -362,7 +425,7 @@ impl<'a> Compiler<'a> {
                     chunk.write_u16(const_idx, lokasi);
                     chunk.write_opcode(OpCode::Return, lokasi);
                 }
-                
+
                 let fungsi = crate::value::FungsiVM {
                     nama: "<anonim>".to_string(),
                     parameter,
@@ -384,7 +447,7 @@ impl<'a> Compiler<'a> {
                 } else {
                     std::path::PathBuf::from(&path_str)
                 };
-                
+
                 let (kode_asli, final_path) = match std::fs::read_to_string(&resolved_path) {
                     Ok(k) => (k, resolved_path),
                     Err(e) => {
@@ -393,35 +456,52 @@ impl<'a> Compiler<'a> {
                         if let Some(base) = &self.base_path {
                             current_dir = base.clone();
                         }
-                        
-                        let module_path = current_dir.join("rpl_modules").join(&path_str).join("main.rpl");
+
+                        let module_path = current_dir
+                            .join("rpl_modules")
+                            .join(&path_str)
+                            .join("main.rpl");
                         match std::fs::read_to_string(&module_path) {
                             Ok(k) => (k, module_path),
-                            Err(_) => return Err(format!("Gagal memuat modul '{}': {}", resolved_path.display(), e)),
+                            Err(_) => {
+                                return Err(format!(
+                                    "Gagal memuat modul '{}': {}",
+                                    resolved_path.display(),
+                                    e
+                                ));
+                            }
                         }
                     }
                 };
-                
+
                 let is_html_template = path_str.ends_with(".rpl.html");
                 let kode_sumber = if is_html_template {
                     interpreter::template::preprocess_template(&kode_asli)
                 } else {
                     kode_asli
                 };
-                
+
                 let mut lexer = lexer::Lexer::new(&kode_sumber);
-                let tokens = lexer.tokenize().map_err(|e| format!("Error lexer di '{}': {:?}", path_str, e))?;
-                
+                let tokens = lexer
+                    .tokenize()
+                    .map_err(|e| format!("Error lexer di '{}': {:?}", path_str, e))?;
+
                 let mut parser = parser::Parser::new(tokens);
-                let program = parser.parse_program().map_err(|e| format!("Error parser di '{}': {:?}", path_str, e))?;
-                
+                let program = parser
+                    .parse_program()
+                    .map_err(|e| format!("Error parser di '{}': {:?}", path_str, e))?;
+
                 let new_base_path = final_path.parent().map(|p| p.to_path_buf());
-                let mut fn_compiler = Compiler::baru_dengan_file(self.heap, new_base_path, Some(final_path.to_string_lossy().to_string()));
-                
+                let mut fn_compiler = Compiler::baru_dengan_file(
+                    self.heap,
+                    new_base_path,
+                    Some(final_path.to_string_lossy().to_string()),
+                );
+
                 for stmt in program.statements {
                     fn_compiler.compile_statement(stmt)?;
                 }
-                
+
                 let mut chunk = fn_compiler.chunk;
                 if chunk.code.last() != Some(&(OpCode::Return as u8)) {
                     let const_idx = chunk.write_constant(Value::Kosong);
@@ -429,7 +509,7 @@ impl<'a> Compiler<'a> {
                     chunk.write_u16(const_idx, lokasi);
                     chunk.write_opcode(OpCode::Return, lokasi);
                 }
-                
+
                 let fungsi = crate::value::FungsiVM {
                     nama: path_str.clone(),
                     parameter: vec![],
@@ -439,7 +519,7 @@ impl<'a> Compiler<'a> {
                 let fungsi_idx = self.heap.alloc(crate::heap::HeapData::Fungsi(fungsi));
                 let func_val = Value::Fungsi(fungsi_idx, 0); // Dummy env_id 0 at compile time
                 let const_idx = self.chunk.write_constant(func_val);
-                
+
                 self.chunk.write_opcode(OpCode::LoadConst, lokasi);
                 self.chunk.write_u16(const_idx, lokasi);
                 self.chunk.write_opcode(OpCode::LoadModule, lokasi);
@@ -461,7 +541,7 @@ impl<'a> Compiler<'a> {
         self.chunk.code[offset] = bytes[0];
         self.chunk.code[offset + 1] = bytes[1];
     }
-    
+
     fn patch_jump_to(&mut self, offset: usize, target: usize) {
         let bytes = (target as u16).to_be_bytes();
         self.chunk.code[offset] = bytes[0];

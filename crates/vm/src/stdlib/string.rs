@@ -1,11 +1,11 @@
-use crate::machine::VM;
-use crate::value::{Value, FungsiBawaanVM};
-use std::collections::HashMap;
 use crate::heap::HeapData;
+use crate::machine::VM;
+use crate::value::{FungsiBawaanVM, Value};
+use std::collections::HashMap;
 
 pub fn register(vm: &mut VM) {
     let mut module_dict = HashMap::new();
-    
+
     let panjang_func = FungsiBawaanVM {
         nama: "panjang".to_string(),
         func: |ctx, args| {
@@ -63,9 +63,13 @@ pub fn register(vm: &mut VM) {
         nama: "potong".to_string(),
         func: |ctx, args| {
             if args.len() != 3 {
-                return Err("Fungsi 'potong' membutuhkan 3 argumen: teks, mulai, selesai".to_string());
+                return Err(
+                    "Fungsi 'potong' membutuhkan 3 argumen: teks, mulai, selesai".to_string(),
+                );
             }
-            if let (Value::String(idx), Value::Angka(mulai), Value::Angka(selesai)) = (&args[0], &args[1], &args[2]) {
+            if let (Value::String(idx), Value::Angka(mulai), Value::Angka(selesai)) =
+                (&args[0], &args[1], &args[2])
+            {
                 let s = ctx.get_heap_mut().get_string(*idx).clone();
                 let mulai_idx = *mulai as usize;
                 let selesai_idx = *selesai as usize;
@@ -90,7 +94,9 @@ pub fn register(vm: &mut VM) {
             if args.len() != 3 {
                 return Err("Fungsi 'ganti' membutuhkan 3 argumen: teks, cari, ganti".to_string());
             }
-            if let (Value::String(t_idx), Value::String(c_idx), Value::String(g_idx)) = (&args[0], &args[1], &args[2]) {
+            if let (Value::String(t_idx), Value::String(c_idx), Value::String(g_idx)) =
+                (&args[0], &args[1], &args[2])
+            {
                 let teks = ctx.get_heap_mut().get_string(*t_idx).clone();
                 let cari = ctx.get_heap_mut().get_string(*c_idx).clone();
                 let ganti = ctx.get_heap_mut().get_string(*g_idx).clone();

@@ -1,8 +1,8 @@
-use crate::machine::VM;
-use crate::value::{Value, FungsiBawaanVM, VmContext};
-use std::collections::HashMap;
 use crate::heap::HeapData;
+use crate::machine::VM;
+use crate::value::{FungsiBawaanVM, Value, VmContext};
 use serde_json::Value as JsonValue;
+use std::collections::HashMap;
 
 pub fn convert_to_value(ctx: &mut dyn VmContext, json: &JsonValue) -> Value {
     match json {
@@ -14,16 +14,16 @@ pub fn convert_to_value(ctx: &mut dyn VmContext, json: &JsonValue) -> Value {
             } else {
                 Value::Kosong
             }
-        },
+        }
         JsonValue::String(s) => {
             let idx = ctx.get_heap_mut().alloc(HeapData::String(s.clone()));
             Value::String(idx)
-        },
+        }
         JsonValue::Array(arr) => {
             let elements = arr.iter().map(|v| convert_to_value(ctx, v)).collect();
             let idx = ctx.get_heap_mut().alloc(HeapData::Array(elements));
             Value::Array(idx)
-        },
+        }
         JsonValue::Object(obj) => {
             let mut map = HashMap::new();
             for (k, v) in obj {
@@ -31,13 +31,13 @@ pub fn convert_to_value(ctx: &mut dyn VmContext, json: &JsonValue) -> Value {
             }
             let idx = ctx.get_heap_mut().alloc(HeapData::Kamus(map));
             Value::Kamus(idx)
-        },
+        }
     }
 }
 
 pub fn register(vm: &mut VM) {
     let mut module_dict = HashMap::new();
-    
+
     let parse_func = FungsiBawaanVM {
         nama: "parse".to_string(),
         func: |ctx, args| {
@@ -64,7 +64,7 @@ pub fn register(vm: &mut VM) {
             if args.is_empty() {
                 return Err("Fungsi 'stringify' membutuhkan 1 argumen: data".to_string());
             }
-            
+
             fn convert_from_value(ctx: &mut dyn VmContext, val: &Value) -> JsonValue {
                 match val {
                     Value::Kosong => JsonValue::Null,
@@ -75,13 +75,18 @@ pub fn register(vm: &mut VM) {
                         } else {
                             JsonValue::Null
                         }
-                    },
-                    Value::String(idx) => JsonValue::String(ctx.get_heap_mut().get_string(*idx).clone()),
+                    }
+                    Value::String(idx) => {
+                        JsonValue::String(ctx.get_heap_mut().get_string(*idx).clone())
+                    }
                     Value::Array(idx) => {
                         let array_clone = ctx.get_heap_mut().get_array(*idx).clone();
-                        let elements = array_clone.iter().map(|v| convert_from_value(ctx, v)).collect();
+                        let elements = array_clone
+                            .iter()
+                            .map(|v| convert_from_value(ctx, v))
+                            .collect();
                         JsonValue::Array(elements)
-                    },
+                    }
                     Value::Kamus(idx) => {
                         let mut map = serde_json::Map::new();
                         let kamus_clone = ctx.get_heap_mut().get_kamus(*idx).clone();
@@ -89,18 +94,20 @@ pub fn register(vm: &mut VM) {
                             map.insert(k, convert_from_value(ctx, &v));
                         }
                         JsonValue::Object(map)
-                    },
+                    }
                     Value::Fungsi(..) | Value::FungsiBawaan(_) | Value::Modul(_) => JsonValue::Null,
                 }
             }
-            
+
             let json_val = convert_from_value(ctx, &args[0]);
             let s = json_val.to_string();
             let s_idx = ctx.get_heap_mut().alloc(HeapData::String(s));
             Ok(Value::String(s_idx))
         },
     };
-    let stringify_idx = vm.heap.alloc(HeapData::FungsiBawaan(stringify_func.clone()));
+    let stringify_idx = vm
+        .heap
+        .alloc(HeapData::FungsiBawaan(stringify_func.clone()));
     module_dict.insert("stringify".to_string(), Value::FungsiBawaan(stringify_idx));
 
     let buat_idx = vm.heap.alloc(HeapData::FungsiBawaan(stringify_func));

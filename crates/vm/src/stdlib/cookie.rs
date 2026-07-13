@@ -1,6 +1,6 @@
-use crate::machine::VM;
-use crate::value::{Value, FungsiBawaanVM};
 use crate::heap::HeapData;
+use crate::machine::VM;
+use crate::value::{FungsiBawaanVM, Value};
 use std::collections::HashMap;
 
 pub fn register(vm: &mut VM) {
@@ -10,20 +10,21 @@ pub fn register(vm: &mut VM) {
         nama: "set".to_string(),
         func: |ctx, args| {
             if args.len() < 2 {
-                return Err("Fungsi 'cookie.set' membutuhkan minimal 2 argumen: nama, nilai".to_string());
+                return Err(
+                    "Fungsi 'cookie.set' membutuhkan minimal 2 argumen: nama, nilai".to_string(),
+                );
             }
             if let (Value::String(k_idx), Value::String(v_idx)) = (&args[0], &args[1]) {
                 let key = ctx.get_heap_mut().get_string(*k_idx).clone();
                 let val = ctx.get_heap_mut().get_string(*v_idx).clone();
-                
+
                 let mut cookie_str = format!("{}={}; Path=/", key, val);
-                
-                if args.len() >= 3 {
-                    if let Value::Angka(max_age) = &args[2] {
+
+                if args.len() >= 3
+                    && let Value::Angka(max_age) = &args[2] {
                         cookie_str.push_str(&format!("; Max-Age={}", *max_age as i64));
                     }
-                }
-                
+
                 ctx.get_heap_mut().web_state.cookies_to_set.push(cookie_str);
                 Ok(Value::Kosong)
             } else {
@@ -42,8 +43,13 @@ pub fn register(vm: &mut VM) {
             }
             if let Value::String(k_idx) = &args[0] {
                 let key = ctx.get_heap_mut().get_string(*k_idx).clone();
-                
-                let val_opt = ctx.get_heap_mut().web_state.active_cookies.get(&key).cloned();
+
+                let val_opt = ctx
+                    .get_heap_mut()
+                    .web_state
+                    .active_cookies
+                    .get(&key)
+                    .cloned();
                 if let Some(val) = val_opt {
                     let val_str = ctx.get_heap_mut().alloc(HeapData::String(val));
                     Ok(Value::String(val_str))

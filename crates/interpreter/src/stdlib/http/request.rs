@@ -1,7 +1,7 @@
 use crate::objek::Objek;
+use base64::{Engine as _, engine::general_purpose::STANDARD};
 use std::collections::HashMap;
 use std::time::Duration;
-use base64::{Engine as _, engine::general_purpose::STANDARD};
 
 pub(crate) struct HttpConfig {
     pub timeout: Option<Duration>,
@@ -10,10 +10,9 @@ pub(crate) struct HttpConfig {
 }
 
 pub(crate) fn apply_config<B>(
-    mut req: ureq::RequestBuilder<B>, 
-    config: &HashMap<String, Objek>
+    mut req: ureq::RequestBuilder<B>,
+    config: &HashMap<String, Objek>,
 ) -> (ureq::RequestBuilder<B>, HttpConfig) {
-    
     let mut http_config = HttpConfig {
         timeout: None,
         max_retries: 0,
@@ -30,7 +29,7 @@ pub(crate) fn apply_config<B>(
         match retry_obj {
             Objek::Angka(n) => {
                 http_config.max_retries = *n as u32;
-            },
+            }
             Objek::Kamus(k) => {
                 let map = k.borrow();
                 if let Some(Objek::Angka(m)) = map.get("maksimal") {
@@ -70,14 +69,16 @@ pub(crate) fn apply_config<B>(
     if let Some(Objek::String(token)) = config.get("bearer") {
         req = req.header("Authorization", format!("Bearer {}", token));
     }
-    
+
     if let Some(Objek::String(api_key)) = config.get("api_key") {
         req = req.header("x-api-key", api_key);
     }
-    
+
     if let Some(Objek::Kamus(auth_map)) = config.get("auth") {
         let map = auth_map.borrow();
-        if let (Some(Objek::String(user)), Some(Objek::String(pass))) = (map.get("username"), map.get("password")) {
+        if let (Some(Objek::String(user)), Some(Objek::String(pass))) =
+            (map.get("username"), map.get("password"))
+        {
             let combined = format!("{}:{}", user, pass);
             let encoded = STANDARD.encode(combined);
             req = req.header("Authorization", format!("Basic {}", encoded));
@@ -87,9 +88,12 @@ pub(crate) fn apply_config<B>(
     (req, http_config)
 }
 
-pub(crate) fn merge_configs(base: &HashMap<String, Objek>, req_config: &HashMap<String, Objek>) -> HashMap<String, Objek> {
+pub(crate) fn merge_configs(
+    base: &HashMap<String, Objek>,
+    req_config: &HashMap<String, Objek>,
+) -> HashMap<String, Objek> {
     let mut merged = base.clone();
-    
+
     for (k, v) in req_config.iter() {
         if let Some(base_v) = merged.get_mut(k) {
             match (base_v, v) {
@@ -98,8 +102,9 @@ pub(crate) fn merge_configs(base: &HashMap<String, Objek>, req_config: &HashMap<
                     for (ik, iv) in req_map.borrow().iter() {
                         new_inner.insert(ik.clone(), iv.clone());
                     }
-                    *merged.get_mut(k).unwrap() = Objek::Kamus(std::rc::Rc::new(std::cell::RefCell::new(new_inner)));
-                },
+                    *merged.get_mut(k).unwrap() =
+                        Objek::Kamus(std::rc::Rc::new(std::cell::RefCell::new(new_inner)));
+                }
                 _ => {
                     *merged.get_mut(k).unwrap() = v.clone();
                 }
@@ -108,6 +113,6 @@ pub(crate) fn merge_configs(base: &HashMap<String, Objek>, req_config: &HashMap<
             merged.insert(k.clone(), v.clone());
         }
     }
-    
+
     merged
 }

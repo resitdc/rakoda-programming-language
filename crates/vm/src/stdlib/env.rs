@@ -1,14 +1,14 @@
-use crate::machine::VM;
-use crate::value::{Value, FungsiBawaanVM};
-use std::collections::HashMap;
 use crate::heap::HeapData;
+use crate::machine::VM;
+use crate::value::{FungsiBawaanVM, Value};
+use std::collections::HashMap;
 use std::env;
 
 pub fn register(vm: &mut VM) {
     let mut module_dict = HashMap::new();
-    
+
     let _ = dotenvy::dotenv();
-    
+
     let get_func = FungsiBawaanVM {
         nama: "get".to_string(),
         func: |ctx, args| {
@@ -21,7 +21,7 @@ pub fn register(vm: &mut VM) {
                     Ok(val) => {
                         let new_idx = ctx.get_heap_mut().alloc(HeapData::String(val));
                         Ok(Value::String(new_idx))
-                    },
+                    }
                     Err(_) => Ok(Value::Kosong),
                 }
             } else {
@@ -36,7 +36,9 @@ pub fn register(vm: &mut VM) {
         nama: "set".to_string(),
         func: |ctx, args| {
             if args.len() != 2 {
-                return Err("Fungsi 'set' membutuhkan 2 argumen: nama_variabel dan nilai".to_string());
+                return Err(
+                    "Fungsi 'set' membutuhkan 2 argumen: nama_variabel dan nilai".to_string(),
+                );
             }
             if let (Value::String(k_idx), Value::String(v_idx)) = (&args[0], &args[1]) {
                 let key = ctx.get_heap_mut().get_string(*k_idx).clone();

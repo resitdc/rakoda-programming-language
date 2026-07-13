@@ -1,37 +1,41 @@
-use axum::{
-    routing::get,
-    Router,
-    response::Html,
-};
-use tokio::net::TcpListener;
-use std::path::PathBuf;
-use std::fs;
 use anyhow::Result;
+use axum::{Router, response::Html, routing::get};
+use interpreter::Interpreter;
 use lexer::Lexer;
 use parser::Parser as RplParser;
-use interpreter::Interpreter;
+use std::fs;
+use std::path::PathBuf;
+use tokio::net::TcpListener;
 
 pub async fn start_server(file: PathBuf, mut port: u16) -> Result<()> {
-    let app = Router::new()
-        .route("/", get({
+    let app = Router::new().route(
+        "/",
+        get({
             let file_path = file.clone();
-            move || async move {
-                handle_request(file_path).await
-            }
-        }));
+            move || async move { handle_request(file_path).await }
+        }),
+    );
 
     let listener = loop {
         let addr = format!("0.0.0.0:{}", port);
         match TcpListener::bind(&addr).await {
             Ok(l) => {
-                println!("\x1b[32mMenjalankan server web RPL pada http://{}\x1b[0m", addr);
+                println!(
+                    "\x1b[32mMenjalankan server web RPL pada http://{}\x1b[0m",
+                    addr
+                );
                 break l;
             }
             Err(e) if e.kind() == std::io::ErrorKind::AddrInUse => {
-                let nano = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().subsec_nanos();
+                let nano = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .subsec_nanos();
                 let mut next_port = 1024 + (nano % (65535 - 1024));
                 next_port = next_port - (next_port % 13);
-                if next_port < 1024 { next_port += 13; }
+                if next_port < 1024 {
+                    next_port += 13;
+                }
                 port = next_port as u16;
             }
             Err(e) => return Err(e.into()),
@@ -39,7 +43,7 @@ pub async fn start_server(file: PathBuf, mut port: u16) -> Result<()> {
     };
 
     axum::serve(listener, app).await?;
-    
+
     Ok(())
 }
 

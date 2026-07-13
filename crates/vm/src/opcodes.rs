@@ -2,9 +2,9 @@
 #[repr(u8)]
 pub enum OpCode {
     Return,
-    LoadConst,   // operand: 2 bytes (index to constant pool)
-    LoadVar,     // operand: 2 bytes (index to constant pool for variable name)
-    StoreVar,    // operand: 2 bytes (index to constant pool for variable name)
+    LoadConst, // operand: 2 bytes (index to constant pool)
+    LoadVar,   // operand: 2 bytes (index to constant pool for variable name)
+    StoreVar,  // operand: 2 bytes (index to constant pool for variable name)
     Add,
     Subtract,
     Multiply,
@@ -24,13 +24,13 @@ pub enum OpCode {
     Jump,        // operand: 2 bytes (jump offset)
     Call,        // operand: 1 byte (arg count)
     GetIndex,
-    MakeArray,   // operand: 2 bytes (element count)
-    MakeKamus,   // operand: 2 bytes (pair count)
-    SetupCatch,  // operand: 2 bytes (jump offset)
+    MakeArray,  // operand: 2 bytes (element count)
+    MakeKamus,  // operand: 2 bytes (pair count)
+    SetupCatch, // operand: 2 bytes (jump offset)
     PopCatch,
     Throw,
     Negate,
-    LoadModule,  // operand: 2 bytes (index to constant pool string for module path)
+    LoadModule, // operand: 2 bytes (index to constant pool string for module path)
     Pop,
 }
 

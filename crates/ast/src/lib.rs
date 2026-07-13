@@ -67,11 +67,9 @@ pub enum Expression {
     String(String, Lokasi),
     Boolean(bool, Lokasi),
     Kosong(Lokasi),
-    
-    Impor(String, Lokasi),
-    
 
-    
+    Impor(String, Lokasi),
+
     Prefix {
         operator: PrefixOperator,
         kanan: Box<Expression>,

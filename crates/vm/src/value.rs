@@ -1,5 +1,5 @@
-use std::fmt;
 use crate::heap::Heap;
+use std::fmt;
 
 pub trait VmContext {
     fn get_heap_mut(&mut self) -> &mut Heap;
@@ -60,14 +60,24 @@ impl Value {
             Value::String(idx) => heap.get_string(*idx).clone(),
             Value::Boolean(val) => (if *val { "benar" } else { "salah" }).to_string(),
             Value::Fungsi(idx, _) => format!("<fungsi {}>", heap.get_fungsi(*idx).nama),
-            Value::FungsiBawaan(idx) => format!("<fungsi bawaan {}>", heap.get_fungsi_bawaan(*idx).nama),
+            Value::FungsiBawaan(idx) => {
+                format!("<fungsi bawaan {}>", heap.get_fungsi_bawaan(*idx).nama)
+            }
             Value::Modul(_) => "<modul>".to_string(),
             Value::Array(idx) => {
-                let items: Vec<String> = heap.get_array(*idx).iter().map(|v| v.to_string(heap)).collect();
+                let items: Vec<String> = heap
+                    .get_array(*idx)
+                    .iter()
+                    .map(|v| v.to_string(heap))
+                    .collect();
                 format!("[{}]", items.join(", "))
             }
             Value::Kamus(idx) => {
-                let items: Vec<String> = heap.get_kamus(*idx).iter().map(|(k, v)| format!("{}: {}", k, v.to_string(heap))).collect();
+                let items: Vec<String> = heap
+                    .get_kamus(*idx)
+                    .iter()
+                    .map(|(k, v)| format!("{}: {}", k, v.to_string(heap)))
+                    .collect();
                 format!("{{{}}}", items.join(", "))
             }
             Value::Kosong => "kosong".to_string(),
@@ -113,8 +123,6 @@ pub fn deep_copy_value(val: &Value, source: &Heap, dest: &mut Heap) -> Value {
             let new_idx = dest.alloc(crate::heap::HeapData::FungsiBawaan(f));
             Value::FungsiBawaan(new_idx)
         }
-        Value::Modul(idx) => {
-            Value::Modul(*idx)
-        }
+        Value::Modul(idx) => Value::Modul(*idx),
     }
 }

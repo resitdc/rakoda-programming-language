@@ -1,11 +1,11 @@
-use crate::machine::VM;
-use crate::value::{Value, FungsiBawaanVM};
-use std::collections::HashMap;
 use crate::heap::HeapData;
+use crate::machine::VM;
+use crate::value::{FungsiBawaanVM, Value};
+use std::collections::HashMap;
 
 pub fn register(vm: &mut VM) {
     let mut module_dict = HashMap::new();
-    
+
     let get_func = FungsiBawaanVM {
         nama: "get".to_string(),
         func: |ctx, args| {
@@ -17,12 +17,15 @@ pub fn register(vm: &mut VM) {
                 match ureq::get(&url).call() {
                     Ok(mut response) => {
                         let mut resp_dict = HashMap::new();
-                        resp_dict.insert("status".to_string(), Value::Angka(response.status().as_u16() as f64));
-                        
+                        resp_dict.insert(
+                            "status".to_string(),
+                            Value::Angka(response.status().as_u16() as f64),
+                        );
+
                         let body = response.body_mut().read_to_string().unwrap_or_default();
                         let body_idx = ctx.get_heap_mut().alloc(HeapData::String(body));
                         resp_dict.insert("body".to_string(), Value::String(body_idx));
-                        
+
                         let dict_idx = ctx.get_heap_mut().alloc(HeapData::Kamus(resp_dict));
                         Ok(Value::Kamus(dict_idx))
                     }

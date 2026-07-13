@@ -41,17 +41,17 @@ pub enum Token {
     Bagi,   // /
     Mod,    // %
 
-    Assign,      // =
-    TitikKoma,   // ;
-    Koma,        // ,
-    TitikDua,    // :
-    Titik,       // .
-    KurungBuka,  // (
-    KurungTutup, // )
-    KurungSikuBuka, // [
+    Assign,          // =
+    TitikKoma,       // ;
+    Koma,            // ,
+    TitikDua,        // :
+    Titik,           // .
+    KurungBuka,      // (
+    KurungTutup,     // )
+    KurungSikuBuka,  // [
     KurungSikuTutup, // ]
-    KurawalBuka, // {
-    KurawalTutup,// }
+    KurawalBuka,     // {
+    KurawalTutup,    // }
 
     Identifier(String),
     String(String),
@@ -74,11 +74,11 @@ impl Token {
             Token::Fungsi => "kata 'fungsi'".to_string(),
             Token::Kembalikan => "kata 'kembalikan'".to_string(),
             Token::Impor => "kata 'impor' atau 'gabung'".to_string(),
-            
+
             Token::Identifier(s) => format!("nama (variabel/fungsi) '{}'", s),
             Token::Angka(f) => format!("angka {}", f),
             Token::String(s) => format!("teks \"{}\"", s),
-            
+
             Token::Assign => "tanda sama dengan '='".to_string(),
             Token::SamaDengan => "tanda cek kesamaan".to_string(),
             Token::TidakSamaDengan => "tanda tidak sama dengan".to_string(),
@@ -88,7 +88,7 @@ impl Token {
             Token::Kurang => "tanda kurang '-'".to_string(),
             Token::Kali => "tanda kali '*'".to_string(),
             Token::Bagi => "tanda bagi '/'".to_string(),
-            
+
             Token::KurungBuka => "kurung buka '('".to_string(),
             Token::KurungTutup => "kurung tutup ')'".to_string(),
             Token::KurawalBuka => "kurawal buka '{' atau 'maka'".to_string(),
@@ -96,7 +96,7 @@ impl Token {
             Token::TitikKoma => "titik koma ';'".to_string(),
             Token::Koma => "koma ','".to_string(),
             Token::Titik => "titik '.'".to_string(),
-            
+
             Token::EOF => "akhir file".to_string(),
             Token::Coba => "'coba'".to_string(),
             Token::Tangkap => "'tangkap'".to_string(),

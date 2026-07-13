@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-use crate::value::{Value, FungsiBawaanVM};
 use crate::heap::HeapData;
+use crate::value::{FungsiBawaanVM, Value};
+use std::collections::HashMap;
 
 pub fn register(vm: &mut crate::machine::VM) {
     let mut methods = HashMap::new();

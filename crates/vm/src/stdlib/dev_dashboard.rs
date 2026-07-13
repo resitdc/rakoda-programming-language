@@ -1,8 +1,7 @@
+use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::sync::OnceLock;
-use chrono::Local;
-use serde::Serialize;
 use tokio::sync::mpsc;
 
 // Global sender registry for WebSocket connections
@@ -15,9 +14,7 @@ pub fn get_ws_broadcast() -> &'static Mutex<Vec<mpsc::UnboundedSender<String>>> 
 // Broadcast helper
 pub fn broadcast_message(msg: String) {
     if let Ok(mut senders) = get_ws_broadcast().lock() {
-        senders.retain(|tx| {
-            tx.send(msg.clone()).is_ok()
-        });
+        senders.retain(|tx| tx.send(msg.clone()).is_ok());
     }
 }
 
@@ -75,6 +72,12 @@ pub struct DevTelemetry {
     pub memory_peak_kb: usize,
 }
 
+impl Default for DevTelemetry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DevTelemetry {
     pub fn new() -> Self {
         Self {
@@ -94,49 +97,58 @@ pub fn get_telemetry() -> &'static Mutex<DevTelemetry> {
 
 // Telemetry injection APIs
 pub fn record_request(req: RequestTelemetry) {
-    if !is_dev_mode() { return; }
-    
+    if !is_dev_mode() {
+        return;
+    }
+
     let mut tel = get_telemetry().lock().unwrap();
     if req.memory_used_kb > tel.memory_peak_kb {
         tel.memory_peak_kb = req.memory_used_kb;
     }
-    
+
     let req_clone = req.clone();
     tel.requests.push(req);
-    
+
     // Broadcast event
     let payload = serde_json::json!({
         "event": "new_request",
         "data": req_clone
-    }).to_string();
+    })
+    .to_string();
     broadcast_message(payload);
 }
 
 pub fn record_db_query(query: DbQueryTelemetry) {
-    if !is_dev_mode() { return; }
-    
+    if !is_dev_mode() {
+        return;
+    }
+
     let mut tel = get_telemetry().lock().unwrap();
     let query_clone = query.clone();
     tel.db_queries.push(query);
-    
+
     let payload = serde_json::json!({
         "event": "new_query",
         "data": query_clone
-    }).to_string();
+    })
+    .to_string();
     broadcast_message(payload);
 }
 
 pub fn record_log(log_item: LogTelemetry) {
-    if !is_dev_mode() { return; }
-    
+    if !is_dev_mode() {
+        return;
+    }
+
     let mut tel = get_telemetry().lock().unwrap();
     let log_clone = log_item.clone();
     tel.logs.push(log_item);
-    
+
     let payload = serde_json::json!({
         "event": "new_log",
         "data": log_clone
-    }).to_string();
+    })
+    .to_string();
     broadcast_message(payload);
 }
 

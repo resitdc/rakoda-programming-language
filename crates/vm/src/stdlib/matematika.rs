@@ -1,20 +1,19 @@
+use crate::heap::HeapData;
 use crate::machine::VM;
-use crate::value::{Value, FungsiBawaanVM};
-use std::collections::HashMap;
-use crate::heap::{HeapData};
+use crate::value::{FungsiBawaanVM, Value};
 use rand::Rng;
+use std::collections::HashMap;
 
 pub fn register(vm: &mut VM) {
     let mut module_dict = HashMap::new();
-    
+
     let tambah_func = FungsiBawaanVM {
         nama: "tambah".to_string(),
         func: |_heap, args| {
-            if args.len() == 2 {
-                if let (Value::Angka(a), Value::Angka(b)) = (&args[0], &args[1]) {
+            if args.len() == 2
+                && let (Value::Angka(a), Value::Angka(b)) = (&args[0], &args[1]) {
                     return Ok(Value::Angka(a + b));
                 }
-            }
             Ok(Value::Kosong)
         },
     };
@@ -24,11 +23,10 @@ pub fn register(vm: &mut VM) {
     let kurang_func = FungsiBawaanVM {
         nama: "kurang".to_string(),
         func: |_heap, args| {
-            if args.len() == 2 {
-                if let (Value::Angka(a), Value::Angka(b)) = (&args[0], &args[1]) {
+            if args.len() == 2
+                && let (Value::Angka(a), Value::Angka(b)) = (&args[0], &args[1]) {
                     return Ok(Value::Angka(a - b));
                 }
-            }
             Ok(Value::Kosong)
         },
     };
@@ -38,11 +36,10 @@ pub fn register(vm: &mut VM) {
     let kali_func = FungsiBawaanVM {
         nama: "kali".to_string(),
         func: |_heap, args| {
-            if args.len() == 2 {
-                if let (Value::Angka(a), Value::Angka(b)) = (&args[0], &args[1]) {
+            if args.len() == 2
+                && let (Value::Angka(a), Value::Angka(b)) = (&args[0], &args[1]) {
                     return Ok(Value::Angka(a * b));
                 }
-            }
             Ok(Value::Kosong)
         },
     };
@@ -52,13 +49,11 @@ pub fn register(vm: &mut VM) {
     let bagi_func = FungsiBawaanVM {
         nama: "bagi".to_string(),
         func: |_heap, args| {
-            if args.len() == 2 {
-                if let (Value::Angka(a), Value::Angka(b)) = (&args[0], &args[1]) {
-                    if *b != 0.0 {
+            if args.len() == 2
+                && let (Value::Angka(a), Value::Angka(b)) = (&args[0], &args[1])
+                    && *b != 0.0 {
                         return Ok(Value::Angka(a / b));
                     }
-                }
-            }
             Ok(Value::Kosong)
         },
     };
@@ -68,11 +63,10 @@ pub fn register(vm: &mut VM) {
     let pangkat_func = FungsiBawaanVM {
         nama: "pangkat".to_string(),
         func: |_heap, args| {
-            if args.len() == 2 {
-                if let (Value::Angka(a), Value::Angka(b)) = (&args[0], &args[1]) {
+            if args.len() == 2
+                && let (Value::Angka(a), Value::Angka(b)) = (&args[0], &args[1]) {
                     return Ok(Value::Angka(a.powf(*b)));
                 }
-            }
             Ok(Value::Kosong)
         },
     };
@@ -83,14 +77,12 @@ pub fn register(vm: &mut VM) {
         nama: "acak".to_string(),
         func: |_heap, args| {
             let mut rng = rand::thread_rng();
-            if args.len() == 2 {
-                if let (Value::Angka(min), Value::Angka(max)) = (&args[0], &args[1]) {
-                    if max > min {
+            if args.len() == 2
+                && let (Value::Angka(min), Value::Angka(max)) = (&args[0], &args[1])
+                    && max > min {
                         let acak: f64 = rng.gen_range(*min..*max);
                         return Ok(Value::Angka(acak));
                     }
-                }
-            }
             Ok(Value::Angka(rng.gen_range(0.0..1.0)))
         },
     };
@@ -100,11 +92,10 @@ pub fn register(vm: &mut VM) {
     let bulat_func = FungsiBawaanVM {
         nama: "bulatkan".to_string(),
         func: |_heap, args| {
-            if args.len() == 1 {
-                if let Value::Angka(n) = args[0] {
+            if args.len() == 1
+                && let Value::Angka(n) = args[0] {
                     return Ok(Value::Angka(n.round()));
                 }
-            }
             Ok(Value::Kosong)
         },
     };
@@ -114,13 +105,11 @@ pub fn register(vm: &mut VM) {
     let akar_func = FungsiBawaanVM {
         nama: "akar".to_string(),
         func: |_heap, args| {
-            if args.len() == 1 {
-                if let Value::Angka(n) = args[0] {
-                    if n >= 0.0 {
+            if args.len() == 1
+                && let Value::Angka(n) = args[0]
+                    && n >= 0.0 {
                         return Ok(Value::Angka(n.sqrt()));
                     }
-                }
-            }
             Ok(Value::Kosong)
         },
     };
@@ -130,17 +119,16 @@ pub fn register(vm: &mut VM) {
     let kuadrat_func = FungsiBawaanVM {
         nama: "kuadrat".to_string(),
         func: |_heap, args| {
-            if args.len() == 1 {
-                if let Value::Angka(n) = args[0] {
+            if args.len() == 1
+                && let Value::Angka(n) = args[0] {
                     return Ok(Value::Angka(n * n));
                 }
-            }
             Ok(Value::Kosong)
         },
     };
     let kuadrat_idx = vm.heap.alloc(HeapData::FungsiBawaan(kuadrat_func));
     module_dict.insert("kuadrat".to_string(), Value::FungsiBawaan(kuadrat_idx));
-    
+
     let dict_idx = vm.heap.alloc(HeapData::Kamus(module_dict));
     vm.set_global("matematika".to_string(), Value::Kamus(dict_idx));
 }

@@ -41,46 +41,70 @@ pub enum RplError {
         lokasi: Lokasi,
         saran: Option<String>,
     },
-    
+
     #[error("Error internal: {pesan}")]
-    Internal {
-        pesan: String,
-    },
+    Internal { pesan: String },
 
     #[error("Error runtime: {pesan}")]
-    Runtime {
-        pesan: String,
-        lokasi: Lokasi,
-    },
+    Runtime { pesan: String, lokasi: Lokasi },
 }
 
 impl RplError {
     pub fn tampilkan(&self, source_code: &str) -> String {
         match self {
-            RplError::Sintaks { pesan, lokasi, saran } => {
-                format_error(pesan, lokasi, saran, source_code)
-            }
-            RplError::VariabelTidakDitemukan { nama, lokasi, saran } => {
-                format_error(&format!("Variabel '{}' belum dibuat.", nama), lokasi, saran, source_code)
-            }
-            RplError::FungsiTidakDitemukan { nama, lokasi, saran } => {
-                format_error(&format!("Fungsi '{}' tidak ditemukan.", nama), lokasi, saran, source_code)
-            }
-            RplError::TipeData { pesan, lokasi, saran } => {
-                format_error(&format!("Tipe data tidak cocok: {}", pesan), lokasi, saran, source_code)
-            }
+            RplError::Sintaks {
+                pesan,
+                lokasi,
+                saran,
+            } => format_error(pesan, lokasi, saran, source_code),
+            RplError::VariabelTidakDitemukan {
+                nama,
+                lokasi,
+                saran,
+            } => format_error(
+                &format!("Variabel '{}' belum dibuat.", nama),
+                lokasi,
+                saran,
+                source_code,
+            ),
+            RplError::FungsiTidakDitemukan {
+                nama,
+                lokasi,
+                saran,
+            } => format_error(
+                &format!("Fungsi '{}' tidak ditemukan.", nama),
+                lokasi,
+                saran,
+                source_code,
+            ),
+            RplError::TipeData {
+                pesan,
+                lokasi,
+                saran,
+            } => format_error(
+                &format!("Tipe data tidak cocok: {}", pesan),
+                lokasi,
+                saran,
+                source_code,
+            ),
             RplError::Internal { pesan } => {
                 format!("\x1b[33mKesalahan sistem internal: {}\x1b[0m", pesan)
             }
-            RplError::Runtime { pesan, lokasi } => {
-                format_error(&format!("Runtime Error: {}", pesan), lokasi, &None, source_code)
-            }
+            RplError::Runtime { pesan, lokasi } => format_error(
+                &format!("Runtime Error: {}", pesan),
+                lokasi,
+                &None,
+                source_code,
+            ),
         }
     }
 }
 
 fn format_error(pesan: &str, lokasi: &Lokasi, saran: &Option<String>, source_code: &str) -> String {
-    let baris_teks = source_code.lines().nth(lokasi.baris.saturating_sub(1)).unwrap_or("");
+    let baris_teks = source_code
+        .lines()
+        .nth(lokasi.baris.saturating_sub(1))
+        .unwrap_or("");
     let pointer = " ".repeat(lokasi.kolom.saturating_sub(1)) + "^";
 
     let mut output = format!(

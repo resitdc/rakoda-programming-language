@@ -1,9 +1,9 @@
-use std::fmt;
-use std::rc::Rc;
+use crate::lingkungan::Lingkungan;
+use ast::Statement;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use ast::Statement;
-use crate::lingkungan::Lingkungan;
+use std::fmt;
+use std::rc::Rc;
 
 #[derive(Clone)]
 pub enum Objek {
@@ -40,9 +40,9 @@ impl Objek {
                     s.push_str(&inner_spaces);
                     s.push_str(&e.to_string_pretty(indent + 2, false));
                     if i < borrow.len() - 1 {
-                        s.push_str(",");
+                        s.push(',');
                     }
-                    s.push_str("\n");
+                    s.push('\n');
                 }
                 s.push_str(&format!("{}]", spaces));
                 s
@@ -64,9 +64,9 @@ impl Objek {
                     }
                     s.push_str(&v.to_string_pretty(indent + 2, false));
                     if i < borrow.len() - 1 {
-                        s.push_str(",");
+                        s.push(',');
                     }
-                    s.push_str("\n");
+                    s.push('\n');
                 }
                 s.push_str(&format!("{}}}", spaces));
                 s
@@ -123,7 +123,11 @@ impl fmt::Display for Objek {
                 write!(f, "[{}]", items.join(", "))
             }
             Objek::Kamus(pasangan) => {
-                let mut items: Vec<String> = pasangan.borrow().iter().map(|(k, v)| format!("{}: {}", k, v)).collect();
+                let mut items: Vec<String> = pasangan
+                    .borrow()
+                    .iter()
+                    .map(|(k, v)| format!("{}: {}", k, v))
+                    .collect();
                 items.sort(); // Sort to ensure consistent output format
                 write!(f, "{{{}}}", items.join(", "))
             }

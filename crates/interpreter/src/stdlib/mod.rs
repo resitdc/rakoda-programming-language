@@ -1,17 +1,17 @@
 pub mod core;
+pub mod env;
+pub mod file;
+pub mod http;
+pub mod json;
+pub mod kripto;
+pub mod list;
 pub mod matematika;
 pub mod string;
-pub mod list;
-pub mod file;
 pub mod waktu;
-pub mod json;
-pub mod http;
-pub mod env;
-pub mod kripto;
 
-use std::rc::Rc;
-use std::cell::RefCell;
 use crate::lingkungan::Lingkungan;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub fn register_all(env: &Rc<RefCell<Lingkungan>>) {
     core::register(env);

@@ -1,11 +1,11 @@
-use crate::machine::VM;
-use crate::value::{Value, FungsiBawaanVM};
-use std::collections::HashMap;
 use crate::heap::HeapData;
+use crate::machine::VM;
+use crate::value::{FungsiBawaanVM, Value};
+use std::collections::HashMap;
 
 pub fn register(vm: &mut VM) {
     let mut module_dict = HashMap::new();
-    
+
     let tambah_func = FungsiBawaanVM {
         nama: "tambah".to_string(),
         func: |ctx, args| {
@@ -37,7 +37,11 @@ pub fn register(vm: &mut VM) {
                     let val = arr.remove(i);
                     Ok(val)
                 } else {
-                    Err(format!("Indeks {} di luar batas array (panjang {})", i, arr.len()))
+                    Err(format!(
+                        "Indeks {} di luar batas array (panjang {})",
+                        i,
+                        arr.len()
+                    ))
                 }
             } else {
                 Err("Argumen pertama harus array dan kedua harus angka".to_string())
@@ -76,7 +80,11 @@ pub fn register(vm: &mut VM) {
                 if i < arr.len() {
                     Ok(arr[i])
                 } else {
-                    Err(format!("Indeks {} di luar batas array (panjang {})", i, arr.len()))
+                    Err(format!(
+                        "Indeks {} di luar batas array (panjang {})",
+                        i,
+                        arr.len()
+                    ))
                 }
             } else {
                 Err("Argumen harus berupa array dan angka".to_string())

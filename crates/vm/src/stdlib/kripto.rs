@@ -1,8 +1,8 @@
 use crate::machine::VM;
-use crate::value::{Value, FungsiBawaanVM, VmContext};
+use crate::value::{FungsiBawaanVM, Value, VmContext};
+use md5::{Digest as Md5Digest, Md5};
+use sha2::Sha256;
 use std::collections::HashMap;
-use md5::{Md5, Digest as Md5Digest};
-use sha2::{Sha256, Digest as Sha256Digest};
 
 pub fn register(vm: &mut VM) {
     let mut module_dict = HashMap::new();
@@ -23,9 +23,11 @@ pub fn register(vm: &mut VM) {
             let result = hasher.finalize();
             let hex_string = format!("{:x}", result);
 
-            let str_idx = vm.get_heap_mut().alloc(crate::heap::HeapData::String(hex_string));
+            let str_idx = vm
+                .get_heap_mut()
+                .alloc(crate::heap::HeapData::String(hex_string));
             Ok(Value::String(str_idx))
-        }
+        },
     };
 
     let sha256_func = FungsiBawaanVM {
@@ -44,15 +46,19 @@ pub fn register(vm: &mut VM) {
             let result = hasher.finalize();
             let hex_string = format!("{:x}", result);
 
-            let str_idx = vm.get_heap_mut().alloc(crate::heap::HeapData::String(hex_string));
+            let str_idx = vm
+                .get_heap_mut()
+                .alloc(crate::heap::HeapData::String(hex_string));
             Ok(Value::String(str_idx))
-        }
+        },
     };
 
     let md5_idx = vm.heap.alloc(crate::heap::HeapData::FungsiBawaan(md5_func));
     module_dict.insert("md5".to_string(), Value::FungsiBawaan(md5_idx));
 
-    let sha256_idx = vm.heap.alloc(crate::heap::HeapData::FungsiBawaan(sha256_func));
+    let sha256_idx = vm
+        .heap
+        .alloc(crate::heap::HeapData::FungsiBawaan(sha256_func));
     module_dict.insert("sha256".to_string(), Value::FungsiBawaan(sha256_idx));
 
     let module_idx = vm.heap.alloc(crate::heap::HeapData::Modul(module_dict));

@@ -1,6 +1,6 @@
 pub mod token;
-use token::{SpannedToken, Token};
 use errors::{Lokasi, RplError};
+use token::{SpannedToken, Token};
 
 pub struct Lexer {
     chars: Vec<char>,
@@ -66,15 +66,26 @@ impl Lexer {
             let lokasi_awal = Lokasi::new(self.baris, self.kolom);
 
             let token = match c {
-                '+' => { self.advance(); Token::Tambah }
-                '-' => { self.advance(); Token::Kurang }
-                '*' => { self.advance(); Token::Kali }
+                '+' => {
+                    self.advance();
+                    Token::Tambah
+                }
+                '-' => {
+                    self.advance();
+                    Token::Kurang
+                }
+                '*' => {
+                    self.advance();
+                    Token::Kali
+                }
                 '/' => {
                     if self.peek_char() == Some('/') {
                         self.advance();
                         self.advance();
                         while let Some(ch) = self.current_char() {
-                            if ch == '\n' { break; }
+                            if ch == '\n' {
+                                break;
+                            }
                             self.advance();
                         }
                         continue;
@@ -83,7 +94,10 @@ impl Lexer {
                         Token::Bagi
                     }
                 }
-                '%' => { self.advance(); Token::Mod }
+                '%' => {
+                    self.advance();
+                    Token::Mod
+                }
                 '=' => {
                     self.advance();
                     if self.current_char() == Some('=') {
@@ -146,28 +160,58 @@ impl Lexer {
                         });
                     }
                 }
-                ';' => { self.advance(); Token::TitikKoma }
-                ',' => { self.advance(); Token::Koma }
-                ':' => { self.advance(); Token::TitikDua }
-                '.' => { self.advance(); Token::Titik }
-                '(' => { self.advance(); Token::KurungBuka }
-                ')' => { self.advance(); Token::KurungTutup }
-                '[' => { self.advance(); Token::KurungSikuBuka }
-                ']' => { self.advance(); Token::KurungSikuTutup }
-                '{' => { 
-                    self.advance(); 
-                    self.brace_count += 1;
-                    Token::KurawalBuka 
+                ';' => {
+                    self.advance();
+                    Token::TitikKoma
                 }
-                '}' => { 
-                    self.advance(); 
+                ',' => {
+                    self.advance();
+                    Token::Koma
+                }
+                ':' => {
+                    self.advance();
+                    Token::TitikDua
+                }
+                '.' => {
+                    self.advance();
+                    Token::Titik
+                }
+                '(' => {
+                    self.advance();
+                    Token::KurungBuka
+                }
+                ')' => {
+                    self.advance();
+                    Token::KurungTutup
+                }
+                '[' => {
+                    self.advance();
+                    Token::KurungSikuBuka
+                }
+                ']' => {
+                    self.advance();
+                    Token::KurungSikuTutup
+                }
+                '{' => {
+                    self.advance();
+                    self.brace_count += 1;
+                    Token::KurawalBuka
+                }
+                '}' => {
+                    self.advance();
                     if self.brace_count > 0 {
                         self.brace_count -= 1;
-                        Token::KurawalTutup 
+                        Token::KurawalTutup
                     } else if let Some(old_count) = self.template_stack.pop() {
                         self.brace_count = old_count;
-                        tokens.push(SpannedToken { token: Token::KurungTutup, lokasi: lokasi_awal.clone() });
-                        tokens.push(SpannedToken { token: Token::Tambah, lokasi: lokasi_awal.clone() });
+                        tokens.push(SpannedToken {
+                            token: Token::KurungTutup,
+                            lokasi: lokasi_awal,
+                        });
+                        tokens.push(SpannedToken {
+                            token: Token::Tambah,
+                            lokasi: lokasi_awal,
+                        });
                         let tks = self.read_template_string(lokasi_awal)?;
                         tokens.extend(tks);
                         continue;
@@ -280,20 +324,20 @@ impl Lexer {
                 self.advance();
                 if self.current_char() == Some('{') {
                     self.advance(); // lewati '{'
-                    
+
                     tokens.push(SpannedToken {
                         token: Token::String(string_val),
-                        lokasi: lokasi_awal.clone(),
+                        lokasi: lokasi_awal,
                     });
                     tokens.push(SpannedToken {
                         token: Token::Tambah,
-                        lokasi: lokasi_awal.clone(),
+                        lokasi: lokasi_awal,
                     });
                     tokens.push(SpannedToken {
                         token: Token::KurungBuka,
                         lokasi: lokasi_awal,
                     });
-                    
+
                     self.template_stack.push(self.brace_count);
                     self.brace_count = 0;
                     return Ok(tokens);
@@ -423,7 +467,7 @@ impl Lexer {
                         break;
                     }
                 }
-                
+
                 if third_word == "dengan" {
                     return Token::TidakSamaDengan;
                 } else {
@@ -495,7 +539,7 @@ mod tests {
         let input = "jika x lebih dari 10 atau x tidak sama dengan y";
         let mut lexer = Lexer::new(input);
         let tokens = lexer.tokenize().unwrap();
-        
+
         assert_eq!(tokens[0].token, Token::Jika);
         assert_eq!(tokens[1].token, Token::Identifier("x".to_string()));
         assert_eq!(tokens[2].token, Token::LebihDari);
@@ -512,7 +556,7 @@ mod tests {
         let input = "jika tidak { tampilkan 1 }";
         let mut lexer = Lexer::new(input);
         let tokens = lexer.tokenize().unwrap();
-        
+
         assert_eq!(tokens[0].token, Token::JikaTidak);
         assert_eq!(tokens[1].token, Token::KurawalBuka);
         assert_eq!(tokens[2].token, Token::Tampilkan);

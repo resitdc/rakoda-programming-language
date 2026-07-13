@@ -1,6 +1,6 @@
-use crate::machine::VM;
-use crate::value::{Value, FungsiBawaanVM};
 use crate::heap::HeapData;
+use crate::machine::VM;
+use crate::value::{FungsiBawaanVM, Value};
 
 pub fn register(vm: &mut VM) {
     let angka_func = FungsiBawaanVM {
@@ -23,7 +23,7 @@ pub fn register(vm: &mut VM) {
             }
         },
     };
-    
+
     let angka_idx = vm.heap.alloc(HeapData::FungsiBawaan(angka_func));
     vm.set_global("angka".to_string(), Value::FungsiBawaan(angka_idx));
 
@@ -38,7 +38,7 @@ pub fn register(vm: &mut VM) {
             Ok(Value::String(idx))
         },
     };
-    
+
     let teks_idx = vm.heap.alloc(HeapData::FungsiBawaan(teks_func));
     vm.set_global("teks".to_string(), Value::FungsiBawaan(teks_idx));
 }

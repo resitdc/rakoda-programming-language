@@ -1,9 +1,12 @@
-use std::collections::HashMap;
-use crate::value::{Value, FungsiVM, FungsiBawaanVM};
-use rusqlite::Connection as SqliteConnection;
+use crate::value::{FungsiBawaanVM, FungsiVM, Value};
 use mysql::Conn as MysqlConnection;
 use postgres::Client as PostgresClient;
+use rusqlite::Connection as SqliteConnection;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+
+pub type SessionMap =
+    Arc<Mutex<HashMap<String, (Option<std::time::Instant>, usize)>>>;
 
 pub enum DatabaseConnection {
     Sqlite(SqliteConnection),
@@ -28,22 +31,13 @@ pub enum HeapData {
     Free(usize), // Next free index
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct WebConfig {
     pub kompresi: bool,
     pub rate_limit: Option<u32>,
     pub proxies: HashMap<String, String>,
 }
 
-impl Default for WebConfig {
-    fn default() -> Self {
-        Self {
-            kompresi: false,
-            rate_limit: None,
-            proxies: HashMap::new(),
-        }
-    }
-}
 
 #[derive(Clone)]
 pub struct WebState {
@@ -51,8 +45,9 @@ pub struct WebState {
     // Value represents Kamus data in memory but wait, Value itself is an index.
     // So session data needs to be stored somewhere. We can store it as a Kamus inside WebState itself instead of in the VM Heap?
     // Actually, storing it in the VM Heap is fine, but since we are modifying WebState across requests, we can just store `HashMap<String, usize>` where usize is the Kamus Heap index.
-    pub sessions: std::sync::Arc<std::sync::Mutex<HashMap<String, (Option<std::time::Instant>, usize)>>>,
-    
+    pub sessions:
+        SessionMap,
+
     pub active_session_id: Option<String>,
     pub active_cookies: HashMap<String, String>,
     pub cookies_to_set: Vec<String>,
@@ -121,17 +116,18 @@ impl Heap {
 
     pub fn alloc(&mut self, data: HeapData) -> usize {
         self.allocated_count += 1;
-        
+
         if let Some(idx) = self.free_list_head
-            && let HeapData::Free(next) = self.objects[idx].data {
-                self.free_list_head = if next == usize::MAX { None } else { Some(next) };
-                self.objects[idx] = HeapObject {
-                    is_marked: false,
-                    data,
-                };
-                return idx;
-            }
-        
+            && let HeapData::Free(next) = self.objects[idx].data
+        {
+            self.free_list_head = if next == usize::MAX { None } else { Some(next) };
+            self.objects[idx] = HeapObject {
+                is_marked: false,
+                data,
+            };
+            return idx;
+        }
+
         let idx = self.objects.len();
         self.objects.push(HeapObject {
             is_marked: false,
@@ -211,56 +207,92 @@ impl Heap {
         }
     }
 
-
-
     pub fn mark(&mut self, idx: usize) {
-        if self.objects[idx].is_marked { return; }
+        if self.objects[idx].is_marked {
+            return;
+        }
         self.objects[idx].is_marked = true;
 
         // Recursively mark children
         let mut worklist = vec![idx];
-        
+
         while let Some(current) = worklist.pop() {
             let children = match &self.objects[current].data {
                 HeapData::Array(arr) => {
                     let mut c = Vec::new();
                     for val in arr {
-                        if let Value::Array(i) = val { c.push(*i); }
-                        if let Value::Kamus(i) = val { c.push(*i); }
-                        if let Value::String(i) = val { c.push(*i); }
-                        if let Value::Fungsi(i, _) = val { c.push(*i); }
-                        if let Value::FungsiBawaan(i) = val { c.push(*i); }
-                        if let Value::Modul(i) = val { c.push(*i); }
+                        if let Value::Array(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Kamus(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::String(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Fungsi(i, _) = val {
+                            c.push(*i);
+                        }
+                        if let Value::FungsiBawaan(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Modul(i) = val {
+                            c.push(*i);
+                        }
                     }
                     c
-                },
+                }
                 HeapData::Kamus(k) | HeapData::Modul(k) => {
                     let mut c = Vec::new();
                     for val in k.values() {
-                        if let Value::Array(i) = val { c.push(*i); }
-                        if let Value::Kamus(i) = val { c.push(*i); }
-                        if let Value::String(i) = val { c.push(*i); }
-                        if let Value::Fungsi(i, _) = val { c.push(*i); }
-                        if let Value::FungsiBawaan(i) = val { c.push(*i); }
-                        if let Value::Modul(i) = val { c.push(*i); }
+                        if let Value::Array(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Kamus(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::String(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Fungsi(i, _) = val {
+                            c.push(*i);
+                        }
+                        if let Value::FungsiBawaan(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Modul(i) = val {
+                            c.push(*i);
+                        }
                     }
                     c
-                },
+                }
                 HeapData::Fungsi(f) => {
                     let mut c = Vec::new();
                     for val in &f.chunk.constants {
-                        if let Value::Array(i) = val { c.push(*i); }
-                        if let Value::Kamus(i) = val { c.push(*i); }
-                        if let Value::String(i) = val { c.push(*i); }
-                        if let Value::Fungsi(i, _) = val { c.push(*i); }
-                        if let Value::FungsiBawaan(i) = val { c.push(*i); }
-                        if let Value::Modul(i) = val { c.push(*i); }
+                        if let Value::Array(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Kamus(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::String(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Fungsi(i, _) = val {
+                            c.push(*i);
+                        }
+                        if let Value::FungsiBawaan(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Modul(i) = val {
+                            c.push(*i);
+                        }
                     }
                     c
-                },
+                }
                 _ => Vec::new(),
             };
-            
+
             for child in children {
                 if !self.objects[child].is_marked {
                     self.objects[child].is_marked = true;
@@ -269,18 +301,18 @@ impl Heap {
             }
         }
     }
-    
+
     pub fn mark_sessions_and_cache(&mut self) {
         let mut session_indices = Vec::new();
         if let Ok(sessions) = self.web_state.sessions.lock() {
-            for (_, (_, idx)) in sessions.iter() {
+            for (_, idx) in sessions.values() {
                 session_indices.push(*idx);
             }
         }
         for idx in session_indices {
             self.mark(idx);
         }
-        
+
         // Templates code are just strings, no heap indices to mark.
     }
 
