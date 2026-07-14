@@ -1,0 +1,93 @@
+// Response helper untuk standardisasi format API
+
+buat sukses = fungsi(data, pesan)
+    jika pesan adalah kosong maka
+        pesan = "Operasi berhasil"
+    selesai
+    
+    kembalikan {
+        "status": 200,
+        "json": {
+            "sukses": benar,
+            "pesan": pesan,
+            "data": data
+        }
+    }
+selesai
+
+buat dibuat = fungsi(data, pesan)
+    jika pesan adalah kosong maka
+        pesan = "Data berhasil dibuat"
+    selesai
+    
+    kembalikan {
+        "status": 201,
+        "json": {
+            "sukses": benar,
+            "pesan": pesan,
+            "data": data
+        }
+    }
+selesai
+
+buat galat_validasi = fungsi(pesan, detail)
+    jika detail adalah kosong maka
+        detail = kosong
+    selesai
+    
+    kembalikan {
+        "status": 400,
+        "json": {
+            "sukses": salah,
+            "pesan": pesan,
+            "error": detail
+        }
+    }
+selesai
+
+buat galat_otorisasi = fungsi(pesan)
+    kembalikan {
+        "status": 401,
+        "json": {
+            "sukses": salah,
+            "pesan": pesan
+        }
+    }
+selesai
+
+buat galat_server = fungsi(pesan)
+    kembalikan {
+        "status": 500,
+        "json": {
+            "sukses": salah,
+            "pesan": "Terjadi kesalahan pada server",
+            "error": pesan
+        }
+    }
+selesai
+
+buat tidak_ditemukan = fungsi(entitas)
+    kembalikan {
+        "status": 404,
+        "json": {
+            "sukses": salah,
+            "pesan": entitas + " tidak ditemukan"
+        }
+    }
+selesai
+
+buat paginasi = fungsi(data, halaman, per_halaman, total)
+    buat total_halaman = matematika.bulatkan_ke_atas(total / per_halaman)
+    
+    kembalikan {
+        "status": 200,
+        "json": {
+            "sukses": benar,
+            "data": data,
+            "halaman": halaman,
+            "per_halaman": per_halaman,
+            "total": total,
+            "total_halaman": total_halaman
+        }
+    }
+selesai

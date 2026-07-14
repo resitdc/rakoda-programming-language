@@ -1,0 +1,247 @@
+// Kontroler Nilai
+// Fitur: CRUD, rekap per siswa, rata-rata, peringkat
+
+buat resp = pakai "../model/response.rpl"
+buat validasi = pakai "../layanan/validasi.rpl"
+
+buat ambil_semua = fungsi(req)
+    buat halaman = 1
+    buat per_halaman = 25
+
+    jika req.params bukan kosong maka
+        jika req.params.halaman bukan kosong maka
+            halaman = string.ke_int(req.params.halaman)
+        selesai
+        jika req.params.per_halaman bukan kosong maka
+            per_halaman = string.ke_int(req.params.per_halaman)
+        selesai
+    selesai
+
+    buat offset = (halaman - 1) * per_halaman
+
+    buat kueri_data = `
+        SELECT n.*, s.nama_lengkap as nama_siswa, s.nis,
+               g.nama_lengkap as nama_guru
+        FROM nilai n
+        JOIN siswa s ON n.siswa_id = s.id
+        LEFT JOIN guru g ON n.guru_id = g.id
+        ORDER BY n.tanggal DESC
+        LIMIT ${per_halaman} OFFSET ${offset}
+    `
+
+    buat kueri_total = "SELECT COUNT(*) as total FROM nilai"
+
+    buat data = db.kueri(kueri_data)
+    buat hasil_total = db.kueri(kueri_total)
+    buat total = list.ambil(hasil_total, 0).total
+
+    kembalikan resp.paginasi(data, halaman, per_halaman, total)
+selesai
+
+buat tambah = fungsi(req)
+    buat data = json.parse(req.tubuh)
+
+    buat hasil_validasi = validasi.validasi_nilai(data)
+    jika hasil_validasi.valid adalah salah maka
+        kembalikan resp.galat_validasi("Validasi gagal", hasil_validasi.error)
+    selesai
+
+    db.eksekusi(`
+        INSERT INTO nilai (siswa_id, mata_pelajaran, tipe_nilai, nilai_angka, semester, tahun_ajaran, deskripsi, guru_id)
+        VALUES (
+            ${data.siswa_id},
+            '${data.mata_pelajaran}',
+            '${data.tipe_nilai}',
+            ${data.nilai_angka},
+            '${data.semester}',
+            '${data.tahun_ajaran}',
+            '${data.deskripsi}',
+            ${data.guru_id}
+        )
+    `)
+
+    tampilkan("✅ Nilai berhasil ditambahkan")
+    kembalikan resp.dibuat(kosong, "Nilai berhasil ditambahkan")
+selesai
+
+buat perbarui = fungsi(req)
+    jika req.params adalah kosong atau req.params.id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Nilai tidak diberikan")
+    selesai
+
+    buat id = req.params.id
+    buat data = json.parse(req.tubuh)
+
+    buat cek = db.kueri(`SELECT id FROM nilai WHERE id = ${id}`)
+    jika list.panjang(cek) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Nilai")
+    selesai
+
+    db.eksekusi(`
+        UPDATE nilai SET
+            mata_pelajaran = '${data.mata_pelajaran}',
+            tipe_nilai = '${data.tipe_nilai}',
+            nilai_angka = ${data.nilai_angka},
+            semester = '${data.semester}',
+            tahun_ajaran = '${data.tahun_ajaran}',
+            deskripsi = '${data.deskripsi}'
+        WHERE id = ${id}
+    `)
+
+    kembalikan resp.sukses(kosong, "Nilai berhasil diperbarui")
+selesai
+
+buat hapus = fungsi(req)
+    jika req.params adalah kosong atau req.params.id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Nilai tidak diberikan")
+    selesai
+
+    buat id = req.params.id
+
+    buat cek = db.kueri(`SELECT id FROM nilai WHERE id = ${id}`)
+    jika list.panjang(cek) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Nilai")
+    selesai
+
+    db.eksekusi(`DELETE FROM nilai WHERE id = ${id}`)
+    kembalikan resp.sukses(kosong, "Nilai berhasil dihapus")
+selesai
+
+buat rekap_siswa = fungsi(req)
+    jika req.params adalah kosong atau req.params.siswa_id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Siswa tidak diberikan")
+    selesai
+
+    buat siswa_id = req.params.siswa_id
+
+    // Ambil detail siswa
+    buat info_siswa = db.kueri(`
+        SELECT s.nama_lengkap, s.nis, k.nama_kelas
+        FROM siswa s
+        LEFT JOIN kelas k ON s.kelas_id = k.id
+        WHERE s.id = ${siswa_id}
+    `)
+
+    jika list.panjang(info_siswa) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Siswa")
+    selesai
+
+    // Ambil semua nilai
+    buat semua_nilai = db.kueri(`
+        SELECT mata_pelajaran, tipe_nilai, nilai_angka, semester, tahun_ajaran, tanggal
+        FROM nilai
+        WHERE siswa_id = ${siswa_id}
+        ORDER BY semester, mata_pelajaran, tipe_nilai
+    `)
+
+    // Hitung rata-rata per mata pelajaran
+    buat rata_rata = db.kueri(`
+        SELECT mata_pelajaran, 
+               ROUND(AVG(nilai_angka), 2) as rata_rata,
+               MIN(nilai_angka) as terendah,
+               MAX(nilai_angka) as tertinggi,
+               COUNT(*) as jumlah_nilai
+        FROM nilai
+        WHERE siswa_id = ${siswa_id}
+        GROUP BY mata_pelajaran
+        ORDER BY rata_rata DESC
+    `)
+
+    kembalikan resp.sukses({
+        "siswa": list.ambil(info_siswa, 0),
+        "semua_nilai": semua_nilai,
+        "rata_rata_per_mapel": rata_rata,
+        "total_nilai": list.panjang(semua_nilai)
+    })
+selesai
+
+buat peringkat_kelas = fungsi(req)
+    jika req.params adalah kosong atau req.params.kelas_id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Kelas tidak diberikan")
+    selesai
+
+    buat kelas_id = req.params.kelas_id
+
+    buat hasil = db.kueri(`
+        SELECT 
+            s.id as siswa_id,
+            s.nama_lengkap,
+            s.nis,
+            ROUND(AVG(n.nilai_angka), 2) as rata_rata,
+            COUNT(n.id) as jumlah_nilai
+        FROM siswa s
+        LEFT JOIN nilai n ON s.id = n.siswa_id
+        WHERE s.kelas_id = ${kelas_id}
+        GROUP BY s.id
+        ORDER BY rata_rata DESC
+    `)
+
+    kembalikan resp.sukses(hasil)
+selesai
+
+buat rekap_mapel = fungsi(req)
+    jika req.params adalah kosong atau req.params.mata_pelajaran adalah kosong maka
+        kembalikan resp.galat_validasi("Mata pelajaran tidak diberikan")
+    selesai
+
+    buat mata_pelajaran = req.params.mata_pelajaran
+
+    buat hasil = db.kueri(`
+        SELECT 
+            n.mata_pelajaran,
+            COUNT(*) as total_nilai,
+            ROUND(AVG(n.nilai_angka), 2) as rata_rata,
+            MIN(n.nilai_angka) as terendah,
+            MAX(n.nilai_angka) as tertinggi
+        FROM nilai n
+        WHERE n.mata_pelajaran LIKE '%${mata_pelajaran}%'
+        GROUP BY n.mata_pelajaran
+    `)
+
+    kembalikan resp.sukses(hasil)
+selesai
+
+buat tambah_banyak = fungsi(req)
+    buat data = json.parse(req.tubuh)
+
+    // data.nilai adalah array of {siswa_id, mata_pelajaran, tipe_nilai, nilai_angka, semester, tahun_ajaran}
+    buat daftar_nilai = data.nilai
+    buat berhasil = 0
+    buat gagal = 0
+    buat i = 0
+    buat total_data = list.panjang(daftar_nilai)
+
+    selama i < total_data
+        buat nilai_item = list.ambil(daftar_nilai, i)
+        buat hasil_validasi = validasi.validasi_nilai(nilai_item)
+
+        jika hasil_validasi.valid adalah benar maka
+            db.eksekusi(`
+                INSERT INTO nilai (siswa_id, mata_pelajaran, tipe_nilai, nilai_angka, semester, tahun_ajaran, deskripsi, guru_id)
+                VALUES (
+                    ${nilai_item.siswa_id},
+                    '${nilai_item.mata_pelajaran}',
+                    '${nilai_item.tipe_nilai}',
+                    ${nilai_item.nilai_angka},
+                    '${nilai_item.semester}',
+                    '${nilai_item.tahun_ajaran}',
+                    '${nilai_item.deskripsi}',
+                    ${data.guru_id}
+                )
+            `)
+            berhasil = berhasil + 1
+        selesai
+
+        jika hasil_validasi.valid adalah salah maka
+            gagal = gagal + 1
+        selesai
+
+        i = i + 1
+    selesai
+
+    kembalikan resp.sukses({
+        "berhasil": berhasil,
+        "gagal": gagal,
+        "total": list.panjang(daftar_nilai)
+    }, "Input nilai berhasil diproses")
+selesai

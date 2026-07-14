@@ -229,10 +229,37 @@ pub struct TypeChecker {
 
 impl TypeChecker {
     pub fn new() -> Self {
-        Self {
+        let mut tc = Self {
             symbols: SymbolTable::new(),
             errors: Vec::new(),
             expected_return: None,
+        };
+        tc.daftarkan_builtin();
+        tc
+    }
+
+    /// Daftarkan nama-nama built-in global yang tersedia di VM.
+    /// Mencegah false positive "Variabel 'xxx' belum dibuat" pada built-in.
+    pub fn daftarkan_builtin(&mut self) {
+        let builtins = [
+            // Global module/kamus yang di-register oleh vm::stdlib
+            "db", "web", "string", "waktu", "kripto", "matematika",
+            "list", "json", "http", "env", "file", "cookie", "session",
+            "tugas", "log", "core",
+            // Fungsi/konstanta global
+            "panjang", "tipe",
+            // Function bawaan dari core
+            "tampilkan", "baca", "cetak", "tunda",
+            // Http helpers
+            "unduh", "kirim_http",
+        ];
+
+        let lokasi = errors::Lokasi::new(0, 0);
+        for nama in &builtins {
+            // Gunakan Kamus kosong sebagai representasi. Built-in ini
+            // bisa berupa modul, kamus, atau fungsi bawaam. Yang penting
+            // type checker tidak melaporkan "belum dibuat".
+            let _ = self.symbols.deklarasi(nama, RplType::Kamus(HashMap::new()), lokasi);
         }
     }
 

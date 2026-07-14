@@ -6,5 +6,5 @@ buat rute = pakai "rute.rpl"
 rute.daftarkan()
 
 buat port = 3012
-tampilkan(`Server Toko API berjalan di http://localhost:${port}`)
+tampilkan(`Server Toko API berjalan di http://localhost:3012`)
 web.jalankan(port)

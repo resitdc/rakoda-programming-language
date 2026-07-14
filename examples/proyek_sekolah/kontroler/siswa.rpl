@@ -1,0 +1,218 @@
+// Kontroler Siswa
+// Fitur: CRUD, pencarian, filter per kelas, statistik
+
+buat resp = pakai "../model/response.rpl"
+buat validasi = pakai "../layanan/validasi.rpl"
+
+buat ambil_semua = fungsi(req)
+    buat halaman = 1
+    buat per_halaman = 20
+    
+    jika req.params bukan kosong maka
+        jika req.params.halaman bukan kosong maka
+            halaman = string.ke_int(req.params.halaman)
+        selesai
+        jika req.params.per_halaman bukan kosong maka
+            per_halaman = string.ke_int(req.params.per_halaman)
+        selesai
+    selesai
+    
+    buat offset = (halaman - 1) * per_halaman
+    
+    // Query dengan JOIN ke tabel kelas
+    buat kueri_data = `
+        SELECT s.*, k.nama_kelas, k.tingkat
+        FROM siswa s
+        LEFT JOIN kelas k ON s.kelas_id = k.id
+        ORDER BY s.id DESC
+        LIMIT ${per_halaman} OFFSET ${offset}
+    `
+    
+    buat kueri_total = "SELECT COUNT(*) as total FROM siswa"
+    
+    buat data = db.kueri(kueri_data)
+    buat hasil_total = db.kueri(kueri_total)
+    buat total = list.ambil(hasil_total, 0).total
+    
+    kembalikan resp.paginasi(data, halaman, per_halaman, total)
+selesai
+
+buat ambil_detail = fungsi(req)
+    jika req.params adalah kosong atau req.params.id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Siswa tidak diberikan")
+    selesai
+    
+    buat id = req.params.id
+    
+    buat kueri = `
+        SELECT s.*, k.nama_kelas, k.tingkat
+        FROM siswa s
+        LEFT JOIN kelas k ON s.kelas_id = k.id
+        WHERE s.id = ${id}
+    `
+    
+    buat hasil = db.kueri(kueri)
+    
+    jika list.panjang(hasil) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Siswa")
+    selesai
+    
+    kembalikan resp.sukses(list.ambil(hasil, 0))
+selesai
+
+buat tambah = fungsi(req)
+    buat data = json.parse(req.tubuh)
+    
+    buat hasil_validasi = validasi.validasi_siswa(data)
+    jika hasil_validasi.valid adalah salah maka
+        kembalikan resp.galat_validasi("Validasi gagal", hasil_validasi.error)
+    selesai
+    
+    // Cek apakah NIS sudah ada
+    buat cek_nis = db.kueri(`
+        SELECT id FROM siswa WHERE nis = '${data.nis}'
+    `)
+    
+    jika list.panjang(cek_nis) maksimal 0 maka
+        kembalikan resp.galat_validasi("NIS sudah digunakan oleh siswa lain")
+    selesai
+    
+    db.eksekusi(`
+        INSERT INTO siswa (nis, nama_lengkap, jenis_kelamin, tanggal_lahir, alamat, nomor_telepon, kelas_id, angkatan)
+        VALUES (
+            '${data.nis}', 
+            '${data.nama_lengkap}', 
+            '${data.jenis_kelamin}', 
+            '${data.tanggal_lahir}',
+            '${data.alamat}',
+            '${data.nomor_telepon}',
+            ${data.kelas_id},
+            ${data.angkatan}
+        )
+    `)
+    
+    tampilkan("✅ Siswa " + data.nama_lengkap + " berhasil ditambahkan")
+    kembalikan resp.dibuat(kosong, "Siswa berhasil ditambahkan")
+selesai
+
+buat perbarui = fungsi(req)
+    jika req.params adalah kosong atau req.params.id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Siswa tidak diberikan")
+    selesai
+    
+    buat id = req.params.id
+    buat data = json.parse(req.tubuh)
+    
+    // Cek apakah siswa ada
+    buat cek = db.kueri(`SELECT id FROM siswa WHERE id = ${id}`)
+    jika list.panjang(cek) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Siswa")
+    selesai
+    
+    db.eksekusi(`
+        UPDATE siswa SET
+            nis = '${data.nis}',
+            nama_lengkap = '${data.nama_lengkap}',
+            jenis_kelamin = '${data.jenis_kelamin}',
+            tanggal_lahir = '${data.tanggal_lahir}',
+            alamat = '${data.alamat}',
+            nomor_telepon = '${data.nomor_telepon}',
+            kelas_id = ${data.kelas_id},
+            angkatan = ${data.angkatan}
+        WHERE id = ${id}
+    `)
+    
+    kembalikan resp.sukses(kosong, "Data siswa berhasil diperbarui")
+selesai
+
+buat hapus = fungsi(req)
+    jika req.params adalah kosong atau req.params.id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Siswa tidak diberikan")
+    selesai
+    
+    buat id = req.params.id
+    
+    // Cek apakah siswa ada
+    buat cek = db.kueri(`SELECT nama_lengkap FROM siswa WHERE id = ${id}`)
+    jika list.panjang(cek) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Siswa")
+    selesai
+    
+    buat nama = list.ambil(cek, 0).nama_lengkap
+    
+    // Hapus data terkait: nilai, absensi
+    db.eksekusi(`DELETE FROM nilai WHERE siswa_id = ${id}`)
+    db.eksekusi(`DELETE FROM absensi WHERE siswa_id = ${id}`)
+    db.eksekusi(`DELETE FROM siswa WHERE id = ${id}`)
+    
+    tampilkan("🗑️ Siswa " + nama + " dan data terkait berhasil dihapus")
+    kembalikan resp.sukses(kosong, "Siswa berhasil dihapus beserta data nilai dan absensi")
+selesai
+
+buat cari = fungsi(req)
+    jika req.params adalah kosong atau req.params.q adalah kosong maka
+        kembalikan resp.galat_validasi("Kata kunci pencarian tidak diberikan")
+    selesai
+    
+    buat kata_kunci = req.params.q
+    
+    buat kueri = `
+        SELECT s.*, k.nama_kelas 
+        FROM siswa s
+        LEFT JOIN kelas k ON s.kelas_id = k.id
+        WHERE s.nama_lengkap LIKE '%${kata_kunci}%' 
+           OR s.nis LIKE '%${kata_kunci}%'
+        ORDER BY s.nama_lengkap ASC
+        LIMIT 50
+    `
+    
+    buat hasil = db.kueri(kueri)
+    kembalikan resp.sukses(hasil, "Ditemukan " + list.panjang(hasil) + " siswa")
+selesai
+
+buat filter_kelas = fungsi(req)
+    jika req.params adalah kosong atau req.params.kelas_id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Kelas tidak diberikan")
+    selesai
+    
+    buat kelas_id = req.params.kelas_id
+    
+    buat kueri = `
+        SELECT s.*, k.nama_kelas, k.tingkat
+        FROM siswa s
+        JOIN kelas k ON s.kelas_id = k.id
+        WHERE s.kelas_id = ${kelas_id}
+        ORDER BY s.nama_lengkap ASC
+    `
+    
+    buat hasil = db.kueri(kueri)
+    kembalikan resp.sukses(hasil, "Ditemukan " + list.panjang(hasil) + " siswa di kelas tersebut")
+selesai
+
+buat statistik = fungsi(req)
+    // Total siswa per kelas
+    buat per_kelas = db.kueri(`
+        SELECT k.nama_kelas, k.tingkat, COUNT(s.id) as jumlah_siswa
+        FROM kelas k
+        LEFT JOIN siswa s ON s.kelas_id = k.id
+        GROUP BY k.id
+        ORDER BY k.tingkat, k.nama_kelas
+    `)
+    
+    // Total keseluruhan
+    buat total_semua = db.kueri("SELECT COUNT(*) as total FROM siswa")
+    buat total = list.ambil(total_semua, 0).total
+    
+    // Jenis kelamin
+    buat gender = db.kueri(`
+        SELECT jenis_kelamin, COUNT(*) as jumlah 
+        FROM siswa 
+        GROUP BY jenis_kelamin
+    `)
+    
+    kembalikan resp.sukses({
+        "total_siswa": total,
+        "per_kelas": per_kelas,
+        "per_gender": gender
+    })
+selesai

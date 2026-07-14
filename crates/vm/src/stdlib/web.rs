@@ -96,9 +96,23 @@ pub fn register(vm: &mut VM) {
                 );
             }
 
-            let file_name = match &args[0] {
+            let raw_file_name = match &args[0] {
                 Value::String(idx) => ctx.get_heap_mut().get_string(*idx).clone(),
                 _ => return Err("Argumen pertama harus berupa string (nama file)".to_string()),
+            };
+
+            // Resolve path relatif terhadap project_root (direktori file sumber),
+            // bukan CWD (current working directory).
+            let file_name = if std::path::Path::new(&raw_file_name).is_relative() {
+                if let Some(root) = &ctx.get_heap_mut().project_root {
+                    root.join(&raw_file_name)
+                        .to_string_lossy()
+                        .to_string()
+                } else {
+                    raw_file_name
+                }
+            } else {
+                raw_file_name
             };
 
             let data_arg = if args.len() == 2 {

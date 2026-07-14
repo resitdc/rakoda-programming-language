@@ -106,12 +106,16 @@ pub enum RplError {
 
 impl RplError {
     pub fn tampilkan(&self, source_code: &str) -> String {
+        self.tampilkan_dengan_file(source_code, None)
+    }
+
+    pub fn tampilkan_dengan_file(&self, source_code: &str, file: Option<&str>) -> String {
         match self {
             RplError::Sintaks {
                 pesan,
                 lokasi,
                 saran,
-            } => format_error(pesan, lokasi, saran, source_code),
+            } => format_error(pesan, lokasi, saran, source_code, file),
             RplError::VariabelTidakDitemukan {
                 nama,
                 lokasi,
@@ -121,6 +125,7 @@ impl RplError {
                 lokasi,
                 saran,
                 source_code,
+                file,
             ),
             RplError::FungsiTidakDitemukan {
                 nama,
@@ -131,6 +136,7 @@ impl RplError {
                 lokasi,
                 saran,
                 source_code,
+                file,
             ),
             RplError::TipeData {
                 pesan,
@@ -141,6 +147,7 @@ impl RplError {
                 lokasi,
                 saran,
                 source_code,
+                file,
             ),
             RplError::Internal { pesan } => {
                 format!("\x1b[33mKesalahan sistem internal: {}\x1b[0m", pesan)
@@ -150,22 +157,34 @@ impl RplError {
                 lokasi,
                 &None,
                 source_code,
+                file,
             ),
         }
     }
 }
 
-fn format_error(pesan: &str, lokasi: &Lokasi, saran: &Option<String>, source_code: &str) -> String {
+fn format_error(
+    pesan: &str,
+    lokasi: &Lokasi,
+    saran: &Option<String>,
+    source_code: &str,
+    file: Option<&str>,
+) -> String {
     let baris_teks = source_code
         .lines()
         .nth(lokasi.baris.saturating_sub(1))
         .unwrap_or("");
     let pointer = " ".repeat(lokasi.kolom.saturating_sub(1)) + "^";
 
+    let lokasi_str = if let Some(f) = file {
+        format!("{}:{}:{}", f, lokasi.baris, lokasi.kolom)
+    } else {
+        format!("baris {}, kolom {}", lokasi.baris, lokasi.kolom)
+    };
+
     let mut output = format!(
-        "\x1b[33mError di baris {}, kolom {}:\n{}\n\n  {} | {}\n  {} | {}",
-        lokasi.baris,
-        lokasi.kolom,
+        "\x1b[33mError di {}:\n{}\n\n  {} | {}\n  {} | {}",
+        lokasi_str,
         pesan,
         lokasi.baris,
         baris_teks,

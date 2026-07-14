@@ -1,0 +1,79 @@
+// Layanan Autentikasi dan Otorisasi
+
+buat login = fungsi(nama_pengguna, kata_sandi)
+    buat hash_input = kripto.hash_password(kata_sandi)
+    
+    buat kueri = `
+        SELECT id, nama_pengguna, peran, nama_lengkap, email 
+        FROM pengguna 
+        WHERE nama_pengguna = '${nama_pengguna}' AND kata_sandi = '${hash_input}'
+    `
+    
+    buat hasil = db.kueri(kueri)
+    
+    jika list.panjang(hasil) adalah 1 maka
+        buat pengguna = list.ambil(hasil, 0)
+        kembali {
+            "berhasil": benar,
+            "pengguna": pengguna,
+            "token": kripto.hash_token(nama_pengguna + string(waktu.sekarang()))
+        }
+    selesai
+    
+    kembali {
+        "berhasil": salah,
+        "pesan": "Nama pengguna atau kata sandi salah"
+    }
+selesai
+
+buat daftar = fungsi(data)
+    buat hash_password = kripto.hash_password(data.kata_sandi)
+    
+    // Cek apakah nama_pengguna sudah ada
+    buat cek = db.kueri(`
+        SELECT id FROM pengguna WHERE nama_pengguna = '${data.nama_pengguna}'
+    `)
+    
+    jika list.panjang(cek) maksimal 0 maka
+        kembali {
+            "berhasil": salah,
+            "pesan": "Nama pengguna sudah digunakan"
+        }
+    selesai
+    
+    db.eksekusi(`
+        INSERT INTO pengguna (nama_pengguna, kata_sandi, peran, nama_lengkap, email) 
+        VALUES ('${data.nama_pengguna}', '${hash_password}', '${data.peran}', '${data.nama_lengkap}', '${data.email}')
+    `)
+    
+    kembali {
+        "berhasil": benar,
+        "pesan": "Pendaftaran berhasil"
+    }
+selesai
+
+buat cek_peran_admin = fungsi(pengguna_id)
+    buat hasil = db.kueri(`
+        SELECT peran FROM pengguna WHERE id = ${pengguna_id}
+    `)
+    
+    jika list.panjang(hasil) adalah 1 maka
+        buat pengguna = list.ambil(hasil, 0)
+        kembali pengguna.peran adalah "admin"
+    selesai
+    
+    kembali salah
+selesai
+
+buat cek_peran_guru = fungsi(pengguna_id)
+    buat hasil = db.kueri(`
+        SELECT peran FROM pengguna WHERE id = ${pengguna_id}
+    `)
+    
+    jika list.panjang(hasil) adalah 1 maka
+        buat pengguna = list.ambil(hasil, 0)
+        kembali pengguna.peran adalah "guru" atau pengguna.peran adalah "admin"
+    selesai
+    
+    kembali salah
+selesai

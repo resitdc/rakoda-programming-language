@@ -4,6 +4,7 @@ use postgres::Client as PostgresClient;
 use r2d2::Pool as R2d2Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 pub type SessionMap = Arc<Mutex<HashMap<String, (Option<std::time::Instant>, usize)>>>;
@@ -141,6 +142,9 @@ pub struct Heap {
     pub db_pool: Option<DbPool>,
     pub db_query_state: DbQueryState,
     pub db_module_idx: Option<usize>,
+    /// Direktori root proyek (tempat file .rpl utama berada).
+    /// Digunakan untuk resolve path relatif seperti template, database, file.
+    pub project_root: Option<PathBuf>,
 }
 
 impl Default for Heap {
@@ -163,6 +167,7 @@ impl Heap {
             db_pool: None,
             db_query_state: DbQueryState::default(),
             db_module_idx: None,
+            project_root: None,
         }
     }
 

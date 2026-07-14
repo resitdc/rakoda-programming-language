@@ -1,0 +1,165 @@
+// Kontroler Kelas
+// Fitur: CRUD, wali kelas, daftar siswa, statistik
+
+buat resp = pakai "../model/response.rpl"
+
+buat ambil_semua = fungsi(req)
+    buat kueri = `
+        SELECT k.*, g.nama_lengkap as nama_wali_kelas
+        FROM kelas k
+        LEFT JOIN guru g ON k.wali_kelas_id = g.id
+        ORDER BY k.tingkat, k.nama_kelas
+    `
+    
+    buat hasil = db.kueri(kueri)
+    kembalikan resp.sukses(hasil)
+selesai
+
+buat ambil_detail = fungsi(req)
+    jika req.params adalah kosong atau req.params.id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Kelas tidak diberikan")
+    selesai
+    
+    buat id = req.params.id
+    
+    buat kueri = `
+        SELECT k.*, g.nama_lengkap as nama_wali_kelas, g.nip as nip_wali_kelas
+        FROM kelas k
+        LEFT JOIN guru g ON k.wali_kelas_id = g.id
+        WHERE k.id = ${id}
+    `
+    
+    buat hasil = db.kueri(kueri)
+    
+    jika list.panjang(hasil) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Kelas")
+    selesai
+    
+    // Daftar siswa di kelas ini
+    buat daftar_siswa = db.kueri(`
+        SELECT id, nis, nama_lengkap, jenis_kelamin
+        FROM siswa
+        WHERE kelas_id = ${id}
+        ORDER BY nama_lengkap ASC
+    `)
+    
+    // Jadwal kelas ini
+    buat jadwal_kelas = db.kueri(`
+        SELECT j.*, g.nama_lengkap as nama_guru
+        FROM jadwal j
+        JOIN guru g ON j.guru_id = g.id
+        WHERE j.kelas_id = ${id}
+        ORDER BY j.hari, j.jam_mulai
+    `)
+    
+    buat k = list.ambil(hasil, 0)
+    
+    kembalikan resp.sukses({
+        "id": k.id,
+        "nama_kelas": k.nama_kelas,
+        "tingkat": k.tingkat,
+        "wali_kelas_id": k.wali_kelas_id,
+        "nama_wali": k.nama_wali,
+        "kapasitas": k.kapasitas,
+        "tahun_ajaran": k.tahun_ajaran,
+        "daftar_siswa": daftar_siswa,
+        "jumlah_siswa": list.panjang(daftar_siswa),
+        "jadwal": jadwal_kelas
+    })
+selesai
+
+buat tambah = fungsi(req)
+    buat data = json.parse(req.tubuh)
+    
+    jika data.nama_kelas adalah kosong atau data.tingkat adalah kosong maka
+        kembalikan resp.galat_validasi("Nama kelas dan tingkat tidak boleh kosong")
+    selesai
+    
+    db.eksekusi(`
+        INSERT INTO kelas (nama_kelas, tingkat, wali_kelas_id, kapasitas, tahun_ajaran)
+        VALUES (
+            '${data.nama_kelas}',
+            ${data.tingkat},
+            ${data.wali_kelas_id},
+            ${data.kapasitas},
+            '${data.tahun_ajaran}'
+        )
+    `)
+    
+    kembalikan resp.dibuat(kosong, "Kelas berhasil ditambahkan")
+selesai
+
+buat perbarui = fungsi(req)
+    jika req.params adalah kosong atau req.params.id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Kelas tidak diberikan")
+    selesai
+    
+    buat id = req.params.id
+    buat data = json.parse(req.tubuh)
+    
+    buat cek = db.kueri(`SELECT id FROM kelas WHERE id = ${id}`)
+    jika list.panjang(cek) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Kelas")
+    selesai
+    
+    db.eksekusi(`
+        UPDATE kelas SET
+            nama_kelas = '${data.nama_kelas}',
+            tingkat = ${data.tingkat},
+            wali_kelas_id = ${data.wali_kelas_id},
+            kapasitas = ${data.kapasitas},
+            tahun_ajaran = '${data.tahun_ajaran}'
+        WHERE id = ${id}
+    `)
+    
+    kembalikan resp.sukses(kosong, "Data kelas berhasil diperbarui")
+selesai
+
+buat hapus = fungsi(req)
+    jika req.params adalah kosong atau req.params.id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Kelas tidak diberikan")
+    selesai
+    
+    buat id = req.params.id
+    
+    buat cek = db.kueri(`SELECT nama_kelas FROM kelas WHERE id = ${id}`)
+    jika list.panjang(cek) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Kelas")
+    selesai
+    
+    // Cek apakah ada siswa di kelas ini
+    buat jumlah_siswa = db.kueri(`SELECT COUNT(*) as total FROM siswa WHERE kelas_id = ${id}`)
+    buat total = list.ambil(jumlah_siswa, 0).total
+    
+    jika total maksimal 0 maka
+        kembalikan resp.galat_validasi("Tidak dapat menghapus kelas yang masih memiliki " + total + " siswa. Pindahkan siswa terlebih dahulu.")
+    selesai
+    
+    db.eksekusi(`DELETE FROM jadwal WHERE kelas_id = ${id}`)
+    db.eksekusi(`UPDATE pengumuman SET kelas_id = NULL WHERE kelas_id = ${id}`)
+    db.eksekusi(`DELETE FROM kelas WHERE id = ${id}`)
+    
+    kembalikan resp.sukses(kosong, "Kelas berhasil dihapus")
+selesai
+
+buat ringkasan = fungsi(req)
+    // Ringkasan semua kelas
+    buat data = db.kueri(`
+        SELECT 
+            k.id,
+            k.nama_kelas,
+            k.tingkat,
+            k.tahun_ajaran,
+            g.nama_lengkap as wali_kelas,
+            COUNT(s.id) as jumlah_siswa,
+            k.kapasitas,
+            ROUND(CAST(COUNT(s.id) AS FLOAT) / k.kapasitas * 100, 1) as persentase_terisi
+        FROM kelas k
+        LEFT JOIN guru g ON k.wali_kelas_id = g.id
+        LEFT JOIN siswa s ON s.kelas_id = k.id
+        GROUP BY k.id
+        ORDER BY k.tingkat, k.nama_kelas
+    `)
+    
+    kembalikan resp.sukses(data)
+selesai

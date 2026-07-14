@@ -1,0 +1,171 @@
+// Kontroler Pengumuman
+// Fitur: CRUD, filter per kelas, pengumuman aktif, pengumuman terbaru
+
+buat resp = pakai "../model/response.rpl"
+
+buat ambil_semua = fungsi(req)
+    buat halaman = 1
+    buat per_halaman = 10
+
+    jika req.params bukan kosong maka
+        jika req.params.halaman bukan kosong maka
+            halaman = string.ke_int(req.params.halaman)
+        selesai
+        jika req.params.per_halaman bukan kosong maka
+            per_halaman = string.ke_int(req.params.per_halaman)
+        selesai
+    selesai
+
+    buat offset = (halaman - 1) * per_halaman
+
+    buat kueri_data = `
+        SELECT p.*, u.nama_lengkap as pembuat
+        FROM pengumuman p
+        LEFT JOIN pengguna u ON p.pembuat_id = u.id
+        ORDER BY p.tanggal_dibuat DESC
+        LIMIT ${per_halaman} OFFSET ${offset}
+    `
+
+    buat kueri_total = "SELECT COUNT(*) as total FROM pengumuman"
+
+    buat data = db.kueri(kueri_data)
+    buat hasil_total = db.kueri(kueri_total)
+    buat total = list.ambil(hasil_total, 0).total
+
+    kembalikan resp.paginasi(data, halaman, per_halaman, total)
+selesai
+
+buat ambil_detail = fungsi(req)
+    jika req.params adalah kosong atau req.params.id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Pengumuman tidak diberikan")
+    selesai
+
+    buat id = req.params.id
+
+    buat kueri = `
+        SELECT p.*, u.nama_lengkap as pembuat
+        FROM pengumuman p
+        LEFT JOIN pengguna u ON p.pembuat_id = u.id
+        WHERE p.id = ${id}
+    `
+
+    buat hasil = db.kueri(kueri)
+
+    jika list.panjang(hasil) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Pengumuman")
+    selesai
+
+    kembalikan resp.sukses(list.ambil(hasil, 0))
+selesai
+
+buat tambah = fungsi(req)
+    buat data = json.parse(req.tubuh)
+
+    jika data.judul adalah kosong atau data.isi adalah kosong maka
+        kembalikan resp.galat_validasi("Judul dan isi tidak boleh kosong")
+    selesai
+
+    db.eksekusi(`
+        INSERT INTO pengumuman (judul, isi, prioritas, kelas_id, pembuat_id, tanggal_mulai, tanggal_selesai)
+        VALUES (
+            '${data.judul}',
+            '${data.isi}',
+            '${data.prioritas}',
+            ${data.kelas_id},
+            ${data.pembuat_id},
+            '${data.tanggal_mulai}',
+            '${data.tanggal_selesai}'
+        )
+    `)
+
+    tampilkan("✅ Pengumuman dibuat: " + data.judul)
+    kembalikan resp.dibuat(kosong, "Pengumuman berhasil dibuat")
+selesai
+
+buat perbarui = fungsi(req)
+    jika req.params adalah kosong atau req.params.id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Pengumuman tidak diberikan")
+    selesai
+
+    buat id = req.params.id
+    buat data = json.parse(req.tubuh)
+
+    buat cek = db.kueri(`SELECT id FROM pengumuman WHERE id = ${id}`)
+    jika list.panjang(cek) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Pengumuman")
+    selesai
+
+    db.eksekusi(`
+        UPDATE pengumuman SET
+            judul = '${data.judul}',
+            isi = '${data.isi}',
+            prioritas = '${data.prioritas}',
+            kelas_id = ${data.kelas_id},
+            tanggal_mulai = '${data.tanggal_mulai}',
+            tanggal_selesai = '${data.tanggal_selesai}'
+        WHERE id = ${id}
+    `)
+
+    kembalikan resp.sukses(kosong, "Pengumuman berhasil diperbarui")
+selesai
+
+buat hapus = fungsi(req)
+    jika req.params adalah kosong atau req.params.id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Pengumuman tidak diberikan")
+    selesai
+
+    buat id = req.params.id
+
+    buat cek = db.kueri(`SELECT id FROM pengumuman WHERE id = ${id}`)
+    jika list.panjang(cek) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Pengumuman")
+    selesai
+
+    db.eksekusi(`DELETE FROM pengumuman WHERE id = ${id}`)
+    kembalikan resp.sukses(kosong, "Pengumuman berhasil dihapus")
+selesai
+
+buat pengumuman_aktif = fungsi(req)
+    buat kelas_id = 0
+
+    jika req.params bukan kosong dan req.params.kelas_id bukan kosong maka
+        kelas_id = string.ke_int(req.params.kelas_id)
+    selesai
+
+    buat kueri = `
+        SELECT p.*, u.nama_lengkap as pembuat
+        FROM pengumuman p
+        LEFT JOIN pengguna u ON p.pembuat_id = u.id
+        WHERE p.tanggal_mulai <= date('now')
+          AND (p.tanggal_selesai >= date('now') OR p.tanggal_selesai IS NULL)
+    `
+
+    jika kelas_id maksimal 0 maka
+        kueri = kueri + `
+          AND (p.kelas_id IS NULL OR p.kelas_id = ${kelas_id})
+        `
+    selesai
+
+    kueri = kueri + " ORDER BY p.prioritas DESC, p.tanggal_dibuat DESC LIMIT 20"
+
+    buat hasil = db.kueri(kueri)
+    kembalikan resp.sukses(hasil)
+selesai
+
+buat pengumuman_terbaru = fungsi(req)
+    buat limit = 5
+
+    jika req.params bukan kosong dan req.params.limit bukan kosong maka
+        limit = string.ke_int(req.params.limit)
+    selesai
+
+    buat hasil = db.kueri(`
+        SELECT p.*, u.nama_lengkap as pembuat
+        FROM pengumuman p
+        LEFT JOIN pengguna u ON p.pembuat_id = u.id
+        ORDER BY p.tanggal_dibuat DESC
+        LIMIT ${limit}
+    `)
+
+    kembalikan resp.sukses(hasil)
+selesai

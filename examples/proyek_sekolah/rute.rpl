@@ -1,0 +1,154 @@
+// Rute Aplikasi Sekolah
+// Router terpusat untuk memetakan URL ke kontroler
+
+buat siswa = pakai "kontroler/siswa.rpl"
+buat guru = pakai "kontroler/guru.rpl"
+buat kelas = pakai "kontroler/kelas.rpl"
+buat nilai = pakai "kontroler/nilai.rpl"
+buat absensi = pakai "kontroler/absensi.rpl"
+buat jadwal = pakai "kontroler/jadwal.rpl"
+buat pengumuman = pakai "kontroler/pengumuman.rpl"
+buat auth = pakai "kontroler/auth.rpl"
+
+// ========================
+// DAFTAR RUTE APLIKASI
+// ========================
+// Format: web.tambah_rute(metode, url, handler)
+// ========================
+
+// --- HALAMAN TAMPILAN ---
+
+// Dashboard
+web.tambah_rute("GET", "/", "", fungsi(req)
+    kembalikan web.tampilkan("tampilan/index.rpl.html")
+selesai)
+
+// Halaman Login
+web.tambah_rute("GET", "/login", "", fungsi(req)
+    kembalikan web.tampilkan("tampilan/login.rpl.html")
+selesai)
+
+// ========================
+// AUTH (Otentikasi)
+// ========================
+
+web.tambah_rute("POST", "/api/auth/login", "", auth.login)
+web.tambah_rute("POST", "/api/auth/logout", "", auth.logout)
+web.tambah_rute("POST", "/api/auth/register-admin", "", auth.register_admin)
+web.tambah_rute("PUT", "/api/auth/ganti-password", "", auth.ganti_password)
+web.tambah_rute("GET", "/api/auth/sesi", "", auth.cek_sesi)
+web.tambah_rute("GET", "/api/auth/users", "", auth.daftar_user)
+web.tambah_rute("PUT", "/api/auth/users/{id}/nonaktifkan", "", auth.nonaktifkan_user)
+web.tambah_rute("PUT", "/api/auth/users/{id}/aktifkan", "", auth.aktifkan_user)
+
+// ========================
+// SISWA
+// ========================
+
+// CRUD
+web.tambah_rute("GET", "/api/siswa", "", siswa.ambil_semua)
+web.tambah_rute("GET", "/api/siswa/{id}", "", siswa.ambil_detail)
+web.tambah_rute("POST", "/api/siswa", "", siswa.tambah)
+web.tambah_rute("PUT", "/api/siswa/{id}", "", siswa.perbarui)
+web.tambah_rute("DELETE", "/api/siswa/{id}", "", siswa.hapus)
+
+// Pencarian & Filter
+web.tambah_rute("GET", "/api/siswa/cari", "", siswa.cari)
+web.tambah_rute("GET", "/api/siswa/per-kelas/{kelas_id}", "", siswa.per_kelas)
+web.tambah_rute("GET", "/api/siswa/statistik", "", siswa.statistik)
+
+// ========================
+// GURU
+// ========================
+
+// CRUD
+web.tambah_rute("GET", "/api/guru", "", guru.ambil_semua)
+web.tambah_rute("GET", "/api/guru/{id}", "", guru.ambil_detail)
+web.tambah_rute("POST", "/api/guru", "", guru.tambah)
+web.tambah_rute("PUT", "/api/guru/{id}", "", guru.perbarui)
+web.tambah_rute("DELETE", "/api/guru/{id}", "", guru.hapus)
+
+// Pencarian & Filter
+web.tambah_rute("GET", "/api/guru/cari", "", guru.cari)
+web.tambah_rute("GET", "/api/guru/filter-bidang", "", guru.filter_bidang)
+web.tambah_rute("GET", "/api/guru/statistik", "", guru.statistik)
+
+// ========================
+// KELAS
+// ========================
+
+// CRUD
+web.tambah_rute("GET", "/api/kelas", "", kelas.ambil_semua)
+web.tambah_rute("GET", "/api/kelas/{id}", "", kelas.ambil_detail)
+web.tambah_rute("POST", "/api/kelas", "", kelas.tambah)
+web.tambah_rute("PUT", "/api/kelas/{id}", "", kelas.perbarui)
+web.tambah_rute("DELETE", "/api/kelas/{id}", "", kelas.hapus)
+
+// Endpoint Tambahan
+web.tambah_rute("GET", "/api/kelas/ringkasan", "", kelas.ringkasan)
+
+// ========================
+// NILAI
+// ========================
+
+// CRUD
+web.tambah_rute("GET", "/api/nilai", "", nilai.ambil_semua)
+web.tambah_rute("POST", "/api/nilai", "", nilai.tambah)
+web.tambah_rute("PUT", "/api/nilai/{id}", "", nilai.perbarui)
+web.tambah_rute("DELETE", "/api/nilai/{id}", "", nilai.hapus)
+
+// Rekap & Laporan
+web.tambah_rute("GET", "/api/nilai/rekap-siswa/{siswa_id}", "", nilai.rekap_siswa)
+web.tambah_rute("GET", "/api/nilai/peringkat-kelas/{kelas_id}", "", nilai.peringkat_kelas)
+web.tambah_rute("GET", "/api/nilai/rekap-mapel", "", nilai.rekap_mapel)
+web.tambah_rute("POST", "/api/nilai/tambah-banyak", "", nilai.tambah_banyak)
+
+// ========================
+// ABSENSI
+// ========================
+
+// CRUD
+web.tambah_rute("GET", "/api/absensi", "", absensi.ambil_semua)
+web.tambah_rute("GET", "/api/absensi/{id}", "", absensi.ambil_detail)
+web.tambah_rute("POST", "/api/absensi/catat", "", absensi.catat)
+web.tambah_rute("POST", "/api/absensi/catat-massal", "", absensi.catat_massal)
+web.tambah_rute("PUT", "/api/absensi/{id}", "", absensi.perbarui)
+
+// Rekap & Laporan
+web.tambah_rute("GET", "/api/absensi/rekap-siswa/{siswa_id}", "", absensi.rekap_siswa)
+web.tambah_rute("GET", "/api/absensi/laporan-harian", "", absensi.laporan_harian)
+web.tambah_rute("GET", "/api/absensi/laporan-bulanan", "", absensi.laporan_bulanan)
+
+// ========================
+// JADWAL
+// ========================
+
+// CRUD
+web.tambah_rute("GET", "/api/jadwal", "", jadwal.ambil_semua)
+web.tambah_rute("GET", "/api/jadwal/{id}", "", jadwal.ambil_detail)
+web.tambah_rute("POST", "/api/jadwal", "", jadwal.tambah)
+web.tambah_rute("PUT", "/api/jadwal/{id}", "", jadwal.perbarui)
+web.tambah_rute("DELETE", "/api/jadwal/{id}", "", jadwal.hapus)
+
+// View
+web.tambah_rute("GET", "/api/jadwal/per-kelas/{kelas_id}", "", jadwal.lihat_per_kelas)
+web.tambah_rute("GET", "/api/jadwal/per-guru/{guru_id}", "", jadwal.lihat_per_guru)
+web.tambah_rute("GET", "/api/jadwal/per-hari", "", jadwal.lihat_per_hari)
+
+// ========================
+// PENGUMUMAN
+// ========================
+
+// CRUD
+web.tambah_rute("GET", "/api/pengumuman", "", pengumuman.ambil_semua)
+web.tambah_rute("GET", "/api/pengumuman/{id}", "", pengumuman.ambil_detail)
+web.tambah_rute("POST", "/api/pengumuman", "", pengumuman.tambah)
+web.tambah_rute("PUT", "/api/pengumuman/{id}", "", pengumuman.perbarui)
+web.tambah_rute("DELETE", "/api/pengumuman/{id}", "", pengumuman.hapus)
+
+// View
+web.tambah_rute("GET", "/api/pengumuman/aktif", "", pengumuman.pengumuman_aktif)
+web.tambah_rute("GET", "/api/pengumuman/per-kelas/{kelas_id}", "", pengumuman.per_kelas)
+web.tambah_rute("GET", "/api/pengumuman/terbaru", "", pengumuman.terbaru)
+
+tampilkan("✅ Semua rute berhasil didaftarkan!")

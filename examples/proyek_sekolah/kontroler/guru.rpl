@@ -1,0 +1,226 @@
+// Kontroler Guru
+// Fitur: CRUD, pencarian, jadwal mengajar, statistik
+
+buat resp = pakai "../model/response.rpl"
+buat validasi = pakai "../layanan/validasi.rpl"
+
+buat ambil_semua = fungsi(req)
+    buat halaman = 1
+    buat per_halaman = 10
+    
+    jika req.params bukan kosong maka
+        jika req.params.halaman bukan kosong maka
+            halaman = string.ke_int(req.params.halaman)
+        selesai
+        jika req.params.per_halaman bukan kosong maka
+            per_halaman = string.ke_int(req.params.per_halaman)
+        selesai
+    selesai
+    
+    buat offset = (halaman - 1) * per_halaman
+    
+    buat kueri_data = `
+        SELECT * FROM guru 
+        ORDER BY nama_lengkap ASC
+        LIMIT ${per_halaman} OFFSET ${offset}
+    `
+    
+    buat kueri_total = "SELECT COUNT(*) as total FROM guru"
+    
+    buat data = db.kueri(kueri_data)
+    buat hasil_total = db.kueri(kueri_total)
+    buat total = list.ambil(hasil_total, 0).total
+    
+    kembalikan resp.paginasi(data, halaman, per_halaman, total)
+selesai
+
+buat ambil_detail = fungsi(req)
+    jika req.params adalah kosong atau req.params.id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Guru tidak diberikan")
+    selesai
+    
+    buat id = req.params.id
+    
+    buat kueri = `SELECT * FROM guru WHERE id = ${id}`
+    buat hasil = db.kueri(kueri)
+    
+    jika list.panjang(hasil) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Guru")
+    selesai
+    
+    // Tambah info jadwal mengajar
+    buat jadwal_mengajar = db.kueri(`
+        SELECT j.*, k.nama_kelas
+        FROM jadwal j
+        JOIN kelas k ON j.kelas_id = k.id
+        WHERE j.guru_id = ${id}
+        ORDER BY j.hari, j.jam_mulai
+    `)
+    
+    buat guru = list.ambil(hasil, 0)
+    
+    kembalikan resp.sukses({
+        "id": guru.id,
+        "nip": guru.nip,
+        "nama_lengkap": guru.nama_lengkap,
+        "alamat": guru.alamat,
+        "telepon": guru.telepon,
+        "email": guru.email,
+        "bidang_studi": guru.bidang_studi,
+        "tanggal_masuk": guru.tanggal_masuk,
+        "jadwal_mengajar": jadwal_mengajar
+    })
+selesai
+
+buat tambah = fungsi(req)
+    buat data = json.parse(req.tubuh)
+    
+    buat hasil_validasi = validasi.validasi_guru(data)
+    jika hasil_validasi.valid adalah salah maka
+        kembalikan resp.galat_validasi("Validasi gagal", hasil_validasi.error)
+    selesai
+    
+    // Cek NIP unik
+    buat cek_nip = db.kueri(`SELECT id FROM guru WHERE nip = '${data.nip}'`)
+    jika list.panjang(cek_nip) maksimal 0 maka
+        kembalikan resp.galat_validasi("NIP sudah digunakan oleh guru lain")
+    selesai
+    
+    db.eksekusi(`
+        INSERT INTO guru (nip, nama_lengkap, bidang_studi, jenis_kelamin, tanggal_lahir, alamat, nomor_telepon, email, ijazah_tertinggi, pengalaman_tahun)
+        VALUES (
+            '${data.nip}',
+            '${data.nama_lengkap}',
+            '${data.bidang_studi}',
+            '${data.jenis_kelamin}',
+            '${data.tanggal_lahir}',
+            '${data.alamat}',
+            '${data.nomor_telepon}',
+            '${data.email}',
+            '${data.ijazah_tertinggi}',
+            ${data.pengalaman_tahun}
+        )
+    `)
+    
+    tampilkan("✅ Guru " + data.nama_lengkap + " berhasil ditambahkan")
+    kembalikan resp.dibuat(kosong, "Data guru berhasil ditambahkan")
+selesai
+
+buat perbarui = fungsi(req)
+    jika req.params adalah kosong atau req.params.id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Guru tidak diberikan")
+    selesai
+    
+    buat id = req.params.id
+    buat data = json.parse(req.tubuh)
+    
+    buat cek = db.kueri(`SELECT id FROM guru WHERE id = ${id}`)
+    jika list.panjang(cek) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Guru")
+    selesai
+    
+    db.eksekusi(`
+        UPDATE guru SET
+            nip = '${data.nip}',
+            nama_lengkap = '${data.nama_lengkap}',
+            bidang_studi = '${data.bidang_studi}',
+            jenis_kelamin = '${data.jenis_kelamin}',
+            tanggal_lahir = '${data.tanggal_lahir}',
+            alamat = '${data.alamat}',
+            nomor_telepon = '${data.nomor_telepon}',
+            email = '${data.email}',
+            ijazah_tertinggi = '${data.ijazah_tertinggi}',
+            pengalaman_tahun = ${data.pengalaman_tahun}
+        WHERE id = ${id}
+    `)
+    
+    kembalikan resp.sukses(kosong, "Data guru berhasil diperbarui")
+selesai
+
+buat hapus = fungsi(req)
+    jika req.params adalah kosong atau req.params.id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Guru tidak diberikan")
+    selesai
+    
+    buat id = req.params.id
+    
+    buat cek = db.kueri(`SELECT nama_lengkap FROM guru WHERE id = ${id}`)
+    jika list.panjang(cek) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Guru")
+    selesai
+    
+    buat nama = list.ambil(cek, 0).nama_lengkap
+    
+    // Hapus jadwal terkait, update wali kelas ke NULL
+    db.eksekusi(`DELETE FROM jadwal WHERE guru_id = ${id}`)
+    db.eksekusi(`UPDATE kelas SET wali_kelas_id = NULL WHERE wali_kelas_id = ${id}`)
+    db.eksekusi(`UPDATE nilai SET guru_id = NULL WHERE guru_id = ${id}`)
+    db.eksekusi(`DELETE FROM guru WHERE id = ${id}`)
+    
+    tampilkan("🗑️ Guru " + nama + " berhasil dihapus")
+    kembalikan resp.sukses(kosong, "Data guru dan jadwal terkait berhasil dihapus")
+selesai
+
+buat cari = fungsi(req)
+    jika req.params adalah kosong atau req.params.q adalah kosong maka
+        kembalikan resp.galat_validasi("Kata kunci pencarian tidak diberikan")
+    selesai
+    
+    buat kata_kunci = req.params.q
+    
+    buat kueri = `
+        SELECT * FROM guru 
+        WHERE nama_lengkap LIKE '%${kata_kunci}%' 
+           OR nip LIKE '%${kata_kunci}%'
+           OR bidang_studi LIKE '%${kata_kunci}%'
+        ORDER BY nama_lengkap ASC
+    `
+    
+    buat hasil = db.kueri(kueri)
+    kembalikan resp.sukses(hasil, "Ditemukan " + list.panjang(hasil) + " guru")
+selesai
+
+buat filter_bidang = fungsi(req)
+    jika req.params adalah kosong atau req.params.bidang adalah kosong maka
+        kembalikan resp.galat_validasi("Bidang studi tidak diberikan")
+    selesai
+    
+    buat bidang = req.params.bidang
+    
+    buat kueri = `
+        SELECT * FROM guru 
+        WHERE bidang_studi LIKE '%${bidang}%'
+        ORDER BY nama_lengkap ASC
+    `
+    
+    buat hasil = db.kueri(kueri)
+    kembalikan resp.sukses(hasil, "Ditemukan " + list.panjang(hasil) + " guru " + bidang)
+selesai
+
+buat statistik = fungsi(req)
+    // Jumlah per bidang studi
+    buat per_bidang = db.kueri(`
+        SELECT bidang_studi, COUNT(*) as jumlah 
+        FROM guru 
+        GROUP BY bidang_studi
+        ORDER BY jumlah DESC
+    `)
+    
+    // Total
+    buat total_semua = db.kueri("SELECT COUNT(*) as total FROM guru")
+    buat total = list.ambil(total_semua, 0).total
+    
+    // Guru paling berpengalaman
+    buat berpengalaman = db.kueri(`
+        SELECT nama_lengkap, bidang_studi, pengalaman_tahun 
+        FROM guru 
+        ORDER BY pengalaman_tahun DESC 
+        LIMIT 5
+    `)
+    
+    kembalikan resp.sukses({
+        "total_guru": total,
+        "per_bidang": per_bidang,
+        "guru_berpengalaman": berpengalaman
+    })
+selesai

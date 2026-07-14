@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Sistem Manajemen Sekolah</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1d23 0%, #2d3240 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-container {
+            background: #fff;
+            border-radius: 12px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .login-container h1 {
+            text-align: center;
+            font-size: 28px;
+            margin-bottom: 8px;
+            color: #1f2937;
+        }
+        .login-container .brand-icon {
+            text-align: center;
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        .login-container .subtitle {
+            text-align: center;
+            color: #6b7280;
+            margin-bottom: 32px;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            color: #374151;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+        }
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: #3b82f6;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 8px;
+        }
+        .btn-login:hover {
+            background: #2563eb;
+        }
+        .btn-login:disabled {
+            background: #93c5fd;
+            cursor: not-allowed;
+        }
+        .notifikasi {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            font-weight: 500;
+            display: none;
+        }
+        .notifikasi-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+            display: block;
+        }
+        .notifikasi-sukses {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-container">
+    <div class="brand-icon">&#x1F3EB;</div>
+    <h1>SekolahKu</h1>
+    <p class="subtitle">Sistem Manajemen Sekolah</p>
+
+    <div id="pesan-error" class="notifikasi"></div>
+
+    <form id="form-login" onsubmit="login(event)">
+        <div class="form-group">
+            <label for="username">Nama Pengguna</label>
+            <input type="text" id="username" placeholder="Masukkan nama pengguna" required autofocus>
+        </div>
+        <div class="form-group">
+            <label for="kata_sandi">Kata Sandi</label>
+            <input type="password" id="kata_sandi" placeholder="Masukkan kata sandi" required>
+        </div>
+        <button type="submit" class="btn-login" id="btn-login">Masuk</button>
+    </form>
+</div>
+
+<script>
+    async function login(event) {
+        event.preventDefault();
+
+        let tombol = document.getElementById('btn-login');
+        let pesanError = document.getElementById('pesan-error');
+
+        tombol.disabled = true;
+        tombol.textContent = 'Memproses...';
+        pesanError.className = 'notifikasi';
+        pesanError.textContent = '';
+
+        try {
+            let resp = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: document.getElementById('username').value,
+                    kata_sandi: document.getElementById('kata_sandi').value
+                })
+            });
+
+            let data = await resp.json();
+
+            if (data.sukses) {
+                window.location.href = '/';
+            } else {
+                pesanError.className = 'notifikasi notifikasi-error';
+                pesanError.textContent = data.pesan || 'Login gagal. Periksa username dan kata sandi.';
+            }
+        } catch (e) {
+            console.error('Gagal login:', e);
+            pesanError.className = 'notifikasi notifikasi-error';
+            pesanError.textContent = 'Gagal terhubung ke server. Coba lagi nanti.';
+        } finally {
+            tombol.disabled = false;
+            tombol.textContent = 'Masuk';
+        }
+    }
+
+    // Check if already logged in
+    (async function() {
+        try {
+            let resp = await fetch('/api/auth/sesi');
+            let data = await resp.json();
+            if (data.data && data.data.login) {
+                window.location.href = '/';
+            }
+        } catch (e) {}
+    })();
+</script>
+
+</body>
+</html>

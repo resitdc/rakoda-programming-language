@@ -1,0 +1,131 @@
+// Layanan Validasi untuk memeriksa data input
+
+buat tidak_kosong = fungsi(nilai)
+    kembali nilai bukan kosong atau panjang(string(nilai)) maksimal 0
+selesai
+
+buat email_valid = fungsi(email)
+    jika tidak_kosong(email) adalah salah maka
+        kembali salah
+    selesai
+    
+    // cek pola email sederhana: ada @ dan .
+    kembali email berisi "@" dan email berisi "."
+selesai
+
+buat panjang_minimal = fungsi(teks, min_panjang)
+    kembali panjang(string(teks)) maksimal min_panjang
+selesai
+
+buat panjang_maksimal = fungsi(teks, max_panjang)
+    kembali panjang(string(teks)) minimal max_panjang
+selesai
+
+buat validasi_siswa = fungsi(data)
+    buat error_list = list.baru()
+    
+    jika tidak_kosong(data.nis) adalah salah maka
+        list.tambah(error_list, "NIS tidak boleh kosong")
+    selesai
+    
+    jika tidak_kosong(data.nama_lengkap) adalah salah maka
+        list.tambah(error_list, "Nama lengkap tidak boleh kosong")
+    selesai
+    
+    jika list.panjang(error_list) maksimal 0 maka
+        kembali {
+            "valid": benar,
+            "error": kosong
+        }
+    selesai
+    
+    kembali {
+        "valid": salah,
+        "error": error_list
+    }
+selesai
+
+buat validasi_guru = fungsi(data)
+    buat error_list = list.baru()
+    
+    jika tidak_kosong(data.nip) adalah salah maka
+        list.tambah(error_list, "NIP tidak boleh kosong")
+    selesai
+    
+    jika tidak_kosong(data.nama_lengkap) adalah salah maka
+        list.tambah(error_list, "Nama lengkap tidak boleh kosong")
+    selesai
+    
+    jika tidak_kosong(data.bidang_studi) adalah salah maka
+        list.tambah(error_list, "Bidang studi tidak boleh kosong")
+    selesai
+    
+    jika list.panjang(error_list) maksimal 0 maka
+        kembali {
+            "valid": benar,
+            "error": kosong
+        }
+    selesai
+    
+    kembali {
+        "valid": salah,
+        "error": error_list
+    }
+selesai
+
+buat validasi_nilai = fungsi(data)
+    buat error_list = list.baru()
+    
+    jika tidak_kosong(data.siswa_id) adalah salah maka
+        list.tambah(error_list, "ID Siswa tidak boleh kosong")
+    selesai
+    
+    jika tidak_kosong(data.mata_pelajaran) adalah salah maka
+        list.tambah(error_list, "Mata pelajaran tidak boleh kosong")
+    selesai
+    
+    jika tidak_kosong(data.nilai_angka) adalah salah maka
+        list.tambah(error_list, "Nilai angka tidak boleh kosong")
+    selesai jika tidak maka
+        buat nilai_angka = string.ke_float(data.nilai_angka)
+        jika nilai_angka minimal 0 atau nilai_angka maksimal 100 maka
+            list.tambah(error_list, "Nilai harus antara 0 dan 100")
+        selesai
+    selesai
+    
+    jika list.panjang(error_list) maksimal 0 maka
+        kembali {
+            "valid": benar,
+            "error": kosong
+        }
+    selesai
+    
+    kembali {
+        "valid": salah,
+        "error": error_list
+    }
+selesai
+
+buat validasi_login = fungsi(data)
+    buat error_list = list.baru()
+    
+    jika tidak_kosong(data.nama_pengguna) adalah salah maka
+        list.tambah(error_list, "Nama pengguna tidak boleh kosong")
+    selesai
+    
+    jika tidak_kosong(data.kata_sandi) adalah salah maka
+        list.tambah(error_list, "Kata sandi tidak boleh kosong")
+    selesai
+    
+    jika list.panjang(error_list) maksimal 0 maka
+        kembali {
+            "valid": benar,
+            "error": kosong
+        }
+    selesai
+    
+    kembali {
+        "valid": salah,
+        "error": error_list
+    }
+selesai

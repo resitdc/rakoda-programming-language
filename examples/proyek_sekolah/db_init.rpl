@@ -1,0 +1,170 @@
+// Inisialisasi Database Sistem Manajemen Sekolah
+// 8 Tabel: pengguna, siswa, guru, kelas, jadwal, nilai, absensi, pengumuman
+
+tampilkan("🔧 Membuat tabel database sekolah...")
+
+// Tabel pengguna untuk autentikasi
+db.eksekusi("
+    CREATE TABLE IF NOT EXISTS pengguna (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nama_pengguna TEXT TIDAK KOSONG SATUAN,
+        kata_sandi TEXT TIDAK KOSONG,
+        peran TEXT TIDAK KOSONG DEFAULT 'siswa',
+        nama_lengkap TEXT TIDAK KOSONG,
+        email TEXT,
+        dibuat_pada DATETIME DEFAULT WAKTU_SEKARANG
+    )
+")
+
+// Tabel siswa
+db.eksekusi("
+    CREATE TABLE IF NOT EXISTS siswa (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nis TEXT TIDAK KOSONG SATUAN,
+        nama_lengkap TEXT TIDAK KOSONG,
+        jenis_kelamin TEXT DEFAULT 'L',
+        tanggal_lahir DATE,
+        alamat TEXT,
+        nomor_telepon TEXT,
+        kelas_id INTEGER,
+        orang_tua_id INTEGER,
+        angkatan INTEGER,
+        dibuat_pada DATETIME DEFAULT WAKTU_SEKARANG,
+        FOREIGN KEY (kelas_id) REFERENCES kelas(id)
+    )
+")
+
+// Tabel guru
+db.eksekusi("
+    CREATE TABLE IF NOT EXISTS guru (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nip TEXT TIDAK KOSONG SATUAN,
+        nama_lengkap TEXT TIDAK KOSONG,
+        bidang_studi TEXT TIDAK KOSONG,
+        jenis_kelamin TEXT DEFAULT 'L',
+        tanggal_lahir DATE,
+        alamat TEXT,
+        nomor_telepon TEXT,
+        email TEXT,
+        ijazah_tertinggi TEXT DEFAULT 'S1',
+        pengalaman_tahun INTEGER DEFAULT 0,
+        dibuat_pada DATETIME DEFAULT WAKTU_SEKARANG
+    )
+")
+
+// Tabel kelas
+db.eksekusi("
+    CREATE TABLE IF NOT EXISTS kelas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nama_kelas TEXT TIDAK KOSONG SATUAN,
+        tingkat INTEGER TIDAK KOSONG,
+        wali_kelas_id INTEGER,
+        kapasitas INTEGER DEFAULT 40,
+        tahun_ajaran TEXT TIDAK KOSONG,
+        dibuat_pada DATETIME DEFAULT WAKTU_SEKARANG,
+        FOREIGN KEY (wali_kelas_id) REFERENCES guru(id)
+    )
+")
+
+// Tabel jadwal pelajaran
+db.eksekusi("
+    CREATE TABLE IF NOT EXISTS jadwal (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        kelas_id INTEGER TIDAK KOSONG,
+        guru_id INTEGER TIDAK KOSONG,
+        mata_pelajaran TEXT TIDAK KOSONG,
+        hari TEXT TIDAK KOSONG,
+        jam_mulai TEXT TIDAK KOSONG,
+        jam_selesai TEXT TIDAK KOSONG,
+        ruangan TEXT,
+        semester TEXT TIDAK KOSONG,
+        FOREIGN KEY (kelas_id) REFERENCES kelas(id),
+        FOREIGN KEY (guru_id) REFERENCES guru(id)
+    )
+")
+
+// Tabel nilai
+db.eksekusi("
+    CREATE TABLE IF NOT EXISTS nilai (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        siswa_id INTEGER TIDAK KOSONG,
+        mata_pelajaran TEXT TIDAK KOSONG,
+        tipe_nilai TEXT DEFAULT 'tugas',
+        nilai_angka REAL TIDAK KOSONG,
+        semester TEXT TIDAK KOSONG,
+        tahun_ajaran TEXT TIDAK KOSONG,
+        deskripsi TEXT,
+        tanggal DATE DEFAULT TANGGAL_SEKARANG,
+        guru_id INTEGER,
+        FOREIGN KEY (siswa_id) REFERENCES siswa(id),
+        FOREIGN KEY (guru_id) REFERENCES guru(id)
+    )
+")
+
+// Tabel absensi
+db.eksekusi("
+    CREATE TABLE IF NOT EXISTS absensi (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        siswa_id INTEGER TIDAK KOSONG,
+        tanggal DATE DEFAULT TANGGAL_SEKARANG,
+        status TEXT TIDAK KOSONG DEFAULT 'hadir',
+        keterangan TEXT,
+        jam_masuk TEXT,
+        dibuat_pada DATETIME DEFAULT WAKTU_SEKARANG,
+        FOREIGN KEY (siswa_id) REFERENCES siswa(id)
+    )
+")
+
+// Tabel pengumuman
+db.eksekusi("
+    CREATE TABLE IF NOT EXISTS pengumuman (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        judul TEXT TIDAK KOSONG,
+        isi TEXT TIDAK KOSONG,
+        prioritas TEXT DEFAULT 'normal',
+        target_peran TEXT DEFAULT 'semua',
+        kelas_id INTEGER,
+        dibuat_oleh INTEGER,
+        dibuat_pada DATETIME DEFAULT WAKTU_SEKARANG,
+        berakhir_pada DATE,
+        FOREIGN KEY (kelas_id) REFERENCES kelas(id),
+        FOREIGN KEY (dibuat_oleh) REFERENCES pengguna(id)
+    )
+")
+
+tampilkan("✅ Database berhasil diinisialisasi")
+
+// Seed data awal
+tampilkan("🌱 Mengisi data awal...")
+
+// Buat pengguna admin default
+// Hash SHA256 dari "admin123"
+buat hash_admin = "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9"
+db.eksekusi(`
+    INSERT OR IGNORE INTO pengguna (nama_pengguna, kata_sandi, peran, nama_lengkap, email) 
+    VALUES ('admin', '${hash_admin}', 'admin', 'Administrator Sekolah', 'admin@sekolah.id')
+`)
+
+// Buat data guru contoh
+db.eksekusi("
+    INSERT OR IGNORE INTO guru (nip, nama_lengkap, bidang_studi) VALUES 
+    ('198501012010011001', 'Dr. Budi Santoso', 'Matematika'),
+    ('198602022010012002', 'Siti Nurhaliza, S.Pd.', 'Bahasa Indonesia'),
+    ('198703032010012003', 'Ahmad Fauzi, S.Pd.', 'Fisika'),
+    ('198804042010012004', 'Dewi Kartika, S.Pd.', 'Bahasa Inggris'),
+    ('198905052010012005', 'Rudi Hermawan, S.Kom.', 'Informatika'),
+    ('199006062010012006', 'Anisa Putri, S.Pd.', 'Biologi')
+")
+
+// Buat data kelas
+db.eksekusi("
+    INSERT OR IGNORE INTO kelas (nama_kelas, tingkat, kapasitas, tahun_ajaran) VALUES 
+    ('10-A', 10, 40, '2025/2026'),
+    ('10-B', 10, 40, '2025/2026'),
+    ('11-A', 11, 40, '2025/2026'),
+    ('11-B', 11, 40, '2025/2026'),
+    ('12-A', 12, 35, '2025/2026'),
+    ('12-B', 12, 35, '2025/2026')
+")
+
+tampilkan("✅ Data awal berhasil diisi")

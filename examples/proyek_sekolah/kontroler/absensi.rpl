@@ -1,0 +1,291 @@
+// Kontroler Absensi
+// Fitur: CRUD, catat kehadiran massal, rekap per siswa, laporan harian, statistik
+
+buat resp = pakai "../model/response.rpl"
+
+buat ambil_semua = fungsi(req)
+    buat halaman = 1
+    buat per_halaman = 30
+
+    jika req.params bukan kosong maka
+        jika req.params.halaman bukan kosong maka
+            halaman = string.ke_int(req.params.halaman)
+        selesai
+        jika req.params.per_halaman bukan kosong maka
+            per_halaman = string.ke_int(req.params.per_halaman)
+        selesai
+    selesai
+
+    buat offset = (halaman - 1) * per_halaman
+
+    buat kueri_data = `
+        SELECT a.*, s.nama_lengkap, s.nis, k.nama_kelas
+        FROM absensi a
+        JOIN siswa s ON a.siswa_id = s.id
+        LEFT JOIN kelas k ON s.kelas_id = k.id
+        ORDER BY a.tanggal DESC, s.nama_lengkap ASC
+        LIMIT ${per_halaman} OFFSET ${offset}
+    `
+
+    buat kueri_total = "SELECT COUNT(*) as total FROM absensi"
+
+    buat data = db.kueri(kueri_data)
+    buat hasil_total = db.kueri(kueri_total)
+    buat total = list.ambil(hasil_total, 0).total
+
+    kembalikan resp.paginasi(data, halaman, per_halaman, total)
+selesai
+
+buat ambil_detail = fungsi(req)
+    jika req.params adalah kosong atau req.params.id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Absensi tidak diberikan")
+    selesai
+
+    buat id = req.params.id
+
+    buat kueri = `
+        SELECT a.*, s.nama_lengkap, s.nis, k.nama_kelas
+        FROM absensi a
+        JOIN siswa s ON a.siswa_id = s.id
+        LEFT JOIN kelas k ON s.kelas_id = k.id
+        WHERE a.id = ${id}
+    `
+
+    buat hasil = db.kueri(kueri)
+
+    jika list.panjang(hasil) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Data absensi")
+    selesai
+
+    kembalikan resp.sukses(list.ambil(hasil, 0))
+selesai
+
+buat catat = fungsi(req)
+    buat data = json.parse(req.tubuh)
+
+    jika data.siswa_id adalah kosong atau data.status adalah kosong maka
+        kembalikan resp.galat_validasi("ID Siswa dan status tidak boleh kosong")
+    selesai
+
+    // Validasi status
+    buat status_valid = data.status adalah "hadir" atau data.status adalah "sakit" atau data.status adalah "izin" atau data.status adalah "alpa"
+    jika status_valid adalah salah maka
+        kembalikan resp.galat_validasi("Status harus: hadir, sakit, izin, atau alpa")
+    selesai
+
+    db.eksekusi(`
+        INSERT INTO absensi (siswa_id, tanggal, status, keterangan, jam_masuk)
+        VALUES (
+            ${data.siswa_id},
+            '${data.tanggal}',
+            '${data.status}',
+            '${data.keterangan}',
+            '${data.jam_masuk}'
+        )
+    `)
+
+    tampilkan("✅ Absensi tercatat")
+    kembalikan resp.dibuat(kosong, "Absensi berhasil dicatat")
+selesai
+
+buat catat_massal = fungsi(req)
+    buat data = json.parse(req.tubuh)
+
+    // data.absensi = [{siswa_id, status, keterangan}, ...] dan data.tanggal
+    buat daftar_absensi = data.absensi
+    buat tanggal = data.tanggal
+    buat berhasil = 0
+    buat gagal = 0
+    buat i = 0
+    buat total_data = list.panjang(daftar_absensi)
+
+    selama i < total_data
+        buat item = list.ambil(daftar_absensi, i)
+        
+        jika item.siswa_id bukan kosong dan item.status bukan kosong maka
+            db.eksekusi(`
+                INSERT INTO absensi (siswa_id, tanggal, status, keterangan)
+                VALUES (${item.siswa_id}, '${tanggal}', '${item.status}', '${item.keterangan}')
+            `)
+            berhasil = berhasil + 1
+        jika tidak maka
+            gagal = gagal + 1
+        selesai
+
+        i = i + 1
+    selesai
+
+    tampilkan("✅ Absensi massal: " + berhasil + " berhasil, " + gagal + " gagal")
+    kembalikan resp.dibuat({
+        "berhasil": berhasil,
+        "gagal": gagal,
+        "total": list.panjang(daftar_absensi)
+    }, "Absensi massal selesai")
+selesai
+
+buat perbarui = fungsi(req)
+    jika req.params adalah kosong atau req.params.id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Absensi tidak diberikan")
+    selesai
+
+    buat id = req.params.id
+    buat data = json.parse(req.tubuh)
+
+    buat cek = db.kueri(`SELECT id FROM absensi WHERE id = ${id}`)
+    jika list.panjang(cek) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Data absensi")
+    selesai
+
+    db.eksekusi(`
+        UPDATE absensi SET
+            status = '${data.status}',
+            keterangan = '${data.keterangan}',
+            jam_masuk = '${data.jam_masuk}'
+        WHERE id = ${id}
+    `)
+
+    kembalikan resp.sukses(kosong, "Absensi berhasil diperbarui")
+selesai
+
+buat rekap_siswa = fungsi(req)
+    jika req.params adalah kosong atau req.params.siswa_id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Siswa tidak diberikan")
+    selesai
+
+    buat siswa_id = req.params.siswa_id
+
+    // Info siswa
+    buat info = db.kueri(`
+        SELECT s.nama_lengkap, s.nis, k.nama_kelas
+        FROM siswa s
+        LEFT JOIN kelas k ON s.kelas_id = k.id
+        WHERE s.id = ${siswa_id}
+    `)
+
+    jika list.panjang(info) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Siswa")
+    selesai
+
+    // Ringkasan absensi
+    buat ringkasan = db.kueri(`
+        SELECT 
+            status,
+            COUNT(*) as jumlah
+        FROM absensi
+        WHERE siswa_id = ${siswa_id}
+        GROUP BY status
+    `)
+
+    // Total hari
+    buat total_hari = db.kueri(`
+        SELECT COUNT(*) as total FROM absensi WHERE siswa_id = ${siswa_id}
+    `)
+
+    // Hitung persentase kehadiran
+    buat total = list.ambil(total_hari, 0).total
+    
+    buat jumlah_hadir = 0
+    buat idx_ringkasan = 0
+    buat total_ringkasan = list.panjang(ringkasan)
+
+    selama idx_ringkasan < total_ringkasan
+        buat stat = list.ambil(ringkasan, idx_ringkasan)
+        jika stat.status adalah "hadir" maka
+            jumlah_hadir = stat.jumlah
+        selesai
+        idx_ringkasan = idx_ringkasan + 1
+    selesai
+
+    buat persentase = 0
+    jika total maksimal 0 maka
+        persentase = matematika.bulatkan(jumlah_hadir / total * 100, 1)
+    selesai
+
+    // Detail 30 hari terakhir
+    buat detail = db.kueri(`
+        SELECT tanggal, status, keterangan, jam_masuk
+        FROM absensi
+        WHERE siswa_id = ${siswa_id}
+        ORDER BY tanggal DESC
+        LIMIT 30
+    `)
+
+    kembalikan resp.sukses({
+        "siswa": list.ambil(info, 0),
+        "ringkasan": ringkasan,
+        "total_hari": total,
+        "persentase_kehadiran": persentase,
+        "detail": detail
+    })
+selesai
+
+buat laporan_harian = fungsi(req)
+    jika req.params adalah kosong atau req.params.tanggal adalah kosong maka
+        kembalikan resp.galat_validasi("Tanggal tidak diberikan")
+    selesai
+
+    buat tanggal = req.params.tanggal
+
+    buat laporan = db.kueri(`
+        SELECT 
+            a.*, 
+            s.nama_lengkap, 
+            s.nis, 
+            k.nama_kelas,
+            k.tingkat
+        FROM absensi a
+        JOIN siswa s ON a.siswa_id = s.id
+        LEFT JOIN kelas k ON s.kelas_id = k.id
+        WHERE a.tanggal = '${tanggal}'
+        ORDER BY k.tingkat, k.nama_kelas, s.nama_lengkap
+    `)
+
+    // Ringkasan per status
+    buat ringkasan_harian = db.kueri(`
+        SELECT status, COUNT(*) as jumlah
+        FROM absensi
+        WHERE tanggal = '${tanggal}'
+        GROUP BY status
+    `)
+
+    kembalikan resp.sukses({
+        "tanggal": tanggal,
+        "total_tercatat": list.panjang(laporan),
+        "ringkasan": ringkasan_harian,
+        "detail": laporan
+    })
+selesai
+
+buat laporan_bulanan = fungsi(req)
+    jika req.params adalah kosong atau req.params.bulan adalah kosong atau req.params.tahun adalah kosong maka
+        kembalikan resp.galat_validasi("Bulan dan tahun tidak diberikan")
+    selesai
+
+    buat bulan = req.params.bulan
+    buat tahun = req.params.tahun
+
+    buat laporan = db.kueri(`
+        SELECT 
+            s.id as siswa_id,
+            s.nama_lengkap,
+            s.nis,
+            k.nama_kelas,
+            SUM(CASE WHEN a.status = 'hadir' THEN 1 ELSE 0 END) as hadir,
+            SUM(CASE WHEN a.status = 'sakit' THEN 1 ELSE 0 END) as sakit,
+            SUM(CASE WHEN a.status = 'izin' THEN 1 ELSE 0 END) as izin,
+            SUM(CASE WHEN a.status = 'alpa' THEN 1 ELSE 0 END) as alpa,
+            COUNT(*) as total
+        FROM siswa s
+        LEFT JOIN absensi a ON s.id = a.siswa_id 
+            AND strftime('%m', a.tanggal) = '${bulan}'
+            AND strftime('%Y', a.tanggal) = '${tahun}'
+        LEFT JOIN kelas k ON s.kelas_id = k.id
+        GROUP BY s.id
+        ORDER BY k.tingkat, k.nama_kelas, s.nama_lengkap
+    `)
+
+    kembalikan resp.sukses({
+        "periode": tahun + "-" + bulan,
+        "data": laporan
+    })
+selesai

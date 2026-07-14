@@ -59,9 +59,22 @@ pub fn register(vm: &mut VM) {
             };
 
             let pool = if url_str.starts_with("sqlite://") {
-                let path = url_str.trim_start_matches("sqlite://");
+                let raw_path = url_str.trim_start_matches("sqlite://");
+                // Resolve path relatif terhadap project_root (direktori file sumber),
+                // bukan CWD (current working directory).
+                let path = if std::path::Path::new(raw_path).is_relative() {
+                    if let Some(root) = &vm.get_heap_mut().project_root {
+                        root.join(raw_path)
+                            .to_string_lossy()
+                            .to_string()
+                    } else {
+                        raw_path.to_string()
+                    }
+                } else {
+                    raw_path.to_string()
+                };
                 // Gunakan connection pool r2d2 untuk SQLite
-                DbPool::new_sqlite_pool(path, 5)?
+                DbPool::new_sqlite_pool(&path, 5)?
             } else if url_str.starts_with("mysql://") {
                 let opts = mysql::Opts::from_url(&url_str)
                     .map_err(|e| format!("URL MySQL tidak valid: {}", e))?;

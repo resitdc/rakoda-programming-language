@@ -1,0 +1,47 @@
+</main>
+
+    <footer class="footer">
+        <p>&copy; 2024 Sistem Manajemen Sekolah &mdash; Dibangun dengan RPL (Rakoda Programming Language)</p>
+    </footer>
+
+    <script>
+        async function cekLogin() {
+            try {
+                let resp = await fetch('/api/auth/sesi');
+                let data = await resp.json();
+
+                let userDiv = document.getElementById('navbar-user');
+                if (data.data && data.data.login) {
+                    userDiv.innerHTML = '<span>\u{1f464} ' + data.data.pengguna.nama + '</span>' +
+                        '<button class="btn-logout" onclick="logout()">Logout</button>';
+                } else {
+                    userDiv.innerHTML = '<a href="/login" style="color:white;text-decoration:none;">Login</a>';
+                }
+            } catch (e) {
+                console.error('Gagal cek sesi:', e);
+            }
+        }
+
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout', { method: 'POST' });
+                window.location.href = '/login';
+            } catch (e) {
+                console.error('Gagal logout:', e);
+            }
+        }
+
+        function formatTanggal(tanggal) {
+            if (!tanggal) return '-';
+            let d = new Date(tanggal);
+            return d.toLocaleDateString('id-ID', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', cekLogin);
+    </script>
+</body>
+</html>

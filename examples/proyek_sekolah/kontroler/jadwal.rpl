@@ -1,0 +1,204 @@
+// Kontroler Jadwal Pelajaran
+// Fitur: CRUD, lihat per kelas, lihat per guru, lihat per hari
+
+buat resp = pakai "../model/response.rpl"
+
+buat ambil_semua = fungsi(req)
+    buat kueri = `
+        SELECT j.*, k.nama_kelas, k.tingkat, g.nama_lengkap as nama_guru, g.bidang_studi
+        FROM jadwal j
+        JOIN kelas k ON j.kelas_id = k.id
+        JOIN guru g ON j.guru_id = g.id
+        ORDER BY k.tingkat, k.nama_kelas, j.hari, j.jam_mulai
+    `
+
+    buat hasil = db.kueri(kueri)
+    kembalikan resp.sukses(hasil)
+selesai
+
+buat ambil_detail = fungsi(req)
+    jika req.params adalah kosong atau req.params.id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Jadwal tidak diberikan")
+    selesai
+
+    buat id = req.params.id
+
+    buat kueri = `
+        SELECT j.*, k.nama_kelas, g.nama_lengkap as nama_guru
+        FROM jadwal j
+        JOIN kelas k ON j.kelas_id = k.id
+        JOIN guru g ON j.guru_id = g.id
+        WHERE j.id = ${id}
+    `
+
+    buat hasil = db.kueri(kueri)
+
+    jika list.panjang(hasil) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Jadwal")
+    selesai
+
+    kembalikan resp.sukses(list.ambil(hasil, 0))
+selesai
+
+buat tambah = fungsi(req)
+    buat data = json.parse(req.tubuh)
+
+    jika data.kelas_id adalah kosong atau data.guru_id adalah kosong maka
+        kembalikan resp.galat_validasi("Kelas dan Guru tidak boleh kosong")
+    selesai
+
+    // Validasi bentrok jadwal
+    buat cek_bentrok = db.kueri(`
+        SELECT id FROM jadwal
+        WHERE kelas_id = ${data.kelas_id}
+          AND hari = '${data.hari}'
+          AND jam_mulai < '${data.jam_selesai}'
+          AND jam_selesai > '${data.jam_mulai}'
+    `)
+
+    jika list.panjang(cek_bentrok) maksimal 0 maka
+        kembalikan resp.galat_validasi("Jadwal bentrok dengan kelas yang sama di hari dan jam tersebut")
+    selesai
+
+    db.eksekusi(`
+        INSERT INTO jadwal (kelas_id, guru_id, mata_pelajaran, hari, jam_mulai, jam_selesai, ruangan, semester, tahun_ajaran)
+        VALUES (
+            ${data.kelas_id},
+            ${data.guru_id},
+            '${data.mata_pelajaran}',
+            '${data.hari}',
+            '${data.jam_mulai}',
+            '${data.jam_selesai}',
+            '${data.ruangan}',
+            '${data.semester}',
+            '${data.tahun_ajaran}'
+        )
+    `)
+
+    tampilkan("✅ Jadwal ditambahkan: " + data.mata_pelajaran + " - " + data.hari)
+    kembalikan resp.dibuat(kosong, "Jadwal berhasil ditambahkan")
+selesai
+
+buat perbarui = fungsi(req)
+    jika req.params adalah kosong atau req.params.id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Jadwal tidak diberikan")
+    selesai
+
+    buat id = req.params.id
+    buat data = json.parse(req.tubuh)
+
+    buat cek = db.kueri(`SELECT id FROM jadwal WHERE id = ${id}`)
+    jika list.panjang(cek) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Jadwal")
+    selesai
+
+    db.eksekusi(`
+        UPDATE jadwal SET
+            kelas_id = ${data.kelas_id},
+            guru_id = ${data.guru_id},
+            mata_pelajaran = '${data.mata_pelajaran}',
+            hari = '${data.hari}',
+            jam_mulai = '${data.jam_mulai}',
+            jam_selesai = '${data.jam_selesai}',
+            ruangan = '${data.ruangan}',
+            semester = '${data.semester}',
+            tahun_ajaran = '${data.tahun_ajaran}'
+        WHERE id = ${id}
+    `)
+
+    kembalikan resp.sukses(kosong, "Jadwal berhasil diperbarui")
+selesai
+
+buat hapus = fungsi(req)
+    jika req.params adalah kosong atau req.params.id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Jadwal tidak diberikan")
+    selesai
+
+    buat id = req.params.id
+
+    buat cek = db.kueri(`SELECT id FROM jadwal WHERE id = ${id}`)
+    jika list.panjang(cek) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Jadwal")
+    selesai
+
+    db.eksekusi(`DELETE FROM jadwal WHERE id = ${id}`)
+    kembalikan resp.sukses(kosong, "Jadwal berhasil dihapus")
+selesai
+
+buat lihat_per_kelas = fungsi(req)
+    jika req.params adalah kosong atau req.params.kelas_id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Kelas tidak diberikan")
+    selesai
+
+    buat kelas_id = req.params.kelas_id
+
+    buat kueri = `
+        SELECT j.*, g.nama_lengkap as nama_guru, g.bidang_studi
+        FROM jadwal j
+        JOIN guru g ON j.guru_id = g.id
+        WHERE j.kelas_id = ${kelas_id}
+        ORDER BY 
+            CASE j.hari
+                WHEN 'Senin' THEN 1
+                WHEN 'Selasa' THEN 2
+                WHEN 'Rabu' THEN 3
+                WHEN 'Kamis' THEN 4
+                WHEN 'Jumat' THEN 5
+                WHEN 'Sabtu' THEN 6
+                ELSE 7
+            END,
+            j.jam_mulai
+    `
+
+    buat hasil = db.kueri(kueri)
+    kembalikan resp.sukses(hasil)
+selesai
+
+buat lihat_per_guru = fungsi(req)
+    jika req.params adalah kosong atau req.params.guru_id adalah kosong maka
+        kembalikan resp.galat_validasi("ID Guru tidak diberikan")
+    selesai
+
+    buat guru_id = req.params.guru_id
+
+    buat kueri = `
+        SELECT j.*, k.nama_kelas, k.tingkat
+        FROM jadwal j
+        JOIN kelas k ON j.kelas_id = k.id
+        WHERE j.guru_id = ${guru_id}
+        ORDER BY 
+            CASE j.hari
+                WHEN 'Senin' THEN 1
+                WHEN 'Selasa' THEN 2
+                WHEN 'Rabu' THEN 3
+                WHEN 'Kamis' THEN 4
+                WHEN 'Jumat' THEN 5
+                WHEN 'Sabtu' THEN 6
+                ELSE 7
+            END,
+            j.jam_mulai
+    `
+
+    buat hasil = db.kueri(kueri)
+    kembalikan resp.sukses(hasil)
+selesai
+
+buat lihat_per_hari = fungsi(req)
+    jika req.params adalah kosong atau req.params.hari adalah kosong maka
+        kembalikan resp.galat_validasi("Hari tidak diberikan")
+    selesai
+
+    buat hari = req.params.hari
+
+    buat kueri = `
+        SELECT j.*, k.nama_kelas, k.tingkat, g.nama_lengkap as nama_guru
+        FROM jadwal j
+        JOIN kelas k ON j.kelas_id = k.id
+        JOIN guru g ON j.guru_id = g.id
+        WHERE j.hari = '${hari}'
+        ORDER BY k.tingkat, k.nama_kelas, j.jam_mulai
+    `
+
+    buat hasil = db.kueri(kueri)
+    kembalikan resp.sukses(hasil)
+selesai

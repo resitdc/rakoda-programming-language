@@ -23,15 +23,21 @@ pub fn run_file(file: &PathBuf) -> Result<(), String> {
     };
 
     let base_path = file.parent().map(|p| p.to_path_buf());
-    run_source(&kode_sumber, base_path)
+    let nama_file_buf = file.to_string_lossy().to_string();
+    let nama_file = Some(nama_file_buf.as_str());
+    run_source(&kode_sumber, base_path, nama_file)
 }
 
-pub fn run_source(kode_sumber: &str, base_path: Option<PathBuf>) -> Result<(), String> {
+pub fn run_source(
+    kode_sumber: &str,
+    base_path: Option<PathBuf>,
+    nama_file: Option<&str>,
+) -> Result<(), String> {
     let mut lexer = Lexer::new(kode_sumber);
     let tokens = match lexer.tokenize() {
         Ok(t) => t,
         Err(e) => {
-            return Err(e.tampilkan(kode_sumber));
+            return Err(e.tampilkan_dengan_file(kode_sumber, nama_file));
         }
     };
 
@@ -39,7 +45,7 @@ pub fn run_source(kode_sumber: &str, base_path: Option<PathBuf>) -> Result<(), S
     let mut program = parser.parse_program();
     let errors = std::mem::take(&mut program.errors);
     if let Some(e) = errors.into_iter().next() {
-        return Err(e.tampilkan(kode_sumber));
+        return Err(e.tampilkan_dengan_file(kode_sumber, nama_file));
     }
 
     let program = ast::optimizer::optimize_program(program);
@@ -48,12 +54,23 @@ pub fn run_source(kode_sumber: &str, base_path: Option<PathBuf>) -> Result<(), S
     let mut typechecker = typechecker::TypeChecker::new();
     let check_result = typechecker.check(&program);
     if !check_result.errors.is_empty() {
-        eprintln!("\x1b[1;33m⚠️  Peringatan pengecekan tipe:\x1b[0m");
+        if let Some(file) = nama_file {
+            eprintln!("\x1b[1;33m⚠️  Peringatan pengecekan tipe di {}:\x1b[0m", file);
+        } else {
+            eprintln!("\x1b[1;33m⚠️  Peringatan pengecekan tipe:\x1b[0m");
+        }
         for e in &check_result.errors {
-            eprintln!(
-                "  \x1b[1;36m--> \x1b[0mbaris {}, kolom {}: \x1b[1;33m{}\x1b[0m",
-                e.lokasi.baris, e.lokasi.kolom, e.pesan
-            );
+            if let Some(file) = nama_file {
+                eprintln!(
+                    "  \x1b[1;36m--> \x1b[0m{}:{}:{}: \x1b[1;33m{}\x1b[0m",
+                    file, e.lokasi.baris, e.lokasi.kolom, e.pesan
+                );
+            } else {
+                eprintln!(
+                    "  \x1b[1;36m--> \x1b[0mbaris {}, kolom {}: \x1b[1;33m{}\x1b[0m",
+                    e.lokasi.baris, e.lokasi.kolom, e.pesan
+                );
+            }
             if let Some(ref saran) = e.saran {
                 eprintln!("  \x1b[1;32m💡 bantuan:\x1b[0m {}", saran);
             }
@@ -63,6 +80,9 @@ pub fn run_source(kode_sumber: &str, base_path: Option<PathBuf>) -> Result<(), S
 
     let mut machine = vm::VM::new();
     vm::stdlib::register_all(&mut machine);
+    // Set project_root agar fungsi bawaan VM bisa resolve path relatif
+    // terhadap direktori file sumber, bukan CWD.
+    machine.heap.project_root = base_path.clone();
 
     let compiler = vm::Compiler::baru_dengan_base_path(&mut machine.heap, base_path);
     match compiler.compile(program) {
@@ -73,7 +93,7 @@ pub fn run_source(kode_sumber: &str, base_path: Option<PathBuf>) -> Result<(), S
                         pesan: msg,
                         lokasi,
                     };
-                    return Err(e.tampilkan(kode_sumber));
+                    return Err(e.tampilkan_dengan_file(kode_sumber, nama_file));
                 } else {
                     return Err(format!("VM Error: {}", msg));
                 }

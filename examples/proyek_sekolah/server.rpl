@@ -1,0 +1,1229 @@
+// ================================
+// SISTEM MANAJEMEN SEKOLAH (SMS)
+// Dibangun dengan RPL
+// ================================
+
+tampilkan("")
+tampilkan("╔══════════════════════════════════════╗")
+tampilkan("║   SISTEM MANAJEMEN SEKOLAH v1.0      ║")
+tampilkan("║   Dibangun dengan RPL               ║")
+tampilkan("╚══════════════════════════════════════╝")
+tampilkan("")
+
+// Inisialisasi database
+tampilkan("📦 Menginisialisasi database...")
+
+// Hubungkan ke database SQLite
+db.hubungkan("sqlite://sekolah.db")
+
+// ================================
+// INLINE: db_init.rpl
+// ================================
+
+// Skema Database Sekolah
+// Tabel: users, siswa, guru, kelas, kelas_siswa, nilai, absensi, jadwal, pengumuman
+
+tampilkan("🔧 Membuat tabel database sekolah...")
+
+// 1. Tabel users (untuk auth)
+db.jalankan("
+    BUAT TABEL JIKA BELUM ADA users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nama_pengguna TEXT NOT NULL UNIQUE,
+        kata_sandi TEXT NOT NULL,
+        peran TEXT NOT NULL DEFAULT 'guru',
+        nama_lengkap TEXT,
+        status BOOLEAN DEFAULT 'aktif',
+        dibuat_pada TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+")
+
+// 2. Tabel guru
+db.jalankan("
+    BUAT TABEL JIKA BELUM ADA guru (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nip TEXT UNIQUE,
+        nama_lengkap TEXT NOT NULL,
+        bidang_studi TEXT,
+        email TEXT,
+        telepon TEXT,
+        alamat TEXT,
+        status TEXT DEFAULT 'aktif',
+        dibuat_pada TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+")
+
+// 3. Tabel kelas
+db.jalankan("
+    BUAT TABEL JIKA BELUM ADA kelas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nama_kelas TEXT NOT NULL,
+        nama_mapel TEXT NOT NULL,
+        tahun_ajaran TEXT NOT NULL,
+        guru_id INTEGER,
+        kapasitas INTEGER DEFAULT 40,
+        status TEXT DEFAULT 'aktif',
+        dibuat_pada TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (guru_id) REFERENCES guru(id)
+    )
+")
+
+// 4. Tabel siswa
+db.jalankan("
+    BUAT TABEL JIKA BELUM ADA siswa (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nisn TEXT UNIQUE,
+        nis TEXT UNIQUE,
+        nama_lengkap TEXT NOT NULL,
+        tempat_lahir TEXT,
+        tanggal_lahir TEXT,
+        jenis_kelamin TEXT,
+        alamat TEXT,
+        telepon TEXT,
+        email TEXT,
+        nama_wali TEXT,
+        tahun_masuk INTEGER,
+        status TEXT DEFAULT 'aktif',
+        dibuat_pada TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+")
+
+// 5. Tabel kelas_siswa (relasi many-to-many)
+db.jalankan("
+    BUAT TABEL JIKA BELUM ADA kelas_siswa (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        kelas_id INTEGER NOT NULL,
+        siswa_id INTEGER NOT NULL,
+        dibuat_pada TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (kelas_id) REFERENCES kelas(id),
+        FOREIGN KEY (siswa_id) REFERENCES siswa(id),
+        UNIQUE(kelas_id, siswa_id)
+    )
+")
+
+// 6. Tabel nilai
+db.jalankan("
+    BUAT TABEL JIKA BELUM ADA nilai (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        siswa_id INTEGER NOT NULL,
+        kelas_id INTEGER,
+        mapel TEXT NOT NULL,
+        semester TEXT NOT NULL,
+        tipe TEXT NOT NULL DEFAULT 'uts',
+        nilai_angka REAL NOT NULL,
+        keterangan TEXT,
+        dibuat_pada TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (siswa_id) REFERENCES siswa(id),
+        FOREIGN KEY (kelas_id) REFERENCES kelas(id)
+    )
+")
+
+// 7. Tabel absensi
+db.jalankan("
+    BUAT TABEL JIKA BELUM ADA absensi (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        siswa_id INTEGER NOT NULL,
+        kelas_id INTEGER,
+        tanggal TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'hadir',
+        keterangan TEXT,
+        dibuat_pada TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (siswa_id) REFERENCES siswa(id),
+        FOREIGN KEY (kelas_id) REFERENCES kelas(id)
+    )
+")
+
+// 8. Tabel jadwal
+db.jalankan("
+    BUAT TABEL JIKA BELUM ADA jadwal (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        kelas_id INTEGER NOT NULL,
+        hari TEXT NOT NULL,
+        jam_mulai TEXT NOT NULL,
+        jam_selesai TEXT NOT NULL,
+        mapel TEXT NOT NULL,
+        guru_id INTEGER,
+        ruangan TEXT,
+        dibuat_pada TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (kelas_id) REFERENCES kelas(id),
+        FOREIGN KEY (guru_id) REFERENCES guru(id)
+    )
+")
+
+// 9. Tabel pengumuman
+db.jalankan("
+    BUAT TABEL JIKA BELUM ADA pengumuman (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        judul TEXT NOT NULL,
+        isi TEXT NOT NULL,
+        prioritas TEXT DEFAULT 'normal',
+        target_kelas_id INTEGER,
+        pembuat TEXT,
+        tanggal_mulai TEXT,
+        tanggal_selesai TEXT,
+        status TEXT DEFAULT 'aktif',
+        dibuat_pada TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (target_kelas_id) REFERENCES kelas(id)
+    )
+")
+
+tampilkan("✅ Database berhasil diinisialisasi")
+
+// Seed data awal
+tampilkan("🌱 Mengisi data awal...")
+
+// Admin user
+buat admin_password = "admin123"
+// Gunakan hash admin123 yang sudah dikalkulasi sebelumnya
+buat admin_hash = "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9"
+
+db.jalankan("HAPUS DARI users WHERE nama_pengguna = 'admin'")
+db.jalankan("MASUKKAN KE users (nama_pengguna, kata_sandi, peran, nama_lengkap) NILAI ('admin', '" + admin_hash + "', 'admin', 'Administrator')")
+
+tampilkan("✅ Data awal berhasil diisi")
+
+// ================================
+// INLINE: Model Response
+// ================================
+
+fungsi sukses(pesan, data)
+    jika data != kosong
+        kembalikan { pesan: pesan, sukses: true, data: data }
+    selesai
+    kembalikan { pesan: pesan, sukses: true }
+selesai
+
+fungsi error(pesan, kode)
+    jika kode != kosong
+        kembalikan { pesan: pesan, sukses: false, kode: kode }
+    selesai
+    kembalikan { pesan: pesan, sukses: false }
+selesai
+
+// ================================
+// INLINE: Layanan Validasi
+// ================================
+
+fungsi validasi_wajib(data, daftar_field)
+    buat i = 0
+    selama i < panjang(daftar_field)
+        buat field = daftar_field[i]
+        buat nilai = data[field]
+        
+        jika nilai == kosong atau nilai == ""
+            kembalikan error("Field '" + field + "' wajib diisi", 400)
+        selesai
+        
+        i = i + 1
+    selesai
+    
+    kembalikan sukses("Validasi berhasil")
+selesai
+
+fungsi validasi_panjang(nilai, min, maks, nama_field)
+    buat p = panjang(nilai)
+    
+    jika p < min
+        kembalikan error(nama_field + " minimal " + min + " karakter", 400)
+    selesai
+    
+    jika p > maks
+        kembalikan error(nama_field + " maksimal " + maks + " karakter", 400)
+    selesai
+    
+    kembalikan sukses("Panjang valid")
+selesai
+
+// ================================
+// INLINE: Layanan Hitung Nilai
+// ================================
+
+fungsi hitung_rata_rata(daftar_nilai)
+    jika panjang(daftar_nilai) == 0
+        kembalikan 0
+    selesai
+    
+    buat total = 0
+    buat i = 0
+    selama i < panjang(daftar_nilai)
+        buat item = daftar_nilai[i]
+        total = total + item.nilai_angka
+        i = i + 1
+    selesai
+    
+    kembalikan total / panjang(daftar_nilai)
+selesai
+
+fungsi konversi_huruf(nilai_angka)
+    jika nilai_angka >= 90
+        kembalikan "A"
+    selesai
+    jika nilai_angka >= 80
+        kembalikan "B"
+    selesai
+    jika nilai_angka >= 70
+        kembalikan "C"
+    selesai
+    jika nilai_angka >= 60
+        kembalikan "D"
+    selesai
+    kembalikan "E"
+selesai
+
+fungsi cek_naik_kelas(nilai_rata_rata, absensi_hadir, total_absensi)
+    jika nilai_rata_rata >= 70 dan absensi_hadir / total_absensi >= 0.75
+        kembalikan benar
+    selesai
+    kembalikan salah
+selesai
+
+// ================================
+// INLINE: Layanan Auth Helper
+// ================================
+
+fungsi buat_token(user_id, peran)
+    buat payload = user_id + ":" + peran + ":" + string.dari(waktu.sekarang())
+    kembalikan string.ke_base64(payload)
+selesai
+
+fungsi hash_password(password)
+    kembalikan kripto.sha256(password)
+selesai
+
+// ================================
+// INLINE: Kontroler SISWA
+// ================================
+
+fungsi ambil_semua(req)
+    buat hasil_query = db.jalankan("SELECT * FROM siswa WHERE status = 'aktif' ORDER BY nama_lengkap ASC")
+    kembalikan hasil_query
+selesai
+
+fungsi ambil_detail(req)
+    buat id_siswa = req.param.id
+    buat hasil_query = db.jalankan("SELECT * FROM siswa WHERE id = " + id_siswa)
+    
+    jika panjang(hasil_query) == 0
+        kembalikan error("Siswa tidak ditemukan", 404)
+    selesai
+    
+    kembalikan hasil_query[0]
+selesai
+
+fungsi tambah(req)
+    buat data = req.body
+    buat val = validasi_wajib(data, ["nisn", "nis", "nama_lengkap"])
+    
+    jika val.sukses == salah
+        kembalikan val
+    selesai
+    
+    db.jalankan("MASUKKAN KE siswa (nisn, nis, nama_lengkap, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat, telepon, email, nama_wali, tahun_masuk) NILAI ('" + data.nisn + "', '" + data.nis + "', '" + data.nama_lengkap + "', '" + data.tempat_lahir + "', '" + data.tanggal_lahir + "', '" + data.jenis_kelamin + "', '" + data.alamat + "', '" + data.telepon + "', '" + data.email + "', '" + data.nama_wali + "', '" + data.tahun_masuk + "')")
+    
+    kembalikan sukses("Siswa berhasil ditambahkan")
+selesai
+
+fungsi perbarui(req)
+    buat id_siswa = req.param.id
+    buat data = req.body
+    
+    // Periksa apakah siswa ada
+    buat cek = db.jalankan("SELECT id FROM siswa WHERE id = " + id_siswa)
+    jika panjang(cek) == 0
+        kembalikan error("Siswa tidak ditemukan", 404)
+    selesai
+    
+    db.jalankan("PERBARUI siswa SET nisn = '" + data.nisn + "', nis = '" + data.nis + "', nama_lengkap = '" + data.nama_lengkap + "', tempat_lahir = '" + data.tempat_lahir + "', tanggal_lahir = '" + data.tanggal_lahir + "', jenis_kelamin = '" + data.jenis_kelamin + "', alamat = '" + data.alamat + "', telepon = '" + data.telepon + "', email = '" + data.email + "', nama_wali = '" + data.nama_wali + "', tahun_masuk = '" + data.tahun_masuk + "' WHERE id = " + id_siswa)
+    
+    kembalikan sukses("Siswa berhasil diperbarui")
+selesai
+
+fungsi hapus(req)
+    buat id_siswa = req.param.id
+    
+    buat cek = db.jalankan("SELECT id FROM siswa WHERE id = " + id_siswa)
+    jika panjang(cek) == 0
+        kembalikan error("Siswa tidak ditemukan", 404)
+    selesai
+    
+    db.jalankan("HAPUS DARI siswa WHERE id = " + id_siswa)
+    
+    kembalikan sukses("Siswa berhasil dihapus")
+selesai
+
+fungsi cari(req)
+    buat kata_kunci = req.query.q
+    
+    jika kata_kunci == kosong atau kata_kunci == ""
+        kembalikan error("Kata kunci pencarian diperlukan", 400)
+    selesai
+    
+    buat hasil_query = db.jalankan("SELECT * FROM siswa WHERE (nama_lengkap LIKE '%" + kata_kunci + "%' OR nisn LIKE '%" + kata_kunci + "%' OR nis LIKE '%" + kata_kunci + "%') AND status = 'aktif' ORDER BY nama_lengkap ASC")
+    
+    kembalikan hasil_query
+selesai
+
+fungsi per_kelas(req)
+    buat kelas_id = req.param.kelas_id
+    
+    buat hasil_query = db.jalankan("SELECT s.* FROM siswa s JOIN kelas_siswa ks ON s.id = ks.siswa_id WHERE ks.kelas_id = " + kelas_id + " AND s.status = 'aktif' ORDER BY s.nama_lengkap ASC")
+    
+    kembalikan hasil_query
+selesai
+
+fungsi statistik(req)
+    buat total_siswa = db.jalankan("SELECT COUNT(*) as jumlah FROM siswa WHERE status = 'aktif'")
+    buat per_kelas = db.jalankan("SELECT k.nama_kelas, COUNT(ks.siswa_id) as jumlah_siswa FROM kelas k LEFT JOIN kelas_siswa ks ON k.id = ks.kelas_id GROUP BY k.id ORDER BY k.nama_kelas")
+    buat per_tahun = db.jalankan("SELECT tahun_masuk, COUNT(*) as jumlah FROM siswa WHERE status = 'aktif' GROUP BY tahun_masuk ORDER BY tahun_masuk DESC")
+    
+    kembalikan { total: total_siswa[0].jumlah, per_kelas: per_kelas, per_tahun: per_tahun }
+selesai
+
+// ================================
+// INLINE: Kontroler GURU
+// ================================
+
+fungsi ambil_semua_guru(req)
+    buat hasil_query = db.jalankan("SELECT * FROM guru WHERE status = 'aktif' ORDER BY nama_lengkap ASC")
+    kembalikan hasil_query
+selesai
+
+fungsi ambil_detail_guru(req)
+    buat id_guru = req.param.id
+    buat hasil_query = db.jalankan("SELECT * FROM guru WHERE id = " + id_guru)
+    
+    jika panjang(hasil_query) == 0
+        kembalikan error("Guru tidak ditemukan", 404)
+    selesai
+    
+    kembalikan hasil_query[0]
+selesai
+
+fungsi tambah_guru(req)
+    buat data = req.body
+    buat val = validasi_wajib(data, ["nip", "nama_lengkap"])
+    
+    jika val.sukses == salah
+        kembalikan val
+    selesai
+    
+    db.jalankan("MASUKKAN KE guru (nip, nama_lengkap, bidang_studi, email, telepon, alamat) NILAI ('" + data.nip + "', '" + data.nama_lengkap + "', '" + data.bidang_studi + "', '" + data.email + "', '" + data.telepon + "', '" + data.alamat + "')")
+    
+    kembalikan sukses("Guru berhasil ditambahkan")
+selesai
+
+fungsi perbarui_guru(req)
+    buat id_guru = req.param.id
+    buat data = req.body
+    
+    buat cek = db.jalankan("SELECT id FROM guru WHERE id = " + id_guru)
+    jika panjang(cek) == 0
+        kembalikan error("Guru tidak ditemukan", 404)
+    selesai
+    
+    db.jalankan("PERBARUI guru SET nip = '" + data.nip + "', nama_lengkap = '" + data.nama_lengkap + "', bidang_studi = '" + data.bidang_studi + "', email = '" + data.email + "', telepon = '" + data.telepon + "', alamat = '" + data.alamat + "' WHERE id = " + id_guru)
+    
+    kembalikan sukses("Guru berhasil diperbarui")
+selesai
+
+fungsi hapus_guru(req)
+    buat id_guru = req.param.id
+    
+    buat cek = db.jalankan("SELECT id FROM guru WHERE id = " + id_guru)
+    jika panjang(cek) == 0
+        kembalikan error("Guru tidak ditemukan", 404)
+    selesai
+    
+    db.jalankan("HAPUS DARI guru WHERE id = " + id_guru)
+    
+    kembalikan sukses("Guru berhasil dihapus")
+selesai
+
+fungsi cari_guru(req)
+    buat kata_kunci = req.query.q
+    buat hasil_query = db.jalankan("SELECT * FROM guru WHERE (nama_lengkap LIKE '%" + kata_kunci + "%' OR nip LIKE '%" + kata_kunci + "%' OR bidang_studi LIKE '%" + kata_kunci + "%') AND status = 'aktif' ORDER BY nama_lengkap ASC")
+    kembalikan hasil_query
+selesai
+
+fungsi filter_bidang(req)
+    buat bidang = req.query.bidang
+    buat hasil_query = db.jalankan("SELECT * FROM guru WHERE bidang_studi LIKE '%" + bidang + "%' AND status = 'aktif' ORDER BY nama_lengkap ASC")
+    kembalikan hasil_query
+selesai
+
+fungsi statistik_guru(req)
+    buat total = db.jalankan("SELECT COUNT(*) as jumlah FROM guru WHERE status = 'aktif'")
+    buat per_bidang = db.jalankan("SELECT bidang_studi, COUNT(*) as jumlah FROM guru WHERE status = 'aktif' GROUP BY bidang_studi ORDER BY jumlah DESC")
+    
+    kembalikan { total: total[0].jumlah, per_bidang: per_bidang }
+selesai
+
+// ================================
+// INLINE: Kontroler KELAS
+// ================================
+
+fungsi ambil_semua_kelas(req)
+    buat hasil_query = db.jalankan("SELECT k.*, g.nama_lengkap as nama_guru FROM kelas k LEFT JOIN guru g ON k.guru_id = g.id WHERE k.status = 'aktif' ORDER BY k.nama_kelas ASC")
+    kembalikan hasil_query
+selesai
+
+fungsi ambil_detail_kelas(req)
+    buat id_kelas = req.param.id
+    buat hasil_query = db.jalankan("SELECT k.*, g.nama_lengkap as nama_guru FROM kelas k LEFT JOIN guru g ON k.guru_id = g.id WHERE k.id = " + id_kelas)
+    
+    jika panjang(hasil_query) == 0
+        kembalikan error("Kelas tidak ditemukan", 404)
+    selesai
+    
+    kembalikan hasil_query[0]
+selesai
+
+fungsi tambah_kelas(req)
+    buat data = req.body
+    buat val = validasi_wajib(data, ["nama_kelas", "nama_mapel", "tahun_ajaran"])
+    
+    jika val.sukses == salah
+        kembalikan val
+    selesai
+    
+    db.jalankan("MASUKKAN KE kelas (nama_kelas, nama_mapel, tahun_ajaran, guru_id, kapasitas) NILAI ('" + data.nama_kelas + "', '" + data.nama_mapel + "', '" + data.tahun_ajaran + "', '" + data.guru_id + "', '" + data.kapasitas + "')")
+    
+    kembalikan sukses("Kelas berhasil ditambahkan")
+selesai
+
+fungsi perbarui_kelas(req)
+    buat id_kelas = req.param.id
+    buat data = req.body
+    
+    buat cek = db.jalankan("SELECT id FROM kelas WHERE id = " + id_kelas)
+    jika panjang(cek) == 0
+        kembalikan error("Kelas tidak ditemukan", 404)
+    selesai
+    
+    db.jalankan("PERBARUI kelas SET nama_kelas = '" + data.nama_kelas + "', nama_mapel = '" + data.nama_mapel + "', tahun_ajaran = '" + data.tahun_ajaran + "', guru_id = '" + data.guru_id + "', kapasitas = '" + data.kapasitas + "' WHERE id = " + id_kelas)
+    
+    kembalikan sukses("Kelas berhasil diperbarui")
+selesai
+
+fungsi hapus_kelas(req)
+    buat id_kelas = req.param.id
+    
+    buat cek = db.jalankan("SELECT id FROM kelas WHERE id = " + id_kelas)
+    jika panjang(cek) == 0
+        kembalikan error("Kelas tidak ditemukan", 404)
+    selesai
+    
+    db.jalankan("HAPUS DARI kelas WHERE id = " + id_kelas)
+    
+    kembalikan sukses("Kelas berhasil dihapus")
+selesai
+
+fungsi ringkasan(req)
+    buat total = db.jalankan("SELECT COUNT(*) as jumlah FROM kelas WHERE status = 'aktif'")
+    buat daftar = db.jalankan("SELECT k.id, k.nama_kelas, k.nama_mapel, COUNT(ks.siswa_id) as jumlah_siswa FROM kelas k LEFT JOIN kelas_siswa ks ON k.id = ks.kelas_id WHERE k.status = 'aktif' GROUP BY k.id ORDER BY k.nama_kelas")
+    
+    kembalikan { total: total[0].jumlah, daftar: daftar }
+selesai
+
+// ================================
+// INLINE: Kontroler NILAI
+// ================================
+
+fungsi ambil_semua_nilai(req)
+    buat hasil_query = db.jalankan("SELECT n.*, s.nama_lengkap as nama_siswa, k.nama_mapel FROM nilai n JOIN siswa s ON n.siswa_id = s.id LEFT JOIN kelas k ON n.kelas_id = k.id ORDER BY n.dibuat_pada DESC LIMIT 100")
+    kembalikan hasil_query
+selesai
+
+fungsi tambah_nilai(req)
+    buat data = req.body
+    buat val = validasi_wajib(data, ["siswa_id", "mapel", "semester", "nilai_angka"])
+    
+    jika val.sukses == salah
+        kembalikan val
+    selesai
+    
+    // Validasi range nilai
+    buat nilai_angka = data.nilai_angka
+    jika nilai_angka < 0 atau nilai_angka > 100
+        kembalikan error("Nilai harus antara 0-100", 400)
+    selesai
+    
+    db.jalankan("MASUKKAN KE nilai (siswa_id, kelas_id, mapel, semester, tipe, nilai_angka, keterangan) NILAI ('" + data.siswa_id + "', '" + data.kelas_id + "', '" + data.mapel + "', '" + data.semester + "', '" + data.tipe + "', '" + data.nilai_angka + "', '" + data.keterangan + "')")
+    
+    kembalikan sukses("Nilai berhasil ditambahkan")
+selesai
+
+fungsi perbarui_nilai(req)
+    buat id_nilai = req.param.id
+    buat data = req.body
+    
+    buat cek = db.jalankan("SELECT id FROM nilai WHERE id = " + id_nilai)
+    jika panjang(cek) == 0
+        kembalikan error("Nilai tidak ditemukan", 404)
+    selesai
+    
+    // Validasi range nilai
+    buat nilai_angka = data.nilai_angka
+    jika nilai_angka < 0 atau nilai_angka > 100
+        kembalikan error("Nilai harus antara 0-100", 400)
+    selesai
+    
+    db.jalankan("PERBARUI nilai SET nilai_angka = '" + data.nilai_angka + "', tipe = '" + data.tipe + "', keterangan = '" + data.keterangan + "' WHERE id = " + id_nilai)
+    
+    kembalikan sukses("Nilai berhasil diperbarui")
+selesai
+
+fungsi hapus_nilai(req)
+    buat id_nilai = req.param.id
+    
+    buat cek = db.jalankan("SELECT id FROM nilai WHERE id = " + id_nilai)
+    jika panjang(cek) == 0
+        kembalikan error("Nilai tidak ditemukan", 404)
+    selesai
+    
+    db.jalankan("HAPUS DARI nilai WHERE id = " + id_nilai)
+    
+    kembalikan sukses("Nilai berhasil dihapus")
+selesai
+
+fungsi rekap_siswa(req)
+    buat siswa_id = req.param.siswa_id
+    
+    buat data_siswa = db.jalankan("SELECT nama_lengkap FROM siswa WHERE id = " + siswa_id)
+    jika panjang(data_siswa) == 0
+        kembalikan error("Siswa tidak ditemukan", 404)
+    selesai
+    
+    buat daftar_nilai = db.jalankan("SELECT n.*, k.nama_mapel FROM nilai n LEFT JOIN kelas k ON n.kelas_id = k.id WHERE n.siswa_id = " + siswa_id + " ORDER BY n.semester, n.nama_mapel")
+    
+    buat rata_rata = hitung_rata_rata(daftar_nilai)
+    buat nilai_huruf = konversi_huruf(rata_rata)
+    
+    kembalikan { siswa: data_siswa[0], daftar_nilai: daftar_nilai, rata_rata: rata_rata, nilai_huruf: nilai_huruf }
+selesai
+
+fungsi peringkat_kelas(req)
+    buat kelas_id = req.param.kelas_id
+    
+    buat daftar_siswa = db.jalankan("SELECT s.id, s.nama_lengkap FROM siswa s JOIN kelas_siswa ks ON s.id = ks.siswa_id WHERE ks.kelas_id = " + kelas_id)
+    
+    buat hasil_mentah = []
+    buat i = 0
+    selama i < panjang(daftar_siswa)
+        buat s = daftar_siswa[i]
+        buat nilai_siswa = db.jalankan("SELECT nilai_angka FROM nilai WHERE siswa_id = " + s.id)
+        buat rata = hitung_rata_rata(nilai_siswa)
+        
+        hasil_mentah = list.tambah(hasil_mentah, { id: s.id, nama: s.nama_lengkap, rata_rata: rata })
+        i = i + 1
+    selesai
+    
+    // Urutkan dengan insertion sort descending (bangun list baru)
+    buat hasil_peringkat = []
+    i = 0
+    selama i < panjang(hasil_mentah)
+        buat item_skrg = hasil_mentah[i]
+        // Cari posisi sisip
+        buat pos = 0
+        buat disisip = salah
+        buat hasil_baru = []
+        buat j = 0
+        selama j < panjang(hasil_peringkat)
+            buat ada = hasil_peringkat[j]
+            jika disisip == salah dan item_skrg.rata_rata > ada.rata_rata
+                hasil_baru = list.tambah(hasil_baru, item_skrg)
+                disisip = benar
+            selesai
+            hasil_baru = list.tambah(hasil_baru, ada)
+            j = j + 1
+        selesai
+        jika disisip == salah
+            hasil_baru = list.tambah(hasil_baru, item_skrg)
+        selesai
+        hasil_peringkat = hasil_baru
+        i = i + 1
+    selesai
+    
+    kembalikan sukses(hasil_peringkat)
+selesai
+
+fungsi rekap_mapel(req)
+    buat hasil_query = db.jalankan("SELECT mapel, semester, COUNT(*) as total_entri, AVG(nilai_angka) as rata_rata FROM nilai GROUP BY mapel, semester ORDER BY mapel, semester")
+    kembalikan hasil_query
+selesai
+
+fungsi tambah_banyak(req)
+    buat daftar_nilai = req.body.daftar_nilai
+    
+    jika daftar_nilai == kosong atau panjang(daftar_nilai) == 0
+        kembalikan error("Daftar nilai kosong", 400)
+    selesai
+    
+    buat berhasil = 0
+    buat i = 0
+    selama i < panjang(daftar_nilai)
+        buat item = daftar_nilai[i]
+        db.jalankan("MASUKKAN KE nilai (siswa_id, kelas_id, mapel, semester, tipe, nilai_angka) NILAI ('" + item.siswa_id + "', '" + item.kelas_id + "', '" + item.mapel + "', '" + item.semester + "', '" + item.tipe + "', '" + item.nilai_angka + "')")
+        berhasil = berhasil + 1
+        i = i + 1
+    selesai
+    
+    kembalikan sukses("Berhasil menambahkan " + berhasil + " nilai")
+selesai
+
+// ================================
+// INLINE: Kontroler ABSENSI
+// ================================
+
+fungsi ambil_semua_absensi(req)
+    buat hasil_query = db.jalankan("SELECT a.*, s.nama_lengkap as nama_siswa FROM absensi a JOIN siswa s ON a.siswa_id = s.id ORDER BY a.tanggal DESC LIMIT 100")
+    kembalikan hasil_query
+selesai
+
+fungsi ambil_detail_absensi(req)
+    buat id = req.param.id
+    buat hasil_query = db.jalankan("SELECT a.*, s.nama_lengkap as nama_siswa FROM absensi a JOIN siswa s ON a.siswa_id = s.id WHERE a.id = " + id)
+    
+    jika panjang(hasil_query) == 0
+        kembalikan error("Data absensi tidak ditemukan", 404)
+    selesai
+    
+    kembalikan hasil_query[0]
+selesai
+
+fungsi catat(req)
+    buat data = req.body
+    buat val = validasi_wajib(data, ["siswa_id", "tanggal", "status"])
+    
+    jika val.sukses == salah
+        kembalikan val
+    selesai
+    
+    // Validasi status
+    buat status_valid = ["hadir", "sakit", "izin", "alpa"]
+    buat status_ditemukan = salah
+    buat i = 0
+    selama i < panjang(status_valid)
+        jika data.status == status_valid[i]
+            status_ditemukan = benar
+        selesai
+        i = i + 1
+    selesai
+    
+    jika status_ditemukan == salah
+        kembalikan error("Status harus: hadir, sakit, izin, atau alpa", 400)
+    selesai
+    
+    db.jalankan("MASUKKAN KE absensi (siswa_id, kelas_id, tanggal, status, keterangan) NILAI ('" + data.siswa_id + "', '" + data.kelas_id + "', '" + data.tanggal + "', '" + data.status + "', '" + data.keterangan + "')")
+    
+    kembalikan sukses("Absensi berhasil dicatat")
+selesai
+
+fungsi catat_massal(req)
+    buat daftar_absensi = req.body.daftar
+    
+    jika daftar_absensi == kosong atau panjang(daftar_absensi) == 0
+        kembalikan error("Daftar absensi kosong", 400)
+    selesai
+    
+    buat berhasil = 0
+    buat i = 0
+    selama i < panjang(daftar_absensi)
+        buat item = daftar_absensi[i]
+        db.jalankan("MASUKKAN KE absensi (siswa_id, kelas_id, tanggal, status, keterangan) NILAI ('" + item.siswa_id + "', '" + item.kelas_id + "', '" + item.tanggal + "', '" + item.status + "', '" + item.keterangan + "')")
+        berhasil = berhasil + 1
+        i = i + 1
+    selesai
+    
+    kembalikan sukses("Berhasil mencatat " + berhasil + " absensi")
+selesai
+
+fungsi perbarui_absensi(req)
+    buat id = req.param.id
+    buat data = req.body
+    
+    buat cek = db.jalankan("SELECT id FROM absensi WHERE id = " + id)
+    jika panjang(cek) == 0
+        kembalikan error("Data absensi tidak ditemukan", 404)
+    selesai
+    
+    db.jalankan("PERBARUI absensi SET status = '" + data.status + "', keterangan = '" + data.keterangan + "' WHERE id = " + id)
+    
+    kembalikan sukses("Absensi berhasil diperbarui")
+selesai
+
+fungsi rekap_siswa_absensi(req)
+    buat siswa_id = req.param.siswa_id
+    
+    buat total = db.jalankan("SELECT COUNT(*) as total FROM absensi WHERE siswa_id = " + siswa_id)
+    buat hadir = db.jalankan("SELECT COUNT(*) as jumlah FROM absensi WHERE siswa_id = " + siswa_id + " AND status = 'hadir'")
+    buat sakit = db.jalankan("SELECT COUNT(*) as jumlah FROM absensi WHERE siswa_id = " + siswa_id + " AND status = 'sakit'")
+    buat izin = db.jalankan("SELECT COUNT(*) as jumlah FROM absensi WHERE siswa_id = " + siswa_id + " AND status = 'izin'")
+    buat alpa = db.jalankan("SELECT COUNT(*) as jumlah FROM absensi WHERE siswa_id = " + siswa_id + " AND status = 'alpa'")
+    
+    buat persentase = 0
+    jika total[0].total > 0
+        persentase = (hadir[0].jumlah / total[0].total) * 100
+    selesai
+    
+    kembalikan { total: total[0].total, hadir: hadir[0].jumlah, sakit: sakit[0].jumlah, izin: izin[0].jumlah, alpa: alpa[0].jumlah, persentase_kehadiran: persentase }
+selesai
+
+fungsi laporan_harian(req)
+    buat tanggal = req.query.tanggal
+    
+    jika tanggal == kosong atau tanggal == ""
+        // Gunakan tanggal hari ini
+        buat sekarang = waktu.sekarang()
+        tanggal = string.dari(sekarang.tahun) + "-" + string.dari(sekarang.bulan) + "-" + string.dari(sekarang.hari)
+    selesai
+    
+    buat hasil_query = db.jalankan("SELECT a.*, s.nama_lengkap as nama_siswa FROM absensi a JOIN siswa s ON a.siswa_id = s.id WHERE a.tanggal = '" + tanggal + "' ORDER BY s.nama_lengkap")
+    
+    kembalikan hasil_query
+selesai
+
+fungsi laporan_bulanan(req)
+    buat bulan = req.query.bulan
+    buat tahun = req.query.tahun
+    
+    jika bulan == kosong atau tahun == kosong
+        kembalikan error("Parameter bulan dan tahun diperlukan", 400)
+    selesai
+    
+    buat periode = tahun + "-" + bulan
+    
+    buat hasil_query = db.jalankan("SELECT s.id, s.nama_lengkap, COUNT(CASE WHEN a.status = 'hadir' THEN 1 END) as hadir, COUNT(CASE WHEN a.status = 'sakit' THEN 1 END) as sakit, COUNT(CASE WHEN a.status = 'izin' THEN 1 END) as izin, COUNT(CASE WHEN a.status = 'alpa' THEN 1 END) as alpa, COUNT(*) as total FROM absensi a JOIN siswa s ON a.siswa_id = s.id WHERE a.tanggal LIKE '" + periode + "%' GROUP BY s.id ORDER BY s.nama_lengkap")
+    
+    kembalikan hasil_query
+selesai
+
+// ================================
+// INLINE: Kontroler JADWAL
+// ================================
+
+fungsi ambil_semua_jadwal(req)
+    buat hasil_query = db.jalankan("SELECT j.*, k.nama_kelas, g.nama_lengkap as nama_guru FROM jadwal j JOIN kelas k ON j.kelas_id = k.id LEFT JOIN guru g ON j.guru_id = g.id ORDER BY j.hari, j.jam_mulai")
+    kembalikan hasil_query
+selesai
+
+fungsi ambil_detail_jadwal(req)
+    buat id = req.param.id
+    buat hasil_query = db.jalankan("SELECT j.*, k.nama_kelas, g.nama_lengkap as nama_guru FROM jadwal j JOIN kelas k ON j.kelas_id = k.id LEFT JOIN guru g ON j.guru_id = g.id WHERE j.id = " + id)
+    
+    jika panjang(hasil_query) == 0
+        kembalikan error("Jadwal tidak ditemukan", 404)
+    selesai
+    
+    kembalikan hasil_query[0]
+selesai
+
+fungsi tambah_jadwal(req)
+    buat data = req.body
+    buat val = validasi_wajib(data, ["kelas_id", "hari", "jam_mulai", "jam_selesai", "mapel"])
+    
+    jika val.sukses == salah
+        kembalikan val
+    selesai
+    
+    db.jalankan("MASUKKAN KE jadwal (kelas_id, hari, jam_mulai, jam_selesai, mapel, guru_id, ruangan) NILAI ('" + data.kelas_id + "', '" + data.hari + "', '" + data.jam_mulai + "', '" + data.jam_selesai + "', '" + data.mapel + "', '" + data.guru_id + "', '" + data.ruangan + "')")
+    
+    kembalikan sukses("Jadwal berhasil ditambahkan")
+selesai
+
+fungsi perbarui_jadwal(req)
+    buat id = req.param.id
+    buat data = req.body
+    
+    buat cek = db.jalankan("SELECT id FROM jadwal WHERE id = " + id)
+    jika panjang(cek) == 0
+        kembalikan error("Jadwal tidak ditemukan", 404)
+    selesai
+    
+    db.jalankan("PERBARUI jadwal SET hari = '" + data.hari + "', jam_mulai = '" + data.jam_mulai + "', jam_selesai = '" + data.jam_selesai + "', mapel = '" + data.mapel + "', guru_id = '" + data.guru_id + "', ruangan = '" + data.ruangan + "' WHERE id = " + id)
+    
+    kembalikan sukses("Jadwal berhasil diperbarui")
+selesai
+
+fungsi hapus_jadwal(req)
+    buat id = req.param.id
+    
+    buat cek = db.jalankan("SELECT id FROM jadwal WHERE id = " + id)
+    jika panjang(cek) == 0
+        kembalikan error("Jadwal tidak ditemukan", 404)
+    selesai
+    
+    db.jalankan("HAPUS DARI jadwal WHERE id = " + id)
+    
+    kembalikan sukses("Jadwal berhasil dihapus")
+selesai
+
+fungsi lihat_per_kelas(req)
+    buat kelas_id = req.param.kelas_id
+    
+    buat hasil_query = db.jalankan("SELECT j.*, g.nama_lengkap as nama_guru FROM jadwal j LEFT JOIN guru g ON j.guru_id = g.id WHERE j.kelas_id = " + kelas_id + " ORDER BY j.hari, j.jam_mulai")
+    
+    kembalikan hasil_query
+selesai
+
+fungsi lihat_per_guru(req)
+    buat guru_id = req.param.guru_id
+    
+    buat hasil_query = db.jalankan("SELECT j.*, k.nama_kelas FROM jadwal j JOIN kelas k ON j.kelas_id = k.id WHERE j.guru_id = " + guru_id + " ORDER BY j.hari, j.jam_mulai")
+    
+    kembalikan hasil_query
+selesai
+
+fungsi lihat_per_hari(req)
+    buat hari = req.query.hari
+    
+    jika hari == kosong atau hari == ""
+        kembalikan error("Parameter hari diperlukan", 400)
+    selesai
+    
+    buat hasil_query = db.jalankan("SELECT j.*, k.nama_kelas, g.nama_lengkap as nama_guru FROM jadwal j JOIN kelas k ON j.kelas_id = k.id LEFT JOIN guru g ON j.guru_id = g.id WHERE j.hari = '" + hari + "' ORDER BY j.jam_mulai")
+    
+    kembalikan hasil_query
+selesai
+
+// ================================
+// INLINE: Kontroler PENGUMUMAN
+// ================================
+
+fungsi ambil_semua_pengumuman(req)
+    buat hasil_query = db.jalankan("SELECT * FROM pengumuman ORDER BY dibuat_pada DESC LIMIT 100")
+    kembalikan hasil_query
+selesai
+
+fungsi ambil_detail_pengumuman(req)
+    buat id = req.param.id
+    buat hasil_query = db.jalankan("SELECT * FROM pengumuman WHERE id = " + id)
+    
+    jika panjang(hasil_query) == 0
+        kembalikan error("Pengumuman tidak ditemukan", 404)
+    selesai
+    
+    kembalikan hasil_query[0]
+selesai
+
+fungsi tambah_pengumuman(req)
+    buat data = req.body
+    buat val = validasi_wajib(data, ["judul", "isi"])
+    
+    jika val.sukses == salah
+        kembalikan val
+    selesai
+    
+    db.jalankan("MASUKKAN KE pengumuman (judul, isi, prioritas, target_kelas_id, pembuat, tanggal_mulai, tanggal_selesai) NILAI ('" + data.judul + "', '" + data.isi + "', '" + data.prioritas + "', '" + data.target_kelas_id + "', '" + data.pembuat + "', '" + data.tanggal_mulai + "', '" + data.tanggal_selesai + "')")
+    
+    kembalikan sukses("Pengumuman berhasil ditambahkan")
+selesai
+
+fungsi perbarui_pengumuman(req)
+    buat id = req.param.id
+    buat data = req.body
+    
+    buat cek = db.jalankan("SELECT id FROM pengumuman WHERE id = " + id)
+    jika panjang(cek) == 0
+        kembalikan error("Pengumuman tidak ditemukan", 404)
+    selesai
+    
+    db.jalankan("PERBARUI pengumuman SET judul = '" + data.judul + "', isi = '" + data.isi + "', prioritas = '" + data.prioritas + "', target_kelas_id = '" + data.target_kelas_id + "', tanggal_mulai = '" + data.tanggal_mulai + "', tanggal_selesai = '" + data.tanggal_selesai + "', status = '" + data.status + "' WHERE id = " + id)
+    
+    kembalikan sukses("Pengumuman berhasil diperbarui")
+selesai
+
+fungsi hapus_pengumuman(req)
+    buat id = req.param.id
+    
+    buat cek = db.jalankan("SELECT id FROM pengumuman WHERE id = " + id)
+    jika panjang(cek) == 0
+        kembalikan error("Pengumuman tidak ditemukan", 404)
+    selesai
+    
+    db.jalankan("HAPUS DARI pengumuman WHERE id = " + id)
+    
+    kembalikan sukses("Pengumuman berhasil dihapus")
+selesai
+
+fungsi pengumuman_aktif(req)
+    buat hasil_query = db.jalankan("SELECT * FROM pengumuman WHERE status = 'aktif' AND (tanggal_selesai IS NULL OR tanggal_selesai >= DATE('now')) ORDER BY CASE WHEN prioritas = 'tinggi' THEN 0 ELSE 1 END, dibuat_pada DESC")
+    
+    kembalikan hasil_query
+selesai
+
+fungsi per_kelas_pengumuman(req)
+    buat kelas_id = req.param.kelas_id
+    
+    buat hasil_query = db.jalankan("SELECT * FROM pengumuman WHERE (target_kelas_id IS NULL OR target_kelas_id = " + kelas_id + ") AND status = 'aktif' ORDER BY dibuat_pada DESC")
+    
+    kembalikan hasil_query
+selesai
+
+fungsi terbaru(req)
+    buat jumlah = req.query.jumlah
+    
+    jika jumlah == kosong
+        jumlah = 5
+    selesai
+    
+    buat hasil_query = db.jalankan("SELECT * FROM pengumuman WHERE status = 'aktif' ORDER BY dibuat_pada DESC LIMIT " + jumlah)
+    
+    kembalikan hasil_query
+selesai
+
+// ================================
+// INLINE: Kontroler AUTH
+// ================================
+
+fungsi login(req)
+    buat data = req.body
+    buat val = validasi_wajib(data, ["nama_pengguna", "kata_sandi"])
+    
+    jika val.sukses == salah
+        kembalikan val
+    selesai
+    
+    // Hash password terlebih dahulu
+    buat password_hash = kripto.sha256(data.kata_sandi)
+    
+    buat hasil_query = db.jalankan("SELECT * FROM users WHERE nama_pengguna = '" + data.nama_pengguna + "' AND kata_sandi = '" + password_hash + "' AND status = 'aktif'")
+    
+    jika panjang(hasil_query) == 0
+        kembalikan error("Username atau password salah", 401)
+    selesai
+    
+    buat user = hasil_query[0]
+    buat token = buat_token(user.id, user.peran)
+    
+    buat hasil = { token: token, user: { id: user.id, nama_pengguna: user.nama_pengguna, peran: user.peran, nama_lengkap: user.nama_lengkap } }
+    
+    kembalikan sukses("Login berhasil", hasil)
+selesai
+
+fungsi logout(req)
+    kembalikan sukses("Logout berhasil")
+selesai
+
+fungsi register_admin(req)
+    buat data = req.body
+    buat val = validasi_wajib(data, ["nama_pengguna", "kata_sandi", "nama_lengkap"])
+    
+    jika val.sukses == salah
+        kembalikan val
+    selesai
+    
+    // Cek apakah user sudah ada
+    buat cek = db.jalankan("SELECT id FROM users WHERE nama_pengguna = '" + data.nama_pengguna + "'")
+    jika panjang(cek) > 0
+        kembalikan error("Username sudah digunakan", 400)
+    selesai
+    
+    buat password_hash = kripto.sha256(data.kata_sandi)
+    
+    db.jalankan("MASUKKAN KE users (nama_pengguna, kata_sandi, peran, nama_lengkap) NILAI ('" + data.nama_pengguna + "', '" + password_hash + "', '" + data.peran + "', '" + data.nama_lengkap + "')")
+    
+    kembalikan sukses("User berhasil didaftarkan")
+selesai
+
+fungsi ganti_password(req)
+    buat data = req.body
+    
+    buat password_lama_hash = kripto.sha256(data.password_lama)
+    buat password_baru_hash = kripto.sha256(data.password_baru)
+    
+    // Cek password lama
+    buat cek = db.jalankan("SELECT id FROM users WHERE nama_pengguna = '" + data.nama_pengguna + "' AND kata_sandi = '" + password_lama_hash + "'")
+    jika panjang(cek) == 0
+        kembalikan error("Password lama salah", 401)
+    selesai
+    
+    db.jalankan("PERBARUI users SET kata_sandi = '" + password_baru_hash + "' WHERE nama_pengguna = '" + data.nama_pengguna + "'")
+    
+    kembalikan sukses("Password berhasil diganti")
+selesai
+
+fungsi cek_sesi(req)
+    // Endpoint simpel untuk cek apakah user masih login
+    kembalikan sukses("Sesi aktif")
+selesai
+
+fungsi daftar_user(req)
+    buat hasil_query = db.jalankan("SELECT id, nama_pengguna, peran, nama_lengkap, status, dibuat_pada FROM users ORDER BY dibuat_pada DESC")
+    kembalikan hasil_query
+selesai
+
+fungsi nonaktifkan_user(req)
+    buat id_user = req.param.id
+    
+    buat cek = db.jalankan("SELECT id FROM users WHERE id = " + id_user)
+    jika panjang(cek) == 0
+        kembalikan error("User tidak ditemukan", 404)
+    selesai
+    
+    db.jalankan("PERBARUI users SET status = 'nonaktif' WHERE id = " + id_user)
+    
+    kembalikan sukses("User berhasil dinonaktifkan")
+selesai
+
+fungsi aktifkan_user(req)
+    buat id_user = req.param.id
+    
+    buat cek = db.jalankan("SELECT id FROM users WHERE id = " + id_user)
+    jika panjang(cek) == 0
+        kembalikan error("User tidak ditemukan", 404)
+    selesai
+    
+    db.jalankan("PERBARUI users SET status = 'aktif' WHERE id = " + id_user)
+    
+    kembalikan sukses("User berhasil diaktifkan")
+selesai
+
+// ================================
+// REGISTRASI RUTE
+// ================================
+
+tampilkan("🛤️  Mendaftarkan rute...")
+
+// --- HALAMAN TAMPILAN ---
+
+// Dashboard
+web.dapatkan("/", fungsi(req)
+    kembalikan web.tampilkan_halaman("tampilan/index.rpl.html")
+selesai)
+
+// Halaman Login
+web.dapatkan("/login", fungsi(req)
+    kembalikan web.tampilkan_halaman("tampilan/login.rpl.html")
+selesai)
+
+// ========================
+// AUTH (Otentikasi)
+// ========================
+
+web.pos("/api/auth/login", login)
+web.pos("/api/auth/logout", logout)
+web.pos("/api/auth/register-admin", register_admin)
+web.taruh("/api/auth/ganti-password", ganti_password)
+web.dapatkan("/api/auth/sesi", cek_sesi)
+web.dapatkan("/api/auth/users", daftar_user)
+web.taruh("/api/auth/users/{id}/nonaktifkan", nonaktifkan_user)
+web.taruh("/api/auth/users/{id}/aktifkan", aktifkan_user)
+
+// ========================
+// SISWA
+// ========================
+
+// CRUD
+web.dapatkan("/api/siswa", ambil_semua)
+web.dapatkan("/api/siswa/{id}", ambil_detail)
+web.pos("/api/siswa", tambah)
+web.taruh("/api/siswa/{id}", perbarui)
+web.hapus("/api/siswa/{id}", hapus)
+
+// Pencarian & Filter
+web.dapatkan("/api/siswa/cari", cari)
+web.dapatkan("/api/siswa/per-kelas/{kelas_id}", per_kelas)
+web.dapatkan("/api/siswa/statistik", statistik)
+
+// ========================
+// GURU
+// ========================
+
+// CRUD
+web.dapatkan("/api/guru", ambil_semua_guru)
+web.dapatkan("/api/guru/{id}", ambil_detail_guru)
+web.pos("/api/guru", tambah_guru)
+web.taruh("/api/guru/{id}", perbarui_guru)
+web.hapus("/api/guru/{id}", hapus_guru)
+
+// Pencarian & Filter
+web.dapatkan("/api/guru/cari", cari_guru)
+web.dapatkan("/api/guru/filter-bidang", filter_bidang)
+web.dapatkan("/api/guru/statistik", statistik_guru)
+
+// ========================
+// KELAS
+// ========================
+
+// CRUD
+web.dapatkan("/api/kelas", ambil_semua_kelas)
+web.dapatkan("/api/kelas/{id}", ambil_detail_kelas)
+web.pos("/api/kelas", tambah_kelas)
+web.taruh("/api/kelas/{id}", perbarui_kelas)
+web.hapus("/api/kelas/{id}", hapus_kelas)
+
+// Endpoint Tambahan
+web.dapatkan("/api/kelas/ringkasan", ringkasan)
+
+// ========================
+// NILAI
+// ========================
+
+// CRUD
+web.dapatkan("/api/nilai", ambil_semua_nilai)
+web.pos("/api/nilai", tambah_nilai)
+web.taruh("/api/nilai/{id}", perbarui_nilai)
+web.hapus("/api/nilai/{id}", hapus_nilai)
+
+// Rekap & Laporan
+web.dapatkan("/api/nilai/rekap-siswa/{siswa_id}", rekap_siswa)
+web.dapatkan("/api/nilai/peringkat-kelas/{kelas_id}", peringkat_kelas)
+web.dapatkan("/api/nilai/rekap-mapel", rekap_mapel)
+web.pos("/api/nilai/tambah-banyak", tambah_banyak)
+
+// ========================
+// ABSENSI
+// ========================
+
+// CRUD
+web.dapatkan("/api/absensi", ambil_semua_absensi)
+web.dapatkan("/api/absensi/{id}", ambil_detail_absensi)
+web.pos("/api/absensi/catat", catat)
+web.pos("/api/absensi/catat-massal", catat_massal)
+web.taruh("/api/absensi/{id}", perbarui_absensi)
+
+// Rekap & Laporan
+web.dapatkan("/api/absensi/rekap-siswa/{siswa_id}", rekap_siswa_absensi)
+web.dapatkan("/api/absensi/laporan-harian", laporan_harian)
+web.dapatkan("/api/absensi/laporan-bulanan", laporan_bulanan)
+
+// ========================
+// JADWAL
+// ========================
+
+// CRUD
+web.dapatkan("/api/jadwal", ambil_semua_jadwal)
+web.dapatkan("/api/jadwal/{id}", ambil_detail_jadwal)
+web.pos("/api/jadwal", tambah_jadwal)
+web.taruh("/api/jadwal/{id}", perbarui_jadwal)
+web.hapus("/api/jadwal/{id}", hapus_jadwal)
+
+// View
+web.dapatkan("/api/jadwal/per-kelas/{kelas_id}", lihat_per_kelas)
+web.dapatkan("/api/jadwal/per-guru/{guru_id}", lihat_per_guru)
+web.dapatkan("/api/jadwal/per-hari", lihat_per_hari)
+
+// ========================
+// PENGUMUMAN
+// ========================
+
+// CRUD
+web.dapatkan("/api/pengumuman", ambil_semua_pengumuman)
+web.dapatkan("/api/pengumuman/{id}", ambil_detail_pengumuman)
+web.pos("/api/pengumuman", tambah_pengumuman)
+web.taruh("/api/pengumuman/{id}", perbarui_pengumuman)
+web.hapus("/api/pengumuman/{id}", hapus_pengumuman)
+
+// View
+web.dapatkan("/api/pengumuman/aktif", pengumuman_aktif)
+web.dapatkan("/api/pengumuman/per-kelas/{kelas_id}", per_kelas_pengumuman)
+web.dapatkan("/api/pengumuman/terbaru", terbaru)
+
+tampilkan("✅ Semua rute berhasil didaftarkan!")
+
+tampilkan("")
+tampilkan("✅ Sistem Manajemen Sekolah siap!")
+tampilkan("   Database: sekolah.db")
+tampilkan("   8 tabel siap digunakan")
+tampilkan("")

@@ -1,0 +1,170 @@
+// Kontroler Auth (Otentikasi & Otorisasi)
+// Fitur: Login, Logout, Register Admin, Ganti Password, Cek Sesi
+
+buat resp = pakai "../model/response.rpl"
+buat auth_helper = pakai "../layanan/auth_helper.rpl"
+
+buat login = fungsi(req)
+    buat data = json.parse(req.tubuh)
+
+    jika data.email adalah kosong atau data.password adalah kosong maka
+        kembalikan resp.galat_validasi("Email dan password tidak boleh kosong")
+    selesai
+
+    buat hasil = auth_helper.cocokkan(data.email, data.password)
+
+    jika hasil.berhasil adalah salah maka
+        kembalikan resp.tidak_diizinkan(hasil.pesan)
+    selesai
+
+    // Buat sesi login
+    session.set("pengguna", hasil.pengguna)
+    session.set("peran", hasil.pengguna.peran)
+
+    tampilkan("🔑 " + hasil.pengguna.nama + " berhasil login")
+
+    kembalikan resp.sukses({
+        "pengguna": hasil.pengguna
+    }, "Login berhasil")
+selesai
+
+buat logout = fungsi(req)
+    session.hapus("pengguna")
+    session.hapus("peran")
+
+    tampilkan("👋 Logout berhasil")
+    kembalikan resp.redirect("/login", "Anda telah logout")
+selesai
+
+buat register_admin = fungsi(req)
+    // Endpoint khusus untuk membuat akun admin pertama kali
+    buat data = json.parse(req.tubuh)
+
+    jika data.nama adalah kosong atau data.email adalah kosong atau data.password adalah kosong maka
+        kembalikan resp.galat_validasi("Nama, email, dan password tidak boleh kosong")
+    selesai
+
+    // Cek apakah sudah ada admin
+    buat cek_admin = db.kueri("SELECT id FROM users WHERE peran = 'admin'")
+    jika list.panjang(cek_admin) maksimal 0 maka
+        // Jika sudah ada admin sebelumnya, hanya admin yang bisa menambah admin baru
+        buat sesi_aktif = session.get("pengguna")
+        jika sesi_aktif adalah kosong atau session.get("peran") bukan "admin" maka
+            kembalikan resp.tidak_diizinkan("Hanya admin yang dapat menambah admin baru")
+        selesai
+    selesai
+
+    buat password_hash = kripto.sha256(data.password)
+
+    db.eksekusi(`
+        INSERT INTO users (nama, email, password, peran, aktif)
+        VALUES ('${data.nama}', '${data.email}', '${password_hash}', 'admin', 1)
+    `)
+
+    tampilkan("✅ Admin baru berhasil dibuat: " + data.nama)
+    kembalikan resp.dibuat(kosong, "Registrasi admin berhasil")
+selesai
+
+buat ganti_password = fungsi(req)
+    buat data = json.parse(req.tubuh)
+
+    jika data.password_lama adalah kosong atau data.password_baru adalah kosong maka
+        kembalikan resp.galat_validasi("Password lama dan baru tidak boleh kosong")
+    selesai
+
+    buat sesi_aktif = session.get("pengguna")
+    jika sesi_aktif adalah kosong maka
+        kembalikan resp.tidak_diizinkan("Anda harus login terlebih dahulu")
+    selesai
+
+    // Verifikasi password lama
+    buat user_data = db.kueri(`SELECT * FROM users WHERE id = ${sesi_aktif.id}`)
+    jika list.panjang(user_data) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Pengguna")
+    selesai
+
+    buat user = list.ambil(user_data, 0)
+
+    buat password_lama_hash = kripto.sha256(data.password_lama)
+    jika user.password bukan password_lama_hash maka
+        kembalikan resp.galat_validasi("Password lama tidak sesuai")
+    selesai
+
+    // Update password
+    buat password_baru_hash = kripto.sha256(data.password_baru)
+    db.eksekusi(`UPDATE users SET password = '${password_baru_hash}' WHERE id = ${user.id}`)
+
+    tampilkan("🔒 Password berhasil diubah")
+    kembalikan resp.sukses(kosong, "Password berhasil diubah")
+selesai
+
+buat cek_sesi = fungsi(req)
+    buat sesi_aktif = session.get("pengguna")
+
+    jika sesi_aktif adalah kosong maka
+        kembalikan resp.tidak_diizinkan("Tidak ada sesi aktif")
+    selesai
+
+    kembalikan resp.sukses({
+        "login": benar,
+        "pengguna": sesi_aktif
+    })
+selesai
+
+buat daftar_user = fungsi(req)
+    // Hanya admin yang bisa melihat daftar user
+    buat sesi_aktif = session.get("pengguna")
+    jika sesi_aktif adalah kosong atau session.get("peran") bukan "admin" maka
+        kembalikan resp.tidak_diizinkan("Hanya admin yang dapat melihat daftar pengguna")
+    selesai
+
+    buat daftar = db.kueri(`
+        SELECT id, nama, email, peran, aktif, tanggal_dibuat
+        FROM users
+        ORDER BY tanggal_dibuat DESC
+    `)
+
+    kembalikan resp.sukses(daftar)
+selesai
+
+buat nonaktifkan_user = fungsi(req)
+    jika req.params adalah kosong atau req.params.id adalah kosong maka
+        kembalikan resp.galat_validasi("ID User tidak diberikan")
+    selesai
+
+    // Hanya admin
+    buat sesi_aktif = session.get("pengguna")
+    jika sesi_aktif adalah kosong atau session.get("peran") bukan "admin" maka
+        kembalikan resp.tidak_diizinkan("Hanya admin yang dapat menonaktifkan pengguna")
+    selesai
+
+    buat id = req.params.id
+
+    buat cek = db.kueri(`SELECT id FROM users WHERE id = ${id}`)
+    jika list.panjang(cek) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Pengguna")
+    selesai
+
+    db.eksekusi(`UPDATE users SET aktif = 0 WHERE id = ${id}`)
+
+    tampilkan("🚫 User dinonaktifkan")
+    kembalikan resp.sukses(kosong, "Pengguna berhasil dinonaktifkan")
+selesai
+
+buat aktifkan_user = fungsi(req)
+    jika req.params adalah kosong atau req.params.id adalah kosong maka
+        kembalikan resp.galat_validasi("ID User tidak diberikan")
+    selesai
+
+    buat id = req.params.id
+
+    buat cek = db.kueri(`SELECT id FROM users WHERE id = ${id}`)
+    jika list.panjang(cek) adalah 0 maka
+        kembalikan resp.tidak_ditemukan("Pengguna")
+    selesai
+
+    db.eksekusi(`UPDATE users SET aktif = 1 WHERE id = ${id}`)
+
+    tampilkan("✅ User diaktifkan kembali")
+    kembalikan resp.sukses(kosong, "Pengguna berhasil diaktifkan")
+selesai

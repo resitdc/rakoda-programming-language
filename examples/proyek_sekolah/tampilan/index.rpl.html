@@ -1,0 +1,89 @@
+<?rpl gabung "tampilan/header.rpl.html" ?>
+
+<h1 class="page-title">📊 Dashboard Sekolah</h1>
+
+<div class="cards">
+    <div class="card">
+        <div class="card-icon">👨‍🎓</div>
+        <div class="card-value" id="jml-siswa">...</div>
+        <div class="card-label">Total Siswa</div>
+    </div>
+    <div class="card">
+        <div class="card-icon">👩‍🏫</div>
+        <div class="card-value" id="jml-guru">...</div>
+        <div class="card-label">Total Guru</div>
+    </div>
+    <div class="card">
+        <div class="card-icon">🏫</div>
+        <div class="card-value" id="jml-kelas">...</div>
+        <div class="card-label">Total Kelas</div>
+    </div>
+    <div class="card">
+        <div class="card-icon">✅</div>
+        <div class="card-value" id="jml-hadir">...</div>
+        <div class="card-label">Hadir Hari Ini</div>
+    </div>
+</div>
+
+<div class="content">
+    <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 16px;">📋 Absensi Hari Ini</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Nama Siswa</th>
+                <th>Kelas</th>
+                <th>Status</th>
+                <th>Waktu</th>
+            </tr>
+        </thead>
+        <tbody id="tabel-absensi">
+            <tr><td colspan="4" class="loading">Memuat data...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    async function muatDashboard() {
+        try {
+            let resp = await fetch('/api/dashboard');
+            let hasil = await resp.json();
+
+            if (hasil.data) {
+                document.getElementById('jml-siswa').textContent = hasil.data.jumlah_siswa || 0;
+                document.getElementById('jml-guru').textContent = hasil.data.jumlah_guru || 0;
+                document.getElementById('jml-kelas').textContent = hasil.data.jumlah_kelas || 0;
+                document.getElementById('jml-hadir').textContent = hasil.data.jumlah_hadir || 0;
+
+                let tbody = document.getElementById('tabel-absensi');
+                tbody.innerHTML = '';
+
+                if (hasil.data.absensi && hasil.data.absensi.length > 0) {
+                    hasil.data.absensi.forEach(function(a) {
+                        let badgeKelas = '';
+                        if (a.status === 'hadir') badgeKelas = 'badge-hadir';
+                        else if (a.status === 'izin') badgeKelas = 'badge-izin';
+                        else if (a.status === 'sakit') badgeKelas = 'badge-sakit';
+                        else badgeKelas = 'badge-alpha';
+
+                        let tr = document.createElement('tr');
+                        tr.innerHTML = '<td>' + a.nama_siswa + '</td>' +
+                            '<td>' + (a.nama_kelas || '-') + '</td>' +
+                            '<td><span class="badge ' + badgeKelas + '">' + a.status + '</span></td>' +
+                            '<td>' + formatTanggal(a.waktu) + '</td>';
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999;">Belum ada data absensi hari ini.</td></tr>';
+                }
+            }
+        } catch (e) {
+            console.error('Gagal muat dashboard:', e);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        muatDashboard();
+    });
+</script>
+
+<?rpl gabung "tampilan/footer.rpl.html" ?>
