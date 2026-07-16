@@ -54,7 +54,7 @@ pub fn execute_string(kode_sumber: &str) -> Result<String, String> {
     }
 }
 
-pub fn run_file(file: &PathBuf) -> Result<(), String> {
+pub fn run_file(file: &std::path::Path) -> Result<(), String> {
     let kode_asli =
         fs::read_to_string(file).map_err(|_| format!("Gagal membaca file: {}", file.display()))?;
 

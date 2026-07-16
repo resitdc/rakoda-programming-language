@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::path::PathBuf;
 
 /// Jalankan perintah `rpl run <file>`
-pub fn handle_run(file: &PathBuf, watch: bool) -> Result<()> {
+pub fn handle_run(file: &std::path::Path, watch: bool) -> Result<()> {
     if !watch {
         runtime::run_file(file).map_err(|e| {
             eprintln!("{}", e);
@@ -15,7 +15,7 @@ pub fn handle_run(file: &PathBuf, watch: bool) -> Result<()> {
 }
 
 /// Jalankan perintah `rpl serve <file>` — live reload server
-pub fn handle_serve(file: &PathBuf) -> Result<()> {
+pub fn handle_serve(file: &std::path::Path) -> Result<()> {
     use notify::{RecursiveMode, Watcher};
     use std::sync::mpsc::channel;
     use std::time::Duration;
@@ -75,7 +75,7 @@ pub fn handle_repl() -> Result<()> {
 }
 
 /// Jalankan perintah `rpl fmt <file>`
-pub fn handle_fmt(file: &PathBuf) -> Result<()> {
+pub fn handle_fmt(file: &std::path::Path) -> Result<()> {
     println!("Memformat file: {}", file.display());
     println!("Format selesai (fitur masih dalam pengembangan).");
     Ok(())
@@ -221,7 +221,7 @@ pub fn handle_cek(file: &PathBuf) -> Result<()> {
 }
 
 /// Jalankan watch mode untuk file — otomatis reload saat file berubah
-fn jalankan_watch(file: &PathBuf, _port: Option<u16>) -> Result<()> {
+fn jalankan_watch(file: &std::path::Path, _port: Option<u16>) -> Result<()> {
     use notify::{RecursiveMode, Watcher};
     use std::sync::mpsc::channel;
     use std::time::Duration;
