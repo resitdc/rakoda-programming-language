@@ -38,7 +38,7 @@ jobs:
         working-directory: apps/studio/build/macos/Build/Products/Release
         run: |
           mkdir dmg-staging
-          cp -r rpl_studio.app dmg-staging/
+          cp -r "RPL Studio.app" dmg-staging/
           ln -s /Applications dmg-staging/Applications
           hdiutil create -volname "RPL Studio" -srcfolder dmg-staging -ov -format UDZO rpl-studio-macos.dmg
 
@@ -50,12 +50,13 @@ jobs:
           cp build/macos/Build/Products/Release/rpl-studio-macos.dmg build/macos/Build/Products/Release/RPL-Studio-v${APP_VERSION}-mac.dmg
 
       - name: 📤 Upload DMG to Google Drive
-        uses: adityak74/google-drive-upload-git-action@main
-        with:
-          credentials: ${{ secrets.GDRIVE_CREDENTIALS }}
-          filename: apps/studio/build/macos/Build/Products/Release/RPL-Studio-v${{ env.APP_VERSION }}-mac.dmg
-          folderId: ${{ secrets.MAC_GDRIVE_FOLDER_ID }}
-          overwrite: "true"
+        env:
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+          FOLDER_ID: ${{ secrets.MAC_GDRIVE_FOLDER_ID }}
+          FILE_PATH: apps/studio/build/macos/Build/Products/Release/RPL-Studio-v${{ env.APP_VERSION }}-mac.dmg
+        run: |
+          pip3 install google-api-python-client google-auth-httplib2 google-auth-oauthlib
+          python3 .github/scripts/upload_to_gdrive.py
 
       - name: 📤 Upload DMG
         uses: actions/upload-artifact@v4
@@ -108,12 +109,14 @@ jobs:
           cp build/installer/RPL-Studio-Installer.exe build/installer/RPL-Studio-v${APP_VERSION}-win.exe
 
       - name: 📤 Upload EXE to Google Drive
-        uses: adityak74/google-drive-upload-git-action@main
-        with:
-          credentials: ${{ secrets.GDRIVE_CREDENTIALS }}
-          filename: apps/studio/build/installer/RPL-Studio-v${{ env.APP_VERSION }}-win.exe
-          folderId: ${{ secrets.WINDOWS_GDRIVE_FOLDER_ID }}
-          overwrite: "true"
+        env:
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+          FOLDER_ID: ${{ secrets.WINDOWS_GDRIVE_FOLDER_ID }}
+          FILE_PATH: apps/studio/build/installer/RPL-Studio-v${{ env.APP_VERSION }}-win.exe
+        shell: bash
+        run: |
+          pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
+          python .github/scripts/upload_to_gdrive.py
 
       - name: 📤 Upload Windows Installer
         uses: actions/upload-artifact@v4
