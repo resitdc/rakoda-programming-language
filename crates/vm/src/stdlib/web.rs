@@ -192,7 +192,7 @@ pub fn register(vm: &mut VM) {
                     .get_heap_mut()
                     .web_routes
                     .entry(path)
-                    .or_insert_with(HashMap::new);
+                    .or_default();
                 method_map.insert("GET".to_string(), func_val);
                 Ok(Value::Kosong)
             },
@@ -219,7 +219,7 @@ pub fn register(vm: &mut VM) {
                     .get_heap_mut()
                     .web_routes
                     .entry(path)
-                    .or_insert_with(HashMap::new);
+                    .or_default();
                 method_map.insert("POST".to_string(), func_val);
                 Ok(Value::Kosong)
             },
@@ -246,7 +246,7 @@ pub fn register(vm: &mut VM) {
                     .get_heap_mut()
                     .web_routes
                     .entry(path)
-                    .or_insert_with(HashMap::new);
+                    .or_default();
                 method_map.insert("PUT".to_string(), func_val);
                 Ok(Value::Kosong)
             },
@@ -273,7 +273,7 @@ pub fn register(vm: &mut VM) {
                     .get_heap_mut()
                     .web_routes
                     .entry(path)
-                    .or_insert_with(HashMap::new);
+                    .or_default();
                 method_map.insert("DELETE".to_string(), func_val);
                 Ok(Value::Kosong)
             },
@@ -300,7 +300,7 @@ pub fn register(vm: &mut VM) {
                     .get_heap_mut()
                     .web_routes
                     .entry(path)
-                    .or_insert_with(HashMap::new);
+                    .or_default();
                 method_map.insert("PATCH".to_string(), func_val);
                 Ok(Value::Kosong)
             },
