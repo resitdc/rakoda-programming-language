@@ -188,11 +188,7 @@ pub fn register(vm: &mut VM) {
                     Value::Fungsi(idx, env) => Value::Fungsi(idx, env),
                     _ => return Err("Argumen kedua harus berupa fungsi".to_string()),
                 };
-                let method_map = ctx
-                    .get_heap_mut()
-                    .web_routes
-                    .entry(path)
-                    .or_default();
+                let method_map = ctx.get_heap_mut().web_routes.entry(path).or_default();
                 method_map.insert("GET".to_string(), func_val);
                 Ok(Value::Kosong)
             },
@@ -215,11 +211,7 @@ pub fn register(vm: &mut VM) {
                     Value::Fungsi(idx, env) => Value::Fungsi(idx, env),
                     _ => return Err("Argumen kedua harus berupa fungsi".to_string()),
                 };
-                let method_map = ctx
-                    .get_heap_mut()
-                    .web_routes
-                    .entry(path)
-                    .or_default();
+                let method_map = ctx.get_heap_mut().web_routes.entry(path).or_default();
                 method_map.insert("POST".to_string(), func_val);
                 Ok(Value::Kosong)
             },
@@ -242,11 +234,7 @@ pub fn register(vm: &mut VM) {
                     Value::Fungsi(idx, env) => Value::Fungsi(idx, env),
                     _ => return Err("Argumen kedua harus berupa fungsi".to_string()),
                 };
-                let method_map = ctx
-                    .get_heap_mut()
-                    .web_routes
-                    .entry(path)
-                    .or_default();
+                let method_map = ctx.get_heap_mut().web_routes.entry(path).or_default();
                 method_map.insert("PUT".to_string(), func_val);
                 Ok(Value::Kosong)
             },
@@ -269,11 +257,7 @@ pub fn register(vm: &mut VM) {
                     Value::Fungsi(idx, env) => Value::Fungsi(idx, env),
                     _ => return Err("Argumen kedua harus berupa fungsi".to_string()),
                 };
-                let method_map = ctx
-                    .get_heap_mut()
-                    .web_routes
-                    .entry(path)
-                    .or_default();
+                let method_map = ctx.get_heap_mut().web_routes.entry(path).or_default();
                 method_map.insert("DELETE".to_string(), func_val);
                 Ok(Value::Kosong)
             },
@@ -296,11 +280,7 @@ pub fn register(vm: &mut VM) {
                     Value::Fungsi(idx, env) => Value::Fungsi(idx, env),
                     _ => return Err("Argumen kedua harus berupa fungsi".to_string()),
                 };
-                let method_map = ctx
-                    .get_heap_mut()
-                    .web_routes
-                    .entry(path)
-                    .or_default();
+                let method_map = ctx.get_heap_mut().web_routes.entry(path).or_default();
                 method_map.insert("PATCH".to_string(), func_val);
                 Ok(Value::Kosong)
             },

@@ -1,0 +1,66 @@
+name: Build RPL Studio macOS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    name: 🍎 Build macOS DMG
+    runs-on: macos-14
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🦀 Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin, x86_64-apple-darwin
+
+      - name: 🐦 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Get dependencies
+        working-directory: apps/studio
+        run: flutter pub get
+
+      - name: 🏗️ Build macOS app
+        working-directory: apps/studio
+        run: flutter build macos --release
+
+      - name: 💿 Package into DMG
+        working-directory: apps/studio/build/macos/Build/Products/Release
+        run: |
+          mkdir dmg-staging
+          cp -r "RPL Studio.app" dmg-staging/
+          ln -s /Applications dmg-staging/Applications
+          hdiutil create -volname "RPL Studio" -srcfolder dmg-staging -ov -format UDZO rpl-studio-macos.dmg
+
+      - name: 🏷️ Get App Version and Rename
+        working-directory: apps/studio
+        run: |
+          APP_VERSION=$(grep '^version: ' pubspec.yaml | head -n 1 | awk '{print $2}' | cut -d '+' -f 1)
+          echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
+          cp build/macos/Build/Products/Release/rpl-studio-macos.dmg build/macos/Build/Products/Release/RPL-Studio-v${APP_VERSION}-mac.dmg
+
+      - name: 📤 Upload DMG to Google Drive
+        env:
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+          FOLDER_ID: ${{ secrets.MAC_GDRIVE_FOLDER_ID }}
+          FILE_PATH: apps/studio/build/macos/Build/Products/Release/RPL-Studio-v${{ env.APP_VERSION }}-mac.dmg
+        run: |
+          pip3 install --break-system-packages google-api-python-client google-auth-httplib2 google-auth-oauthlib
+          python3 .github/scripts/upload_to_gdrive.py
+
+      - name: 📤 Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpl-studio-macos
+          path: apps/studio/build/macos/Build/Products/Release/rpl-studio-macos.dmg
+          retention-days: 7

@@ -1,0 +1,69 @@
+name: Build RPL Studio Windows
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: 🪟 Build Windows Installer
+    runs-on: windows-latest
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🦀 Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: 🐦 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Get dependencies
+        working-directory: apps/studio
+        run: flutter pub get
+
+      - name: 🏗️ Build Windows app
+        working-directory: apps/studio
+        run: flutter build windows --release
+
+      - name: 🔧 Install Inno Setup
+        run: choco install innosetup -y
+
+      - name: 📦 Build Installer
+        working-directory: apps/studio
+        shell: cmd
+        run: |
+          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "windows\rpl-studio.iss"
+
+      - name: 🏷️ Get App Version and Rename
+        working-directory: apps/studio
+        shell: bash
+        run: |
+          APP_VERSION=$(grep '^version: ' pubspec.yaml | head -n 1 | awk '{print $2}' | cut -d '+' -f 1)
+          echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
+          cp build/installer/RPL-Studio-Installer.exe build/installer/RPL-Studio-v${APP_VERSION}-win.exe
+
+      - name: 📤 Upload EXE to Google Drive
+        env:
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+          FOLDER_ID: ${{ secrets.WINDOWS_GDRIVE_FOLDER_ID }}
+          FILE_PATH: apps/studio/build/installer/RPL-Studio-v${{ env.APP_VERSION }}-win.exe
+        shell: bash
+        run: |
+          pip install --break-system-packages google-api-python-client google-auth-httplib2 google-auth-oauthlib
+          python .github/scripts/upload_to_gdrive.py
+
+      - name: 📤 Upload Windows Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpl-studio-windows
+          path: apps/studio/build/installer/RPL-Studio-Installer.exe
+          retention-days: 7
