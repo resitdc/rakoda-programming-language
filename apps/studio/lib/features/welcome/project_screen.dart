@@ -696,6 +696,32 @@ class _ProjectScreenState extends State<ProjectScreen> {
           ),
           // Action buttons
           if (_openTabs.isNotEmpty) ...[
+            ValueListenableBuilder<UndoHistoryValue>(
+              valueListenable: _openTabs[_activeTabIndex].undoController,
+              builder: (context, value, child) {
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _TitleBarButton(
+                      icon: Icons.undo,
+                      tooltip: 'Undo',
+                      color: value.canUndo ? Colors.white70 : Colors.white24,
+                      onPressed: value.canUndo
+                          ? () => _openTabs[_activeTabIndex].undoController.undo()
+                          : null,
+                    ),
+                    _TitleBarButton(
+                      icon: Icons.redo,
+                      tooltip: 'Redo',
+                      color: value.canRedo ? Colors.white70 : Colors.white24,
+                      onPressed: value.canRedo
+                          ? () => _openTabs[_activeTabIndex].undoController.redo()
+                          : null,
+                    ),
+                  ],
+                );
+              },
+            ),
             _TitleBarButton(
               icon: Icons.search,
               tooltip: 'Cari di file ini',

@@ -184,6 +184,7 @@ class _CodeEditorState extends State<CodeEditor> {
                   child: CodeField(
                     controller: _controller,
                     focusNode: _focusNode,
+                    undoController: widget.tab.undoController,
                     textStyle: const TextStyle(
                       fontFamily: 'monospace',
                       fontSize: 13,
