@@ -210,14 +210,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       children: [
         _ActionCard(
           icon: Icons.create_new_folder_outlined,
-          label: 'Create Project',
+          label: 'Buat Project',
           subtitle: 'Buat project baru',
           color: const Color(0xFF007ACC),
           onTap: _createProject,
         ),
         _ActionCard(
           icon: Icons.folder_open_outlined,
-          label: 'Open Project',
+          label: 'Buka Project',
           subtitle: 'Buka folder project',
           color: const Color(0xFF4EC9B0),
           onTap: _openFolder,
@@ -231,7 +231,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         ),
         _ActionCard(
           icon: Icons.settings_outlined,
-          label: 'Settings',
+          label: 'Pengaturan',
           subtitle: 'Pengaturan aplikasi',
           color: const Color(0xFF9CDCFE),
           onTap: () {

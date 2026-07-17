@@ -519,15 +519,15 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
       to { opacity: 1; transform: translateY(0); }
     }
     .logo-container {
-      margin-bottom: 12px;
+      margin-bottom: 24px;
       display: flex;
       flex-direction: column;
       align-items: center;
     }
     .rakoda-logo {
-      width: 54px;
+      width: 50px;
       height: auto;
-      margin-bottom: 16px;
+      margin-bottom: 26px;
       filter: drop-shadow(0 0 12px rgba(37, 104, 231, 0.5));
       animation: logoPulse 2s infinite alternate;
     }
@@ -536,7 +536,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
       to { transform: scale(1.05); filter: drop-shadow(0 0 18px rgba(37, 104, 231, 0.7)); }
     }
     .logo-text {
-      font-size: 48px;
+      font-size: 28px;
       font-weight: 900;
       letter-spacing: 6px;
       color: #007acc;
@@ -587,57 +587,6 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
       color: #ffffff;
       font-size: 15px;
       outline: none;
-    }
-    .search-button {
-      background: none;
-      border: none;
-      color: #858585;
-      cursor: pointer;
-      outline: none;
-      font-size: 16px;
-      transition: color 0.2s;
-    }
-    .search-button:hover {
-      color: #ffffff;
-    }
-    .shortcuts {
-      display: flex;
-      gap: 32px;
-      margin-top: 50px;
-      justify-content: center;
-    }
-    .shortcut-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      color: #aaaaaa;
-      text-decoration: none;
-      font-size: 12px;
-      transition: all 0.2s;
-      width: 70px;
-    }
-    .shortcut-item:hover {
-      color: #007acc;
-      transform: translateY(-2px);
-    }
-    .shortcut-icon {
-      width: 52px;
-      height: 52px;
-      background-color: #252526;
-      border: 1px solid #3c3c3c;
-      border-radius: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 10px;
-      font-size: 22px;
-      transition: all 0.2s;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-    .shortcut-item:hover .shortcut-icon {
-      background-color: #2d2d2d;
-      border-color: #007acc;
-      box-shadow: 0 6px 12px rgba(0, 122, 204, 0.15);
     }
   </style>
 </head>

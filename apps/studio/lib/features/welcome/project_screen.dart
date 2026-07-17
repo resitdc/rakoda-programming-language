@@ -11,6 +11,9 @@ import '../../src/rust/api/simple.dart';
 import 'activity_bar.dart';
 import 'search_panel.dart';
 import '../browser/browser_workspace.dart';
+import '../database/database_workspace.dart';
+
+enum WorkspaceType { editor, browser, database }
 
 class ProjectScreen extends StatefulWidget {
   final Project project;
@@ -26,6 +29,8 @@ class _ProjectScreenState extends State<ProjectScreen> {
   bool _isTerminalMinimized = false;
   int _explorerVersion = 0;
   int? _targetLineNumber;
+
+  WorkspaceType _activeWorkspace = WorkspaceType.editor;
 
   bool _showLocalSearch = false;
   String _localSearchQuery = '';
@@ -637,7 +642,8 @@ class _ProjectScreenState extends State<ProjectScreen> {
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final isMobile = mediaQuery.size.width < 600;
-    final isBrowser = _activeActivity == ActivityType.browser;
+    final isBrowser = _activeWorkspace == WorkspaceType.browser;
+    final isDatabase = _activeWorkspace == WorkspaceType.database;
     final isKeyboardOpen = mediaQuery.viewInsets.bottom > 0;
     final isTerminalFocused = _terminalFocusNode.hasFocus;
 
@@ -651,7 +657,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
         child: Column(
           children: [
             // ═══ Title Bar / Navbar ═══
-            if (!isBrowser) _buildTitleBar(),
+            if (!isBrowser && !isDatabase) _buildTitleBar(),
             // ═══ Main Content ═══
             Expanded(
               child: Row(
@@ -661,13 +667,24 @@ class _ProjectScreenState extends State<ProjectScreen> {
                     activeActivity: _activeActivity,
                     onActivitySelected: (type) {
                       setState(() {
-                        _activeActivity = _activeActivity == type ? null : type;
+                        if (_activeActivity == type) {
+                          _activeActivity = null;
+                        } else {
+                          _activeActivity = type;
+                          if (type == ActivityType.browser) {
+                            _activeWorkspace = WorkspaceType.browser;
+                          } else if (type == ActivityType.database) {
+                            _activeWorkspace = WorkspaceType.database;
+                          } else {
+                            _activeWorkspace = WorkspaceType.editor;
+                          }
+                        }
                       });
                     },
                   ),
                   Expanded(
                     child: IndexedStack(
-                      index: isBrowser ? 1 : 0,
+                      index: isBrowser ? 1 : (isDatabase ? 2 : 0),
                       children: [
                         // Index 0: Editor & Terminal
                         Row(
@@ -737,6 +754,8 @@ class _ProjectScreenState extends State<ProjectScreen> {
                         ),
                         // Index 1: Browser Workspace
                         const BrowserWorkspace(),
+                        // Index 2: Database Workspace
+                        DatabaseWorkspace(projectPath: widget.project.path),
                       ],
                     ),
                   ),
@@ -925,6 +944,9 @@ class _ProjectScreenState extends State<ProjectScreen> {
 
     Widget panel;
     switch (_activeActivity!) {
+      case ActivityType.database:
+        // Database has its own built-in sidebar, this shouldn't be reached
+        return const SizedBox.shrink();
       case ActivityType.explorer:
         panel = FileExplorer(
           refreshTrigger: _explorerVersion,

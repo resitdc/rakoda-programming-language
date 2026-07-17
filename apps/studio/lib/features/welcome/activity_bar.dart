@@ -53,7 +53,7 @@ class ActivityBar extends StatelessWidget {
           _buildIcon(
             context,
             type: ActivityType.database,
-            icon: Icons.dns_outlined,
+            icon: Icons.storage,
             tooltip: 'Database',
           ),
           const Spacer(),
