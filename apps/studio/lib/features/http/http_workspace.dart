@@ -4,7 +4,14 @@ import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_code_editor/flutter_code_editor.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../settings/settings_provider.dart';
 import 'package:flutter_highlight/themes/vs2015.dart';
+import 'package:flutter_highlight/themes/monokai.dart';
+import 'package:flutter_highlight/themes/monokai-sublime.dart';
+import 'package:flutter_highlight/themes/dracula.dart';
+import 'package:flutter_highlight/themes/github.dart';
+import 'package:flutter_highlight/themes/atom-one-dark.dart';
 import 'package:highlight/languages/json.dart';
 import 'package:highlight/languages/xml.dart';
 
@@ -621,7 +628,7 @@ class _HttpWorkspaceState extends State<HttpWorkspace> {
         ),
         Expanded(
           child: _bodyType == 'None'
-            ? const Center(child: Text('This request does not have a body', style: TextStyle(color: Colors.white38)))
+            ? const Center(child: Text('Request ini gapunya body', style: TextStyle(color: Colors.white38)))
             : _bodyType == 'JSON'
               ? Container(
                   margin: const EdgeInsets.all(12.0),
@@ -641,7 +648,7 @@ class _HttpWorkspaceState extends State<HttpWorkspace> {
                       contentPadding: EdgeInsets.all(12),
                       filled: true,
                       fillColor: Colors.transparent,
-                      hintText: 'Enter JSON body...',
+                      hintText: 'Tulis JSON disini',
                       hintStyle: TextStyle(color: Colors.white24),
                     ),
                   ),
@@ -720,15 +727,39 @@ class _HttpWorkspaceState extends State<HttpWorkspace> {
     );
   }
 
+  Map<String, TextStyle> _getTheme(String themeName) {
+    switch (themeName) {
+      case 'Monokai':
+        return monokaiTheme;
+      case 'Monokai Sublime':
+        return monokaiSublimeTheme;
+      case 'Dracula':
+        return draculaTheme;
+      case 'GitHub':
+        return githubTheme;
+      case 'Atom One Dark':
+        return atomOneDarkTheme;
+      case 'VS2015':
+      default:
+        return vs2015Theme;
+    }
+  }
+
   Widget _buildResponseBody() {
     if (_responseCodeController == null) return const SizedBox();
 
-    final customTheme = Map<String, TextStyle>.from(vs2015Theme);
-    customTheme['root'] = customTheme['root']?.copyWith(
-      backgroundColor: const Color(0xFF1E1E1E),
-    ) ?? const TextStyle(backgroundColor: const Color(0xFF1E1E1E));
+    return Consumer(
+      builder: (context, ref, child) {
+        final settings = ref.watch(settingsProvider);
+        final baseTheme = _getTheme(settings.editorTheme);
+        final editorFontSize = settings.editorFontSize;
 
-    return Container(
+        final customTheme = Map<String, TextStyle>.from(baseTheme);
+        customTheme['root'] = customTheme['root']?.copyWith(
+          backgroundColor: const Color(0xFF1E1E1E),
+        ) ?? const TextStyle(backgroundColor: const Color(0xFF1E1E1E));
+
+        return Container(
       color: const Color(0xFF1E1E1E),
       width: double.infinity,
       height: double.infinity,
@@ -741,30 +772,32 @@ class _HttpWorkspaceState extends State<HttpWorkspace> {
               filled: false,
             ),
           ),
-          child: SingleChildScrollView(
-            child: CodeField(
-              controller: _responseCodeController!,
-              readOnly: true,
-              textStyle: const TextStyle(
-                fontFamily: 'monospace', 
-                fontSize: 13,
-                height: 1.6,
-              ),
-              gutterStyle: const GutterStyle(
-                textStyle: TextStyle(
-                  color: Color(0xFF858585),
-                  fontSize: 13,
-                  fontFamily: 'monospace',
-                  height: 1.6,
+              child: SingleChildScrollView(
+                child: CodeField(
+                  controller: _responseCodeController!,
+                  readOnly: true,
+                  textStyle: TextStyle(
+                    fontFamily: 'monospace', 
+                    fontSize: editorFontSize,
+                    height: 1.6,
+                  ),
+                  gutterStyle: GutterStyle(
+                    textStyle: TextStyle(
+                      color: const Color(0xFF858585),
+                      fontSize: editorFontSize,
+                      fontFamily: 'monospace',
+                      height: 1.6,
+                    ),
+                    background: const Color(0xFF1E1E1E),
+                    margin: 0,
+                    width: 60,
+                  ),
                 ),
-                background: Color(0xFF1E1E1E),
-                margin: 0,
-                width: 60,
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

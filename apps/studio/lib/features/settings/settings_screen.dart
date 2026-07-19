@@ -72,6 +72,27 @@ class SettingsScreen extends ConsumerWidget {
           //   value: settings.isWordWrap,
           //   onChanged: (v) => ref.read(settingsProvider.notifier).toggleWordWrap(v),
           // ),
+          const SizedBox(height: 8),
+          _settingSlider(
+            icon: HugeIcons.strokeRoundedTextFont,
+            title: 'Ukuran Font',
+            subtitle: 'Mengatur besarnya teks di dalam Code Editor.',
+            value: settings.editorFontSize,
+            min: 10,
+            max: 30,
+            onChanged: (v) => ref.read(settingsProvider.notifier).setEditorFontSize(v),
+          ),
+          const SizedBox(height: 8),
+          _settingDropdown(
+            icon: HugeIcons.strokeRoundedPaintBoard,
+            title: 'Tema Editor',
+            subtitle: 'Pilih tema pewarnaan sintaks (Syntax Highlighting) favorit Anda.',
+            value: settings.editorTheme,
+            items: const ['VS2015', 'Monokai', 'Monokai Sublime', 'Dracula', 'GitHub', 'Atom One Dark'],
+            onChanged: (v) {
+              if (v != null) ref.read(settingsProvider.notifier).setEditorTheme(v);
+            },
+          ),
         ],
       ),
     );
@@ -121,6 +142,120 @@ class SettingsScreen extends ConsumerWidget {
           subtitle: Text(subtitle, style: const TextStyle(color: Colors.white54, fontSize: 12, height: 1.4)),
           value: value,
           onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+
+  static Widget _settingDropdown({
+    required dynamic icon,
+    required String title,
+    required String subtitle,
+    required String value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Card(
+      color: const Color(0xFF2D2D30),
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+        child: Row(
+          children: [
+            HugeIcon(icon: icon, color: Colors.white70, size: 22),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+                    const SizedBox(height: 6),
+                    Text(subtitle, style: const TextStyle(color: Colors.white54, fontSize: 12, height: 1.4)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: value,
+                dropdownColor: const Color(0xFF1E1E1E),
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                icon: const Icon(Icons.arrow_drop_down, color: Colors.white54),
+                items: items.map((String item) {
+                  return DropdownMenuItem<String>(
+                    value: item,
+                    child: Text(item),
+                  );
+                }).toList(),
+                onChanged: onChanged,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static Widget _settingSlider({
+    required dynamic icon,
+    required String title,
+    required String subtitle,
+    required double value,
+    required double min,
+    required double max,
+    required ValueChanged<double> onChanged,
+  }) {
+    return Card(
+      color: const Color(0xFF2D2D30),
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                children: [
+                  HugeIcon(icon: icon, color: Colors.white70, size: 22),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+                        const SizedBox(height: 6),
+                        Text(subtitle, style: const TextStyle(color: Colors.white54, fontSize: 12, height: 1.4)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Text('${value.toInt()} px', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                ],
+              ),
+            ),
+            SliderTheme(
+              data: SliderThemeData(
+                activeTrackColor: const Color(0xFF2568E7),
+                inactiveTrackColor: Colors.white12,
+                thumbColor: Colors.white,
+                overlayColor: const Color(0xFF2568E7).withAlpha(51),
+                trackHeight: 4,
+              ),
+              child: Slider(
+                value: value,
+                min: min,
+                max: max,
+                divisions: (max - min).toInt(),
+                onChanged: onChanged,
+              ),
+            ),
+          ],
         ),
       ),
     );

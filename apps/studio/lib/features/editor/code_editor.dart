@@ -7,6 +7,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../settings/settings_provider.dart';
 import 'package:flutter_code_editor/flutter_code_editor.dart';
 import 'package:flutter_highlight/themes/vs2015.dart';
+import 'package:flutter_highlight/themes/monokai.dart';
+import 'package:flutter_highlight/themes/monokai-sublime.dart';
+import 'package:flutter_highlight/themes/dracula.dart';
+import 'package:flutter_highlight/themes/github.dart';
+import 'package:flutter_highlight/themes/atom-one-dark.dart';
 import 'package:highlight/highlight.dart';
 import 'package:highlight/languages/css.dart';
 import 'package:highlight/languages/javascript.dart';
@@ -182,15 +187,49 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
     super.dispose();
   }
 
+  Map<String, TextStyle> _getTheme(String themeName) {
+    switch (themeName) {
+      case 'Monokai':
+        return monokaiTheme;
+      case 'Monokai Sublime':
+        return monokaiSublimeTheme;
+      case 'Dracula':
+        return draculaTheme;
+      case 'GitHub':
+        return githubTheme;
+      case 'Atom One Dark':
+        return atomOneDarkTheme;
+      case 'VS2015':
+      default:
+        return vs2015Theme;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isWordWrap = ref.watch(settingsProvider).isWordWrap;
+    final settings = ref.watch(settingsProvider);
+    final isWordWrap = settings.isWordWrap;
+    final editorFontSize = settings.editorFontSize;
+    final baseTheme = _getTheme(settings.editorTheme);
 
-    // We can inject custom background color into the vs2015 theme map
-    final customTheme = Map<String, TextStyle>.from(vs2015Theme);
+    // We can inject custom background color into the theme map
+    final customTheme = Map<String, TextStyle>.from(baseTheme);
     customTheme['root'] = customTheme['root']?.copyWith(
       backgroundColor: const Color(0xFF1E1E1E), // VS Code exact editor background
     ) ?? const TextStyle(backgroundColor: Color(0xFF1E1E1E));
+
+    final codeTextStyle = TextStyle(
+      fontFamily: 'monospace',
+      fontSize: editorFontSize,
+      height: 1.6,
+    );
+
+    final gutterTextStyle = TextStyle(
+      color: const Color(0xFF858585),
+      fontSize: editorFontSize,
+      fontFamily: 'monospace',
+      height: 1.6,
+    );
 
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
@@ -218,30 +257,38 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
                     filled: false,
                   ),
                 ),
-                child: CodeField(
-                  key: ValueKey('code_field_wrap_$isWordWrap'),
-                  wrap: isWordWrap,
-                  expands: true,
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  undoController: widget.tab.undoController,
-                  textStyle: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 13,
-                    height: 1.6,
-                  ),
-                  gutterStyle: const GutterStyle(
-                    textStyle: TextStyle(
-                      color: Color(0xFF858585),
-                      fontSize: 13,
-                      fontFamily: 'monospace',
-                      height: 1.6,
+                child: isWordWrap
+                  ? CodeField(
+                      key: ValueKey('code_field_wrap_true_$editorFontSize'),
+                      wrap: true,
+                      expands: false,
+                      controller: _controller,
+                      focusNode: _focusNode,
+                      undoController: widget.tab.undoController,
+                      maxLines: null,
+                      textStyle: codeTextStyle,
+                      gutterStyle: GutterStyle(
+                        textStyle: gutterTextStyle,
+                        background: const Color(0xFF1E1E1E),
+                        margin: 0,
+                        width: 60,
+                      ),
+                    )
+                  : CodeField(
+                      key: ValueKey('code_field_wrap_false_$editorFontSize'),
+                      wrap: false,
+                      expands: true,
+                      controller: _controller,
+                      focusNode: _focusNode,
+                      undoController: widget.tab.undoController,
+                      textStyle: codeTextStyle,
+                      gutterStyle: GutterStyle(
+                        textStyle: gutterTextStyle,
+                        background: const Color(0xFF1E1E1E),
+                        margin: 0,
+                        width: 60,
+                      ),
                     ),
-                    background: Color(0xFF1E1E1E),
-                    margin: 0,
-                    width: 60,
-                  ),
-                ),
               ),
             ),
           ),
