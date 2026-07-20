@@ -144,7 +144,7 @@ const HomepageHeader = () => {
               Bahasa pemrograman yang dirancang khusus dengan sintaks <b>Bahasa Indonesia</b>, 
               membuat belajar logika pemrograman menjadi lebih mudah dan relevan!
             </p>
-            <div className={styles.buttons}>
+            <div className={styles.buttons} style={{ flexWrap: 'wrap' }}>
               <Link
                 className="button button--secondary button--lg"
                 to="/docs/intro">
@@ -152,8 +152,14 @@ const HomepageHeader = () => {
               </Link>
               <Link
                 className="button button--outline button--secondary button--lg"
+                to="/download"
+                style={{ color: 'white', borderColor: 'white' }}>
+                Unduh
+              </Link>
+              <Link
+                className="button button--outline button--secondary button--lg"
                 to="https://github.com/resitdc/rakoda-programming-language"
-                style={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)' }}>
+                style={{ color: 'white', borderColor: 'white' }}>
                 GitHub
               </Link>
             </div>
