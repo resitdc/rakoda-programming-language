@@ -1,0 +1,23 @@
+{
+  "id": "percabangan",
+  "title": "Percabangan (Logika)",
+  "description": "Percabangan adalah cara sebuah program mengambil keputusan. Dalam dunia nyata, kita sering berpikir: \"Jika hari ini hujan, maka saya akan membawa payung.\"",
+  "source": "@site/docs/02-percabangan.md",
+  "sourceDirName": ".",
+  "slug": "/percabangan",
+  "permalink": "/docs/percabangan",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/resitdc/rakoda-programming-language/tree/main/documentation/docs/02-percabangan.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Variabel",
+    "permalink": "/docs/variabel"
+  }
+}

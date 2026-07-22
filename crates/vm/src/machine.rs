@@ -452,8 +452,21 @@ impl VM {
                             self.stack.pop(); // Pop function itself
 
                             let func_ptr = self.heap.get_fungsi_bawaan(fungsi_idx).func.clone();
-                            // Pass heap implicitly
-                            let result = func_ptr(self, args).map_err(|e| self.err(e))?;
+                            let result = match func_ptr(self, args) {
+                                Ok(val) => val,
+                                Err(e) => {
+                                    if let Some(handler) = self.catch_handlers.pop() {
+                                        self.frames.truncate(handler.frame_index);
+                                        self.stack.truncate(handler.stack_offset);
+                                        self.frames.last_mut().unwrap().ip = handler.ip_offset;
+                                        let err_idx = self.heap.alloc(crate::heap::HeapData::String(e));
+                                        self.stack.push(Value::String(err_idx));
+                                        continue;
+                                    } else {
+                                        return Err(self.err(e));
+                                    }
+                                }
+                            };
                             self.stack.push(result);
                         }
                         _ => return Err(self.err("Hanya fungsi yang dapat dipanggil".to_string())),
@@ -575,6 +588,85 @@ impl VM {
                     }
                     let new_idx = self.heap.alloc(HeapData::Kamus(map));
                     self.stack.push(Value::Kamus(new_idx));
+                }
+                OpCode::IterInit => {
+                    let koleksi = self.stack.last().unwrap_or(&Value::Kosong);
+                    match koleksi {
+                        Value::Array(_) | Value::String(_) | Value::Kamus(_) => {
+                            self.stack.push(Value::Angka(0.0));
+                        }
+                        _ => return Err(self.err("Hanya tipe daftar (array), teks (string), atau kamus yang bisa diulang dengan 'setiap'.")),
+                    }
+                }
+                OpCode::IterNext => {
+                    let offset = self.frames.last_mut().unwrap().read_short(&self.heap) as usize;
+                    let counter_val = self.stack.last().unwrap().clone();
+                    let koleksi_val = self.stack[self.stack.len() - 2].clone();
+                    
+                    let counter = if let Value::Angka(n) = counter_val { n as usize } else { 0 };
+                    
+                    let mut has_next = false;
+                    let mut current_idx = Value::Kosong;
+                    let mut current_val = Value::Kosong;
+                    
+                    match koleksi_val {
+                        Value::Array(idx) => {
+                            let arr = self.heap.get_array(idx);
+                            if counter < arr.len() {
+                                has_next = true;
+                                current_idx = Value::Angka(counter as f64);
+                                current_val = arr[counter].clone();
+                            }
+                        }
+                        Value::String(idx) => {
+                            let (has_n, char_s) = {
+                                let s = self.heap.get_string(idx);
+                                let chars: Vec<char> = s.chars().collect();
+                                if counter < chars.len() {
+                                    (true, Some(chars[counter].to_string()))
+                                } else {
+                                    (false, None)
+                                }
+                            };
+                            if has_n {
+                                has_next = true;
+                                current_idx = Value::Angka(counter as f64);
+                                let char_idx = self.heap.alloc(crate::heap::HeapData::String(char_s.unwrap()));
+                                current_val = Value::String(char_idx);
+                            }
+                        }
+                        Value::Kamus(idx) => {
+                            let (has_n, key_str, val) = {
+                                let k = self.heap.get_kamus(idx);
+                                let mut keys: Vec<&String> = k.keys().collect();
+                                keys.sort();
+                                if counter < keys.len() {
+                                    let key_s = keys[counter].clone();
+                                    let val_c = k[&key_s].clone();
+                                    (true, Some(key_s), Some(val_c))
+                                } else {
+                                    (false, None, None)
+                                }
+                            };
+                            if has_n {
+                                has_next = true;
+                                let key_idx = self.heap.alloc(crate::heap::HeapData::String(key_str.unwrap()));
+                                current_idx = Value::String(key_idx);
+                                current_val = val.unwrap();
+                            }
+                        }
+                        _ => {}
+                    }
+                    
+                    if has_next {
+                        let top_idx = self.stack.len() - 1;
+                        self.stack[top_idx] = Value::Angka((counter + 1) as f64);
+                        
+                        self.stack.push(current_idx);
+                        self.stack.push(current_val);
+                    } else {
+                        self.frames.last_mut().unwrap().ip = offset;
+                    }
                 }
                 OpCode::Pop => {
                     self.stack.pop();

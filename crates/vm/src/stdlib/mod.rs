@@ -1,4 +1,5 @@
 pub mod adapter;
+pub mod ai;
 pub mod cookie;
 pub mod core;
 pub mod db;
@@ -36,4 +37,5 @@ pub fn register_all(vm: &mut VM) {
     db::register(vm);
     kripto::register(vm);
     log::register(vm);
+    ai::register(vm);
 }

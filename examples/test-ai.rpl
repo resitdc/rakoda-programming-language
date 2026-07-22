@@ -1,0 +1,10 @@
+ai.penyedia("deepseek")
+
+ai.kunci("sk-...")
+
+coba
+  buat hasil = ai.tanya("Jelaskan cara kerja komputer secara sederhana.")
+  tampilkan hasil
+tangkap(error)
+  tampilkan "Penanganan Error: " + error
+selesai

@@ -1,0 +1,28 @@
+// Tes array
+buat buah = ["Apel", "Jeruk", "Mangga"]
+setiap b di buah
+    tampilkan b
+selesai
+
+tampilkan "---"
+
+// Tes array dengan indeks
+setiap b dari buah dengan indeks i
+    tampilkan i + " = " + b
+selesai
+
+tampilkan "---"
+
+// Tes teks (string)
+buat namaku = "Rakoda"
+setiap huruf di namaku
+    tampilkan huruf
+selesai
+
+tampilkan "---"
+
+// Tes kamus
+buat skor = { "Budi": 90, "Andi": 80, "Siti": 95 }
+setiap nilai di skor dengan indeks nama
+    tampilkan nama + " mendapat " + nilai
+selesai

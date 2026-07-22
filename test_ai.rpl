@@ -1,0 +1,30 @@
+// Coba jalankan tanpa mengatur provider
+coba
+    buat jawaban = ai.tanya("Halo")
+    tampilkan jawaban
+tangkap(error)
+    tampilkan "Sukses menangkap error: " + error
+selesai
+
+tampilkan "---"
+
+// Coba atur provider yang tidak ada
+coba
+    ai.penyedia("antagonis")
+tangkap(error)
+    tampilkan "Sukses menangkap error: " + error
+selesai
+
+tampilkan "---"
+
+// Atur provider yang benar
+ai.penyedia("openai")
+
+coba
+    buat jawaban = ai.tanya("Halo")
+    tampilkan jawaban
+tangkap(error)
+    tampilkan "Sukses menangkap error (belum ada kunci): " + error
+selesai
+
+tampilkan "Selesai."
