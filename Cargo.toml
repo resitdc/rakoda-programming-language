@@ -5,7 +5,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "3.0.0"
+version = "4.0.0"
 edition = "2024"
 authors = ["Restu Dwi Cahyo"]
 description = "Rakoda Programming Language - Bahasa pemrograman berbasis Indonesia untuk siswa SMK"

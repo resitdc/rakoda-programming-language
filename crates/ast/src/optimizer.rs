@@ -106,6 +106,23 @@ fn optimize_statement(stmt: Statement) -> Vec<Statement> {
                 lokasi,
             }]
         }
+        Statement::Setiap {
+            elemen,
+            koleksi,
+            indeks,
+            body,
+            lokasi,
+        } => {
+            let opt_koleksi = optimize_expression(koleksi);
+            let opt_body = body.into_iter().flat_map(optimize_statement).collect();
+            vec![Statement::Setiap {
+                elemen,
+                koleksi: opt_koleksi,
+                indeks,
+                body: opt_body,
+                lokasi,
+            }]
+        }
         Statement::DeklarasiFungsi {
             nama,
             parameter,

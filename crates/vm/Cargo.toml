@@ -31,3 +31,4 @@ tokio = { version = "1.41.1", features = ["full"] }
 axum = { version = "0.7.9", features = ["ws"] }
 bytes = "1.9.0"
 futures-util = "0.3.31"
+regex = "1.13.1"

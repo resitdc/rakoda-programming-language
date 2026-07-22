@@ -13,6 +13,10 @@ pub enum Token {
     Kembalikan, // kembalikan
     Selama,     // selama
     Ulangi,     // ulangi
+    Setiap,     // setiap
+    Di,         // di
+    Dengan,     // dengan
+    Indeks,     // indeks
     Berhenti,   // berhenti
     Lanjut,     // lanjut
     Impor,      // impor
@@ -71,6 +75,10 @@ impl Token {
             Token::JikaTidak => "kata 'jika tidak'".to_string(),
             Token::Maka => "kata 'maka' atau '{'".to_string(),
             Token::Selama => "kata 'selama'".to_string(),
+            Token::Setiap => "kata 'setiap'".to_string(),
+            Token::Di => "kata 'di'".to_string(),
+            Token::Dengan => "kata 'dengan'".to_string(),
+            Token::Indeks => "kata 'indeks'".to_string(),
             Token::Fungsi => "kata 'fungsi'".to_string(),
             Token::Kembalikan => "kata 'kembalikan'".to_string(),
             Token::Impor => "kata 'impor' atau 'gabung'".to_string(),
@@ -116,6 +124,10 @@ impl Token {
             "kembalikan" => Some(Token::Kembalikan),
             "selama" => Some(Token::Selama),
             "ulangi" => Some(Token::Ulangi),
+            "setiap" | "tiap" => Some(Token::Setiap),
+            "di" | "dari" => Some(Token::Di),
+            "dengan" => Some(Token::Dengan),
+            "indeks" => Some(Token::Indeks),
             "berhenti" => Some(Token::Berhenti),
             "lanjut" => Some(Token::Lanjut),
             "impor" | "gabung" | "pakai" => Some(Token::Impor),
@@ -129,7 +141,7 @@ impl Token {
             "dan" => Some(Token::Dan),
             "atau" => Some(Token::Atau),
             "bukan" => Some(Token::Bukan),
-            "adalah" | "isinya" => Some(Token::SamaDengan),
+            "adalah" | "isinya" | "hasilnya" => Some(Token::SamaDengan),
             "coba" => Some(Token::Coba),
             "tangkap" => Some(Token::Tangkap),
             "lempar" => Some(Token::Lempar),

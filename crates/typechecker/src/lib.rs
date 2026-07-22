@@ -259,6 +259,11 @@ impl TypeChecker {
             "tugas",
             "log",
             "core",
+            "ai",
+            "regex",
+            "uuid",
+            "acak",
+            "random",
             // Fungsi/konstanta global
             "panjang",
             "tipe",
@@ -460,6 +465,49 @@ impl TypeChecker {
                 }
 
                 self.symbols.push_scope();
+                for s in body {
+                    self.check_statement(s);
+                }
+                self.symbols.pop_scope();
+            }
+            Statement::Setiap {
+                elemen,
+                koleksi,
+                indeks,
+                body,
+                lokasi,
+            } => {
+                let tipe_koleksi = self.infer_expression(koleksi);
+                let tipe_elemen = match &tipe_koleksi {
+                    RplType::Array(inner) => (**inner).clone(),
+                    RplType::String => RplType::String,
+                    RplType::Kamus(_) => RplType::TidakDiketahui, // Value from kamus
+                    RplType::TidakDiketahui => RplType::TidakDiketahui,
+                    _ => {
+                        self.error(
+                            format!(
+                                "Hanya tipe daftar (array), teks (string), atau kamus yang bisa diulang. Diberikan '{}'",
+                                tipe_koleksi
+                            ),
+                            *lokasi,
+                            Some("Pastikan nilai yang diulang adalah daftar, teks, atau kamus.".to_string()),
+                        );
+                        RplType::TidakDiketahui
+                    }
+                };
+
+                self.symbols.push_scope();
+                let _ = self.symbols.deklarasi(elemen, tipe_elemen, *lokasi);
+                
+                if let Some(idx_name) = indeks {
+                    let tipe_indeks = match tipe_koleksi {
+                        RplType::Array(_) | RplType::String => RplType::Angka,
+                        RplType::Kamus(_) => RplType::String,
+                        _ => RplType::TidakDiketahui,
+                    };
+                    let _ = self.symbols.deklarasi(idx_name, tipe_indeks, *lokasi);
+                }
+
                 for s in body {
                     self.check_statement(s);
                 }

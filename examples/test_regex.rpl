@@ -1,0 +1,13 @@
+buat pola_email = regex.buat("^[\\w\\.-]+@[\\w\\.-]+\\.\\w{2,4}$")
+
+tampilkan "Testing email valid (halo@rakoda.id): " + pola_email.cocokan("halo@rakoda.id")
+tampilkan "Testing email invalid (halo@rakoda): " + pola_email.cocokan("halo@rakoda")
+
+buat pola_angka = regex.buat("\\d+")
+tampilkan "Cari angka di teks 'harga 5000 rupiah': " + pola_angka.cari("harga 5000 rupiah")
+tampilkan "Cari angka di teks 'gratis': " + pola_angka.cari("gratis")
+
+buat sensor = regex.buat("bodoh|jelek")
+tampilkan "Ganti kata kasar: " + sensor.ganti("kamu bodoh banget", "***")
+
+tampilkan "Selesai regex"

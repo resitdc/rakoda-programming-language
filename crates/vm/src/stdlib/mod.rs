@@ -1,4 +1,5 @@
 pub mod adapter;
+pub mod ai;
 pub mod cookie;
 pub mod core;
 pub mod db;
@@ -16,6 +17,8 @@ pub mod string;
 pub mod tugas;
 pub mod waktu;
 pub mod web;
+
+pub mod regex;
 
 use crate::machine::VM;
 
@@ -36,4 +39,6 @@ pub fn register_all(vm: &mut VM) {
     db::register(vm);
     kripto::register(vm);
     log::register(vm);
+    ai::register(vm);
+    regex::register(vm);
 }

@@ -1,0 +1,27 @@
+{
+  "id": "variabel",
+  "title": "Variabel",
+  "description": "Dalam bahasa pemrograman Rakoda, Anda dapat menyimpan data ke dalam sebuah \"wadah\" yang disebut sebagai variabel.",
+  "source": "@site/docs/01-variabel.md",
+  "sourceDirName": ".",
+  "slug": "/variabel",
+  "permalink": "/docs/variabel",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/resitdc/rakoda-programming-language/tree/main/documentation/docs/01-variabel.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_position": 1
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Pengenalan Rakoda",
+    "permalink": "/docs/intro"
+  },
+  "next": {
+    "title": "Percabangan (Logika)",
+    "permalink": "/docs/percabangan"
+  }
+}

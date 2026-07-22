@@ -27,6 +27,13 @@ pub enum Statement {
         body: Vec<Statement>,
         lokasi: Lokasi,
     },
+    Setiap {
+        elemen: String,
+        koleksi: Expression,
+        indeks: Option<String>,
+        body: Vec<Statement>,
+        lokasi: Lokasi,
+    },
     Kembalikan {
         nilai: Option<Expression>,
         lokasi: Lokasi,

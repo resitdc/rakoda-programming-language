@@ -90,4 +90,95 @@ pub fn register(vm: &mut VM) {
 
     let module_idx = vm.heap.alloc(HeapData::Modul(module_dict));
     vm.set_global("core".to_string(), Value::Modul(module_idx));
+
+    // uuid
+    fn uuid_wrapper(ctx: &mut dyn VmContext, _args: Vec<Value>) -> Result<Value, String> {
+        let u = uuid::Uuid::new_v4().to_string();
+        let idx = ctx.get_heap_mut().alloc(HeapData::String(u));
+        Ok(Value::String(idx))
+    }
+    let uuid_func = FungsiBawaanVM {
+        nama: "uuid".to_string(),
+        func: std::sync::Arc::new(uuid_wrapper),
+    };
+    let uuid_idx = vm.heap.alloc(HeapData::FungsiBawaan(uuid_func));
+    vm.set_global("uuid".to_string(), Value::FungsiBawaan(uuid_idx));
+
+    // acak
+    fn acak_wrapper(ctx: &mut dyn VmContext, args: Vec<Value>) -> Result<Value, String> {
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+
+        if args.len() == 2 {
+            if let (Value::Angka(min), Value::Angka(max)) = (args[0], args[1]) {
+                if min > max {
+                    return Err("acak: nilai minimum tidak boleh lebih besar dari maksimum".to_string());
+                }
+                let is_integer = min.fract() == 0.0 && max.fract() == 0.0;
+                let res = if is_integer {
+                    rng.gen_range((min as i64)..=(max as i64)) as f64
+                } else {
+                    rng.gen_range(min..=max)
+                };
+                return Ok(Value::Angka(res));
+            }
+            
+            if let (Value::String(tipe_idx), Value::Angka(len)) = (args[0], args[1]) {
+                let tipe = ctx.get_heap_mut().get_string(tipe_idx).clone();
+                let length = len as usize;
+                let chars: Vec<char> = match tipe.as_str() {
+                    "huruf" => "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".chars().collect(),
+                    "angka" => "0123456789".chars().collect(),
+                    "campuran" => "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".chars().collect(),
+                    _ => return Err("acak: tipe tidak valid. Gunakan 'huruf', 'angka', atau 'campuran'".to_string()),
+                };
+                let result: String = (0..length)
+                    .map(|_| {
+                        let idx = rng.gen_range(0..chars.len());
+                        chars[idx]
+                    })
+                    .collect();
+                let res_idx = ctx.get_heap_mut().alloc(HeapData::String(result));
+                return Ok(Value::String(res_idx));
+            }
+        } else if args.len() == 1 {
+            if let Value::String(tipe_idx) = args[0] {
+                let tipe = ctx.get_heap_mut().get_string(tipe_idx).clone();
+                let hasil = match tipe.as_str() {
+                    "nama" => {
+                        let depan = ["Restu", "Salwa", "Bernandus", "Zidane", "Icksan", "Aji", "Aam", "Ilham", "Babaw", "Revin", "Teguh", "Hotma", "Brian", "Abim", "Encep", "Cae", "Cynthia", "Iza", "Gusti", "Ridho"];
+                        let belakang = ["Dwi Cahyo", "Nugraha", "Silaen", "Capah", "Aji", "Naibaho", "Fathur", "Reginal", "Agung", "Akmal", "Ihwan", "Azkia", "Rahayu", "Novia", "Arahman", "Al Sadawi"];
+                        format!("{} {}", depan[rng.gen_range(0..depan.len())], belakang[rng.gen_range(0..belakang.len())])
+                    }
+                    "alamat" => {
+                        let jalan = ["Jl. Sadang Serang", "Jl. Thamrin", "Jl. Melati", "Jl. Mawar", "Jl. Diponegoro", "Jl. Merdeka", "Jl. Gatot Subroto", "Jl. Pahlawan"];
+                        let kota = ["Jakarta", "Surabaya", "Bandung", "Medan", "Semarang", "Makassar", "Palembang", "Denpasar", "Yogyakarta", "Malang"];
+                        format!("{} No. {}, {}", jalan[rng.gen_range(0..jalan.len())], rng.gen_range(1..100), kota[rng.gen_range(0..kota.len())])
+                    }
+                    "kota" => {
+                        let kota = ["Jakarta", "Surabaya", "Bandung", "Medan", "Semarang", "Makassar", "Palembang", "Denpasar", "Yogyakarta", "Malang", "Balikpapan", "Samarinda", "Banjarmasin"];
+                        kota[rng.gen_range(0..kota.len())].to_string()
+                    }
+                    "telepon" => {
+                        format!("0812-{:04}-{:04}", rng.gen_range(1000..9999), rng.gen_range(1000..9999))
+                    }
+                    _ => return Err(format!("acak: argumen '{}' tidak didukung untuk satu parameter", tipe)),
+                };
+                let res_idx = ctx.get_heap_mut().alloc(HeapData::String(hasil));
+                return Ok(Value::String(res_idx));
+            }
+        } else if args.is_empty() {
+            let res: f64 = rng.gen_range(0.0..1.0);
+            return Ok(Value::Angka(res));
+        }
+
+        Err("acak: argumen tidak valid. Gunakan acak(min, max), acak('tipe', panjang), atau acak('tipe_faker')".to_string())
+    }
+    let acak_func = FungsiBawaanVM {
+        nama: "acak".to_string(),
+        func: std::sync::Arc::new(acak_wrapper),
+    };
+    let acak_idx = vm.heap.alloc(HeapData::FungsiBawaan(acak_func));
+    vm.set_global("acak".to_string(), Value::FungsiBawaan(acak_idx));
+    vm.set_global("random".to_string(), Value::FungsiBawaan(acak_idx));
 }

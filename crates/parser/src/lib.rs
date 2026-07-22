@@ -159,6 +159,7 @@ impl Parser {
             Token::Buat => self.parse_deklarasi_variabel(),
             Token::Jika => self.parse_jika(),
             Token::Selama => self.parse_selama(),
+            Token::Setiap => self.parse_setiap(),
             Token::Fungsi => self.parse_fungsi(),
             Token::Kembalikan => self.parse_kembalikan(),
             Token::Tampilkan => self.parse_tampilkan_statement(false),
@@ -370,6 +371,79 @@ impl Parser {
             kondisi,
             konsekuensi,
             alternatif,
+            lokasi,
+        }
+    }
+
+    fn parse_setiap(&mut self) -> Statement {
+        let lokasi = self.current_lokasi();
+        self.advance();
+
+        let elemen = match &self.current().token {
+            Token::Identifier(n) => n.clone(),
+            _ => {
+                self.push_error(
+                    "Diharapkan nama variabel untuk elemen perulangan.".to_string(),
+                    self.current_lokasi(),
+                    Some("Contoh: setiap item di daftar".to_string()),
+                );
+                return Statement::Error(lokasi);
+            }
+        };
+        self.advance();
+
+        if self.current().token == Token::Di {
+            self.advance();
+        } else {
+            self.push_error(
+                "Diharapkan kata 'di' atau 'dari' setelah nama elemen.".to_string(),
+                self.current_lokasi(),
+                Some("Contoh: setiap item di daftar".to_string()),
+            );
+            return Statement::Error(lokasi);
+        }
+
+        let koleksi = match self.parse_expression(Precedence::Lowest) {
+            Ok(e) => e,
+            Err(e) => {
+                self.errors.push(e);
+                return Statement::Error(lokasi);
+            }
+        };
+
+        let mut indeks = None;
+        if self.current().token == Token::Dengan {
+            self.advance();
+            if self.current().token == Token::Indeks {
+                self.advance();
+                if let Token::Identifier(n) = &self.current().token {
+                    indeks = Some(n.clone());
+                    self.advance();
+                } else {
+                    self.push_error(
+                        "Diharapkan nama variabel untuk indeks.".to_string(),
+                        self.current_lokasi(),
+                        Some("Contoh: setiap item di daftar dengan indeks i".to_string()),
+                    );
+                    return Statement::Error(lokasi);
+                }
+            } else {
+                self.push_error(
+                    "Diharapkan kata 'indeks' setelah 'dengan'.".to_string(),
+                    self.current_lokasi(),
+                    Some("Contoh: setiap item di daftar dengan indeks i".to_string()),
+                );
+                return Statement::Error(lokasi);
+            }
+        }
+
+        let body = self.parse_block();
+
+        Statement::Setiap {
+            elemen,
+            koleksi,
+            indeks,
+            body,
             lokasi,
         }
     }

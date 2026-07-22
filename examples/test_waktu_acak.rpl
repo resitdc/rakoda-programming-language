@@ -1,0 +1,17 @@
+buat sekarang = waktu.sekarang()
+
+buat lima_menit_lalu = sekarang - 300
+buat dua_jam_lalu = sekarang - (2 * 3600)
+buat kemarin = sekarang - 100000
+
+tampilkan "5 menit lalu: " + waktu.relatif(lima_menit_lalu)
+tampilkan "2 jam lalu: " + waktu.relatif(dua_jam_lalu)
+tampilkan "Kemarin: " + waktu.relatif(kemarin)
+
+tampilkan "--- Faker Nusantara ---"
+tampilkan "Nama acak: " + acak("nama")
+tampilkan "Alamat acak: " + acak("alamat")
+tampilkan "Kota acak: " + acak("kota")
+tampilkan "Telepon acak: " + acak("telepon")
+
+tampilkan "Semua sukses!"

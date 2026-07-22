@@ -1,0 +1,19 @@
+buat pecahan = string.pecah("apel,mangga,jeruk", ",")
+tampilkan "Hasil pecah: "
+tampilkan pecahan
+
+tampilkan "Mengandung mangga? " + string.kandung("apel,mangga,jeruk", "mangga")
+tampilkan "Mengandung durian? " + string.kandung("apel,mangga,jeruk", "durian")
+
+tampilkan "Trim bersih: '" + string.bersih("   spasi kiri kanan   ") + "'"
+tampilkan "Alias trim: '" + string.trim("   spasi kiri kanan   ") + "'"
+
+tampilkan "Terbilang 1.250.000: " + string.terbilang(1250000)
+tampilkan "Format rupiah 5000: " + string.format_rupiah(5000)
+
+tampilkan "Alay: " + string.alay("ini adalah teks biasa saja")
+
+tampilkan "Sensor biasa: " + string.sensor("dasar kau anjing!")
+tampilkan "Sensor cerdas: " + string.sensor("wah, b4ng5at lu, jancuk!")
+
+tampilkan "Sukses string!"

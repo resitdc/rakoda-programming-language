@@ -14,6 +14,7 @@ pub fn fungsi_waktu() -> DaftarFungsiRpl {
         ("menit", menit_impl),
         ("detik", detik_impl),
         ("format", format_impl),
+        ("relatif", relatif_impl),
     ]
 }
 
@@ -51,4 +52,45 @@ fn format_impl(_args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
     Ok(NilaiRpl::Teks(
         Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
     ))
+}
+
+fn relatif_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
+    if args.is_empty() {
+        return Err("waktu.relatif membutuhkan 1 argumen: timestamp".to_string());
+    }
+    match &args[0] {
+        NilaiRpl::Angka(val) => {
+            let timestamp_sekarang = Local::now().timestamp();
+            let timestamp_arg = *val as i64;
+            let selisih = timestamp_sekarang - timestamp_arg;
+            
+            if selisih < 0 {
+                return Ok(NilaiRpl::Teks("Di masa depan".to_string()));
+            }
+            
+            let hasil = if selisih < 60 {
+                "Baru saja".to_string()
+            } else if selisih < 3600 {
+                let menit = selisih / 60;
+                format!("{} menit yang lalu", menit)
+            } else if selisih < 86400 {
+                let jam = selisih / 3600;
+                format!("{} jam yang lalu", jam)
+            } else if selisih < 172800 { // 48 jam
+                "Kemarin".to_string()
+            } else if selisih < 2592000 { // 30 hari
+                let hari = selisih / 86400;
+                format!("{} hari yang lalu", hari)
+            } else if selisih < 31536000 { // 365 hari
+                let bulan = selisih / 2592000;
+                format!("{} bulan yang lalu", bulan)
+            } else {
+                let tahun = selisih / 31536000;
+                format!("{} tahun yang lalu", tahun)
+            };
+            
+            Ok(NilaiRpl::Teks(hasil))
+        }
+        _ => Err("waktu.relatif hanya menerima angka timestamp".to_string()),
+    }
 }

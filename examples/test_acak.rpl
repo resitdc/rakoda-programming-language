@@ -1,0 +1,19 @@
+buat id = uuid()
+tampilkan "UUID: " + id
+
+buat d = acak(1, 100)
+tampilkan "Acak 1-100: " + d
+
+buat h = acak("huruf", 5)
+tampilkan "Huruf acak: " + h
+
+buat a = acak("angka", 4)
+tampilkan "Angka acak: " + a
+
+buat c = acak("campuran", 8)
+tampilkan "Campuran acak: " + c
+
+buat r = random()
+tampilkan "Random f64: " + r
+
+tampilkan "Berhasil!"
