@@ -141,12 +141,38 @@ pub fn register(vm: &mut VM) {
                 let res_idx = ctx.get_heap_mut().alloc(HeapData::String(result));
                 return Ok(Value::String(res_idx));
             }
+        } else if args.len() == 1 {
+            if let Value::String(tipe_idx) = args[0] {
+                let tipe = ctx.get_heap_mut().get_string(tipe_idx).clone();
+                let hasil = match tipe.as_str() {
+                    "nama" => {
+                        let depan = ["Restu", "Salwa", "Bernandus", "Zidane", "Icksan", "Aji", "Aam", "Ilham", "Babaw", "Revin", "Teguh", "Hotma", "Brian", "Abim", "Encep", "Cae", "Cynthia", "Iza", "Gusti", "Ridho"];
+                        let belakang = ["Dwi Cahyo", "Nugraha", "Silaen", "Capah", "Aji", "Naibaho", "Fathur", "Reginal", "Agung", "Akmal", "Ihwan", "Azkia", "Rahayu", "Novia", "Arahman", "Al Sadawi"];
+                        format!("{} {}", depan[rng.gen_range(0..depan.len())], belakang[rng.gen_range(0..belakang.len())])
+                    }
+                    "alamat" => {
+                        let jalan = ["Jl. Sadang Serang", "Jl. Thamrin", "Jl. Melati", "Jl. Mawar", "Jl. Diponegoro", "Jl. Merdeka", "Jl. Gatot Subroto", "Jl. Pahlawan"];
+                        let kota = ["Jakarta", "Surabaya", "Bandung", "Medan", "Semarang", "Makassar", "Palembang", "Denpasar", "Yogyakarta", "Malang"];
+                        format!("{} No. {}, {}", jalan[rng.gen_range(0..jalan.len())], rng.gen_range(1..100), kota[rng.gen_range(0..kota.len())])
+                    }
+                    "kota" => {
+                        let kota = ["Jakarta", "Surabaya", "Bandung", "Medan", "Semarang", "Makassar", "Palembang", "Denpasar", "Yogyakarta", "Malang", "Balikpapan", "Samarinda", "Banjarmasin"];
+                        kota[rng.gen_range(0..kota.len())].to_string()
+                    }
+                    "telepon" => {
+                        format!("0812-{:04}-{:04}", rng.gen_range(1000..9999), rng.gen_range(1000..9999))
+                    }
+                    _ => return Err(format!("acak: argumen '{}' tidak didukung untuk satu parameter", tipe)),
+                };
+                let res_idx = ctx.get_heap_mut().alloc(HeapData::String(hasil));
+                return Ok(Value::String(res_idx));
+            }
         } else if args.is_empty() {
             let res: f64 = rng.gen_range(0.0..1.0);
             return Ok(Value::Angka(res));
         }
 
-        Err("acak: argumen tidak valid. Gunakan acak(min, max) atau acak('tipe', panjang)".to_string())
+        Err("acak: argumen tidak valid. Gunakan acak(min, max), acak('tipe', panjang), atau acak('tipe_faker')".to_string())
     }
     let acak_func = FungsiBawaanVM {
         nama: "acak".to_string(),
