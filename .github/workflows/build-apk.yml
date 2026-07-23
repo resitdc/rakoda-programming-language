@@ -2,10 +2,9 @@ name: Build RPL Studio APK
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  workflow_dispatch: # Allows manual trigger from GitHub UI
+    tags:
+      - 'studio-v*'
+  workflow_dispatch:
 
 jobs:
   build-apk:
