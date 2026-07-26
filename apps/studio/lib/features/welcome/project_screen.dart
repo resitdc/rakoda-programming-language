@@ -14,6 +14,7 @@ import 'search_panel.dart';
 import '../browser/browser_workspace.dart';
 import '../database/database_workspace.dart';
 import '../http/http_workspace.dart';
+import '../chat/chat_panel.dart';
 import 'pdf_viewer_widget.dart';
 import 'spreadsheet_viewer_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -878,6 +879,9 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           rootPath: widget.project.path,
           onMatchTap: (filePath, line) => _openFile(filePath, lineNumber: line),
         );
+        break;
+      case ActivityType.chat:
+        panel = const ChatPanel();
         break;
       default:
         panel = Container(

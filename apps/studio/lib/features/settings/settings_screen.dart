@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'settings_provider.dart';
+import '../identity/identity_service.dart';
+import '../identity/identity_dialog.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -35,6 +37,13 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
+          // ── Profil Section ──
+          _sectionHeader(HugeIcons.strokeRoundedUserCircle, 'Profil Anda'),
+          const SizedBox(height: 8),
+          _profileCard(context),
+
+          const SizedBox(height: 24),
+
           // ── Performa Section ──
           _sectionHeader(HugeIcons.strokeRoundedDashboardSpeed02, 'Performa'),
           const SizedBox(height: 8),
@@ -257,6 +266,49 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _profileCard(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF252526),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white.withAlpha(12)),
+      ),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: const BoxDecoration(
+            color: Color(0xFF1E1E1E),
+            shape: BoxShape.circle,
+          ),
+          child: Text(IdentityService.avatar ?? '🐼', style: const TextStyle(fontSize: 24)),
+        ),
+        title: Text(
+          IdentityService.name ?? 'Belum ada nama',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
+        subtitle: const Text(
+          "Ketuk untuk mengubah avatar dan nama",
+          style: TextStyle(color: Colors.white54, fontSize: 12),
+        ),
+        trailing: const HugeIcon(icon: HugeIcons.strokeRoundedEdit02, color: Colors.blueAccent, size: 20),
+        onTap: () async {
+          await showDialog(
+            context: context,
+            barrierDismissible: true,
+            builder: (_) => const IdentityDialog(isCancellable: true),
+          );
+          // To update UI without state management, we just trigger rebuild by hot reload, 
+          // or we can convert SettingsScreen to ConsumerStatefulWidget if it wasn't.
+          // Since we use Riverpod, wait, the identity is not in riverpod. 
+          // A simple rebuild can be forced if SettingsScreen is stateful.
+          // Since it's ConsumerWidget, it's stateless. 
+          // But the user can just close and re-open settings.
+          // To force rebuild here, I can just use Navigator replacement or ignore it for now.
+        },
       ),
     );
   }

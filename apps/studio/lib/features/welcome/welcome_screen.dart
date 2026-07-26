@@ -12,6 +12,8 @@ import '../../services/project_service.dart';
 import 'create_project_dialog.dart';
 import 'project_screen.dart';
 import 'scan_barcode_screen.dart';
+import '../identity/identity_service.dart';
+import '../identity/identity_dialog.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
@@ -36,6 +38,16 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       _recentProjects = projects;
       _loading = false;
     });
+    
+    if (!IdentityService.hasIdentity) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const IdentityDialog(isCancellable: false),
+        );
+      });
+    }
   }
 
   Future<void> _createProject() async {

@@ -8,6 +8,7 @@ enum ActivityType {
   browser,
   http,
   database,
+  chat,
 }
 
 class ActivityBar extends StatelessWidget {
@@ -57,6 +58,12 @@ class ActivityBar extends StatelessWidget {
             type: ActivityType.database,
             icon: HugeIcons.strokeRoundedDatabase,
             tooltip: 'Database',
+          ),
+          _buildIcon(
+            context,
+            type: ActivityType.chat,
+            icon: HugeIcons.strokeRoundedChatting01,
+            tooltip: 'LAN Chat',
           ),
           const Spacer(),
           _buildIcon(

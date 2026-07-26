@@ -8,9 +8,12 @@ import 'src/rust/frb_generated.dart';
 import 'features/welcome/welcome_screen.dart';
 import 'features/theme/theme_state.dart';
 import 'features/editor/rpl_languages.dart';
+import 'features/identity/identity_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  await IdentityService.init();
   
   try {
     await RustLib.init();
