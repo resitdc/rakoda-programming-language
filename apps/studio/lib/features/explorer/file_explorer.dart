@@ -269,23 +269,41 @@ class _FileExplorerState extends State<FileExplorer> {
   }
 
   IconData _fileIcon(String name) {
-    if (name.endsWith('.rpl')) return Icons.code;
-    if (name.endsWith('.html')) return Icons.public;
-    if (name.endsWith('.css')) return Icons.style;
-    if (name.endsWith('.js')) return Icons.javascript;
-    if (name.endsWith('.json')) return Icons.data_object;
-    if (name.endsWith('.db') || name.endsWith('.sqlite')) return Icons.storage;
-    if (name.endsWith('.md')) return Icons.insert_drive_file;
-    if (name.endsWith('.txt')) return Icons.text_snippet;
+    final lowerName = name.toLowerCase();
+    if (lowerName.endsWith('.rpl')) return Icons.code;
+    if (lowerName.endsWith('.html')) return Icons.public;
+    if (lowerName.endsWith('.css')) return Icons.style;
+    if (lowerName.endsWith('.js')) return Icons.javascript;
+    if (lowerName.endsWith('.json')) return Icons.data_object;
+    if (lowerName.endsWith('.db') || lowerName.endsWith('.sqlite')) return Icons.storage;
+    if (lowerName.endsWith('.md')) return Icons.insert_drive_file;
+    if (lowerName.endsWith('.txt')) return Icons.text_snippet;
+
+    if (lowerName.endsWith('.pdf')) return Icons.picture_as_pdf;
+    if (lowerName.endsWith('.doc') || lowerName.endsWith('.docx')) return Icons.description;
+    if (lowerName.endsWith('.xls') || lowerName.endsWith('.xlsx') || lowerName.endsWith('.csv')) return Icons.table_chart;
+    if (lowerName.endsWith('.png') || lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.endsWith('.webp') || lowerName.endsWith('.bmp') || lowerName.endsWith('.gif')) {
+      return Icons.image;
+    }
+
     return Icons.insert_drive_file;
   }
 
   Color _fileIconColor(String name) {
-    if (name.endsWith('.rpl')) return const Color(0xFF519ABA);
-    if (name.endsWith('.html')) return const Color(0xFFE44D26);
-    if (name.endsWith('.css')) return const Color(0xFF42A5F5);
-    if (name.endsWith('.js')) return const Color(0xFFDCDCAA);
-    if (name.endsWith('.json')) return const Color(0xFFDCDCAA);
+    final lowerName = name.toLowerCase();
+    if (lowerName.endsWith('.rpl')) return const Color(0xFF519ABA);
+    if (lowerName.endsWith('.html')) return const Color(0xFFE44D26);
+    if (lowerName.endsWith('.css')) return const Color(0xFF42A5F5);
+    if (lowerName.endsWith('.js')) return const Color(0xFFDCDCAA);
+    if (lowerName.endsWith('.json')) return const Color(0xFFDCDCAA);
+
+    if (lowerName.endsWith('.pdf')) return const Color(0xFFE53935);
+    if (lowerName.endsWith('.doc') || lowerName.endsWith('.docx')) return const Color(0xFF1E88E5);
+    if (lowerName.endsWith('.xls') || lowerName.endsWith('.xlsx') || lowerName.endsWith('.csv')) return const Color(0xFF43A047);
+    if (lowerName.endsWith('.png') || lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.endsWith('.webp') || lowerName.endsWith('.bmp') || lowerName.endsWith('.gif')) {
+      return const Color(0xFFAB47BC);
+    }
+
     return const Color(0xFFCCCCCC);
   }
 

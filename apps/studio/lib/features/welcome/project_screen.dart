@@ -14,8 +14,14 @@ import 'search_panel.dart';
 import '../browser/browser_workspace.dart';
 import '../database/database_workspace.dart';
 import '../http/http_workspace.dart';
+import 'pdf_viewer_widget.dart';
+import 'spreadsheet_viewer_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../settings/settings_provider.dart';
+import 'package:xterm/xterm.dart';
+import 'package:flutter_pty/flutter_pty.dart';
+import 'package:desktop_drop/desktop_drop.dart';
+import 'dart:convert';
 
 enum WorkspaceType { editor, browser, database, http }
 
@@ -40,20 +46,44 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   String _localSearchQuery = '';
   final TextEditingController _localSearchController = TextEditingController();
 
-  late String _terminalCwd;
-  final List<String> _terminalLines = [];
-  final TextEditingController _terminalInputController =
-      TextEditingController();
-  final ScrollController _terminalScrollController = ScrollController();
+  late final Terminal _terminal;
+  Pty? _pty;
   final FocusNode _terminalFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
-    _terminalCwd = widget.project.path;
-    _terminalLines.add('Selamat datang di RPL Studio Terminal!');
-    _terminalLines.add('Ketik "help" untuk melihat daftar perintah.');
-    _terminalLines.add('');
+    _terminal = Terminal();
+
+    String shell =
+        Platform.environment['SHELL'] ??
+        (Platform.isWindows ? 'cmd.exe' : 'sh');
+    try {
+      _pty = Pty.start(
+        shell,
+        columns: 80,
+        rows: 24,
+        workingDirectory: widget.project.path,
+        environment: Platform.environment,
+      );
+
+      _pty!.output
+          .cast<List<int>>()
+          .transform(const Utf8Decoder(allowMalformed: true))
+          .listen((data) {
+            _terminal.write(data);
+          });
+
+      _terminal.onOutput = (data) {
+        _pty?.write(const Utf8Encoder().convert(data));
+      };
+
+      _terminal.onResize = (w, h, pw, ph) {
+        _pty?.resize(h, w);
+      };
+    } catch (e) {
+      _terminal.write('\x1b[31mTerminal Error: $e\x1b[0m\r\n');
+    }
 
     final mainFile = _findMainFile();
     _openTabs = [
@@ -76,8 +106,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
 
   @override
   void dispose() {
-    _terminalInputController.dispose();
-    _terminalScrollController.dispose();
+    _pty?.kill();
     _terminalFocusNode.dispose();
     _localSearchController.dispose();
     super.dispose();
@@ -431,24 +460,29 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
 
   void _importFile(String targetDirectoryPath) async {
     try {
-      final result = await FilePicker.pickFiles(allowMultiple: false);
-      if (result != null && result.files.single.name != null) {
-        final fileName = result.files.single.name;
-        final destinationPath =
-            '$targetDirectoryPath${Platform.pathSeparator}$fileName';
+      final result = await FilePicker.pickFiles(allowMultiple: true);
+      if (result != null && result.files.isNotEmpty) {
+        int count = 0;
+        for (final file in result.files) {
+          final fileName = file.name;
+          final destinationPath =
+              '$targetDirectoryPath${Platform.pathSeparator}$fileName';
 
-        if (result.files.single.path != null) {
-          final sourceFile = File(result.files.single.path!);
-          await sourceFile.copy(destinationPath);
-        } else if (result.files.single.bytes != null) {
-          await File(destinationPath).writeAsBytes(result.files.single.bytes!);
+          if (file.path != null) {
+            final sourceFile = File(file.path!);
+            await sourceFile.copy(destinationPath);
+            count++;
+          } else if (file.bytes != null) {
+            await File(destinationPath).writeAsBytes(file.bytes!);
+            count++;
+          }
         }
 
         setState(() => _explorerVersion++);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Berhasil mengimpor $fileName'),
+              content: Text('Berhasil mengimpor $count file'),
               backgroundColor: const Color(0xFF333333),
             ),
           );
@@ -461,195 +495,6 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
         ).showSnackBar(SnackBar(content: Text('Gagal: $e')));
       }
     }
-  }
-
-  void _scrollToTerminalBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_terminalScrollController.hasClients) {
-        _terminalScrollController.animateTo(
-          _terminalScrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 150),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
-
-  void _handleTerminalCommand(String input) async {
-    final cmd = input.trim();
-    if (cmd.isEmpty) return;
-
-    _terminalInputController.clear();
-    setState(() {
-      _terminalLines.add('>_ $cmd');
-    });
-
-    final parts = cmd.split(' ');
-    final baseCmd = parts[0].toLowerCase();
-    final args = parts.sublist(1);
-
-    // Filter destructive commands
-    final forbiddenKeywords = [
-      'rm',
-      'rf',
-      'format',
-      'mkfs',
-      'dd',
-      'shred',
-      'wipe',
-      'fdisk',
-      'parted',
-      'chmod',
-      'chown',
-      'sudo',
-      'su',
-      'del',
-      'rd',
-      'erase',
-    ];
-    if (forbiddenKeywords.contains(baseCmd) ||
-        cmd.contains('rm ') ||
-        cmd.contains('del ')) {
-      setState(() {
-        _terminalLines.add('⚠ Perintah ini dilarang demi keamanan.');
-      });
-      _scrollToTerminalBottom();
-      return;
-    }
-
-    switch (baseCmd) {
-      case 'clear':
-      case 'cls':
-        setState(() => _terminalLines.clear());
-        break;
-
-      case 'help':
-        setState(() {
-          _terminalLines.addAll([
-            '╭─ Perintah yang tersedia ──────────╮',
-            '│  help        Bantuan               │',
-            '│  pwd         Direktori saat ini     │',
-            '│  ls          Daftar berkas          │',
-            '│  cd [dir]    Pindah direktori       │',
-            '│  cat [file]  Baca isi berkas        │',
-            '│  run [file]  Jalankan program RPL   │',
-            '│  clear       Bersihkan layar        │',
-            '╰─────────────────────────────────────╯',
-          ]);
-        });
-        break;
-
-      case 'pwd':
-        setState(() => _terminalLines.add(_terminalCwd));
-        break;
-
-      case 'ls':
-        try {
-          final dir = Directory(_terminalCwd);
-          if (dir.existsSync()) {
-            final contents = dir.listSync();
-            if (contents.isEmpty) {
-              setState(() => _terminalLines.add('(kosong)'));
-            } else {
-              for (var entity in contents) {
-                final isDir = entity is Directory;
-                final name = entity.path.split(Platform.pathSeparator).last;
-                setState(() {
-                  _terminalLines.add('${isDir ? "📁" : "📄"} $name');
-                });
-              }
-            }
-          }
-        } catch (e) {
-          setState(() => _terminalLines.add('⚠ $e'));
-        }
-        break;
-
-      case 'cd':
-        if (args.isEmpty) {
-          setState(() => _terminalCwd = widget.project.path);
-        } else {
-          final target = args.join(' ');
-          String newPath;
-          if (target == '..') {
-            final parent = Directory(_terminalCwd).parent.path;
-            newPath = parent.startsWith(widget.project.path)
-                ? parent
-                : widget.project.path;
-          } else {
-            newPath = Directory(
-              '$_terminalCwd${Platform.pathSeparator}$target',
-            ).path;
-          }
-
-          final dir = Directory(newPath);
-          if (dir.existsSync()) {
-            setState(() => _terminalCwd = newPath);
-          } else {
-            setState(
-              () => _terminalLines.add('⚠ Folder "$target" tidak ditemukan.'),
-            );
-          }
-        }
-        break;
-
-      case 'cat':
-        if (args.isEmpty) {
-          setState(() => _terminalLines.add('Gunakan: cat [nama_file]'));
-        } else {
-          final fileName = args.join(' ');
-          final filePath = '$_terminalCwd${Platform.pathSeparator}$fileName';
-          final file = File(filePath);
-          if (file.existsSync()) {
-            try {
-              final content = file.readAsStringSync();
-              setState(() => _terminalLines.addAll(content.split('\n')));
-            } catch (e) {
-              setState(() => _terminalLines.add('⚠ $e'));
-            }
-          } else {
-            setState(
-              () => _terminalLines.add('⚠ File "$fileName" tidak ditemukan.'),
-            );
-          }
-        }
-        break;
-
-      case 'run':
-      case 'rpl':
-        if (args.isEmpty) {
-          setState(() => _terminalLines.add('Gunakan: run [nama_file.rpl]'));
-        } else {
-          final fileName = args.join(' ');
-          final filePath = '$_terminalCwd${Platform.pathSeparator}$fileName';
-          final file = File(filePath);
-          if (file.existsSync()) {
-            setState(() => _terminalLines.add('Menjalankan $fileName...'));
-            try {
-              final content = file.readAsStringSync();
-              final output = await runCode(code: content);
-              if (!mounted) return;
-              setState(() => _terminalLines.addAll(output.split('\n')));
-            } catch (e) {
-              if (!mounted) return;
-              setState(() => _terminalLines.add('⚠ $e'));
-            }
-          } else {
-            setState(
-              () => _terminalLines.add('⚠ File "$fileName" tidak ditemukan.'),
-            );
-          }
-        }
-        break;
-
-      default:
-        setState(() {
-          _terminalLines.add('⚠ "$baseCmd" tidak dikenali. Ketik "help".');
-        });
-        break;
-    }
-
-    _scrollToTerminalBottom();
   }
 
   @override
@@ -701,7 +546,9 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                   ),
                   Expanded(
                     child: IndexedStack(
-                      index: isBrowser ? 1 : (isDatabase ? 2 : (isHttp ? 3 : 0)),
+                      index: isBrowser
+                          ? 1
+                          : (isDatabase ? 2 : (isHttp ? 3 : 0)),
                       children: [
                         // Index 0: Editor & Terminal
                         Row(
@@ -770,7 +617,8 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                           ],
                         ),
                         // Index 1: Browser Workspace
-                        ref.watch(settingsProvider).isLowEndMode && _activeActivity != ActivityType.browser
+                        ref.watch(settingsProvider).isLowEndMode &&
+                                _activeActivity != ActivityType.browser
                             ? const SizedBox() // Bebaskan memori webview saat tidak aktif
                             : const BrowserWorkspace(),
                         // Index 2: Database Workspace
@@ -875,18 +723,14 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
               if (_openTabs.isEmpty) return;
               setState(() {
                 _isTerminalMinimized = false;
-                _terminalLines.add(
-                  '>_ run ${_openTabs[_activeTabIndex].fileName}',
-                );
-                // _terminalLines.add(
-                //   '⏳ Menjalankan ${_openTabs[_activeTabIndex].fileName}...',
-                // );
               });
+              _terminal.write(
+                '\r\n>_ run ${_openTabs[_activeTabIndex].fileName}\r\n',
+              );
               final content = _openTabs[_activeTabIndex].content;
               final result = await runCode(code: content);
               if (!mounted) return;
-              setState(() => _terminalLines.addAll(result.split('\n')));
-              _scrollToTerminalBottom();
+              _terminal.write(result.replaceAll('\n', '\r\n') + '\r\n');
             },
           ),
         ],
@@ -922,11 +766,19 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
             prefixIcon: Center(
               widthFactor: 1,
               heightFactor: 1,
-              child: HugeIcon(icon: HugeIcons.strokeRoundedSearch01, size: 14, color: Colors.white38),
+              child: HugeIcon(
+                icon: HugeIcons.strokeRoundedSearch01,
+                size: 14,
+                color: Colors.white38,
+              ),
             ),
             prefixIconConstraints: const BoxConstraints(minWidth: 28),
             suffixIcon: IconButton(
-              icon: HugeIcon(icon: HugeIcons.strokeRoundedCancel01, size: 12, color: Colors.white54),
+              icon: HugeIcon(
+                icon: HugeIcons.strokeRoundedCancel01,
+                size: 12,
+                color: Colors.white54,
+              ),
               onPressed: () {
                 setState(() {
                   _showLocalSearch = false;
@@ -954,52 +806,71 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
         // Database has its own built-in sidebar, this shouldn't be reached
         return const SizedBox.shrink();
       case ActivityType.explorer:
-        panel = FileExplorer(
-          refreshTrigger: _explorerVersion,
-          rootPath: widget.project.path,
-          onCreateFile: _createFile,
-          onCreateFolder: _createFolder,
-          onRename: _renameFileOrFolder,
-          onImportFile: _importFile,
-          onFileTap: (path) {
-            final ext = path.contains('.')
-                ? path.split('.').last.toLowerCase()
-                : '';
-            final isUnsupportedBinary = [
-              'pdf',
-              'zip',
-              'tar',
-              'gz',
-              'exe',
-              'dll',
-              'so',
-              'dylib',
-              'db',
-              'sqlite',
-            ].contains(ext);
-            if (!isUnsupportedBinary) _openFile(path);
-          },
-          onDelete: (path) {
+        panel = DropTarget(
+          onDragDone: (details) async {
             try {
-              if (Directory(path).existsSync()) {
-                Directory(path).deleteSync(recursive: true);
-              } else {
-                File(path).deleteSync();
-              }
-              _openTabs.removeWhere((t) => t.filePath == path);
-              if (_openTabs.isEmpty) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-                );
+              for (final file in details.files) {
+                final sourceFile = File(file.path);
+                final fileName = sourceFile.uri.pathSegments.last;
+                final destPath =
+                    '${widget.project.path}${Platform.pathSeparator}$fileName';
+                await sourceFile.copy(destPath);
               }
               setState(() => _explorerVersion++);
             } catch (e) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text('Gagal: $e')));
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Gagal menyalin file: $e')),
+                );
+              }
             }
           },
+          child: FileExplorer(
+            refreshTrigger: _explorerVersion,
+            rootPath: widget.project.path,
+            onCreateFile: _createFile,
+            onCreateFolder: _createFolder,
+            onRename: _renameFileOrFolder,
+            onImportFile: _importFile,
+            onFileTap: (path) {
+              final ext = path.contains('.')
+                  ? path.split('.').last.toLowerCase()
+                  : '';
+              final isUnsupportedBinary = [
+                'zip',
+                'tar',
+                'gz',
+                'exe',
+                'dll',
+                'so',
+                'dylib',
+                'db',
+                'sqlite',
+              ].contains(ext);
+              if (!isUnsupportedBinary) _openFile(path);
+            },
+            onDelete: (path) {
+              try {
+                if (Directory(path).existsSync()) {
+                  Directory(path).deleteSync(recursive: true);
+                } else {
+                  File(path).deleteSync();
+                }
+                _openTabs.removeWhere((t) => t.filePath == path);
+                if (_openTabs.isEmpty) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+                  );
+                }
+                setState(() => _explorerVersion++);
+              } catch (e) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Gagal: $e')));
+              }
+            },
+          ),
         );
         break;
       case ActivityType.search:
@@ -1031,6 +902,17 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   /// Empty state when no file is open.
   Widget _buildEditorOrViewer(EditorTab tab) {
     final lowerPath = tab.filePath.toLowerCase();
+    
+    final isSpreadsheet = lowerPath.endsWith('.csv') || lowerPath.endsWith('.xls') || lowerPath.endsWith('.xlsx');
+    if (isSpreadsheet) {
+      return SpreadsheetViewerWidget(filePath: tab.filePath);
+    }
+    
+    final isPdf = lowerPath.endsWith('.pdf');
+    if (isPdf) {
+      return PdfViewerWidget(filePath: tab.filePath);
+    }
+
     final isImage =
         lowerPath.endsWith('.png') ||
         lowerPath.endsWith('.jpg') ||
@@ -1074,7 +956,11 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            HugeIcon(icon: HugeIcons.strokeRoundedSourceCode, size: 48, color: Colors.white.withOpacity(0.08)),
+            HugeIcon(
+              icon: HugeIcons.strokeRoundedSourceCode,
+              size: 48,
+              color: Colors.white.withOpacity(0.08),
+            ),
             const SizedBox(height: 12),
             Text(
               'Tidak ada file yang dibuka',
@@ -1130,8 +1016,14 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                   const Spacer(),
                   if (!_isTerminalMinimized)
                     GestureDetector(
-                      onTap: () => setState(() => _terminalLines.clear()),
-                      child: HugeIcon(icon: HugeIcons.strokeRoundedDelete02, size: 14, color: Colors.white30,
+                      onTap: () {
+                        _terminal.buffer.clear();
+                        _terminal.buffer.setCursor(0, 0);
+                      },
+                      child: HugeIcon(
+                        icon: HugeIcons.strokeRoundedDelete02,
+                        size: 14,
+                        color: Colors.white30,
                       ),
                     ),
                 ],
@@ -1141,80 +1033,16 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           // Terminal Body
           if (!_isTerminalMinimized) ...[
             Expanded(
-              child: GestureDetector(
-                onTap: () => _terminalFocusNode.requestFocus(),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: ListView.builder(
-                    controller: _terminalScrollController,
-                    itemCount: _terminalLines.length,
-                    itemBuilder: (context, idx) {
-                      final line = _terminalLines[idx];
-                      final isPrompt = line.startsWith('>_');
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 1.0),
-                        child: Text(
-                          line,
-                          style: TextStyle(
-                            color: isPrompt
-                                ? const Color(0xFF4EC9B0)
-                                : Colors.white70,
-                            fontFamily: 'monospace',
-                            fontSize: 12,
-                            fontWeight: isPrompt
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                          ),
-                        ),
-                      );
-                    },
+              child: Container(
+                color: Colors.black,
+                child: TerminalView(
+                  _terminal,
+                  focusNode: _terminalFocusNode,
+                  textStyle: const TerminalStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 13,
                   ),
                 ),
-              ),
-            ),
-            // Input row
-            Container(
-              height: 28,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                children: [
-                  const Text(
-                    '>_ ',
-                    style: TextStyle(
-                      color: Color(0xFF4EC9B0),
-                      fontFamily: 'monospace',
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Expanded(
-                    child: Theme(
-                      data: Theme.of(context).copyWith(
-                        inputDecorationTheme: const InputDecorationTheme(
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          filled: false,
-                        ),
-                      ),
-                      child: TextField(
-                        controller: _terminalInputController,
-                        focusNode: _terminalFocusNode,
-                        onSubmitted: _handleTerminalCommand,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontFamily: 'monospace',
-                          fontSize: 12,
-                        ),
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(vertical: 4),
-                          border: InputBorder.none,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
               ),
             ),
           ],
@@ -1253,25 +1081,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           return InkWell(
             onTap: () {
               if (_terminalFocusNode.hasFocus) {
-                final selection = _terminalInputController.selection;
-                if (selection.baseOffset >= 0) {
-                  final text = _terminalInputController.text;
-                  final newText = text.replaceRange(
-                    selection.start,
-                    selection.end,
-                    symbol,
-                  );
-                  _terminalInputController.value = _terminalInputController
-                      .value
-                      .copyWith(
-                        text: newText,
-                        selection: TextSelection.collapsed(
-                          offset: selection.start + symbol.length,
-                        ),
-                      );
-                } else {
-                  _terminalInputController.text += symbol;
-                }
+                _pty?.write(const Utf8Encoder().convert(symbol));
               } else {
                 KeyboardEventNotifier.symbolStream.add(symbol);
               }
@@ -1318,12 +1128,16 @@ class _TitleBarButton extends StatelessWidget {
           ? Icon(
               icon,
               size: 15,
-              color: color ?? (isActive ? const Color(0xFF2568E7) : Colors.white38),
+              color:
+                  color ??
+                  (isActive ? const Color(0xFF2568E7) : Colors.white38),
             )
           : HugeIcon(
               icon: icon,
               size: 15,
-              color: color ?? (isActive ? const Color(0xFF2568E7) : Colors.white38),
+              color:
+                  color ??
+                  (isActive ? const Color(0xFF2568E7) : Colors.white38),
             ),
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(minWidth: 32, minHeight: 32),

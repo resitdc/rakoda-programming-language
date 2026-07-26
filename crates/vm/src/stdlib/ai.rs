@@ -153,7 +153,7 @@ fn call_ai_api(provider: &str, api_key: &str, prompt: &str) -> Result<String, St
         "openai" => call_openai(api_key, prompt, "api.openai.com", "gpt-4o"),
         "anthropic" => call_anthropic(api_key, prompt),
         "glm" => call_openai(api_key, prompt, "open.bigmodel.cn/api/paas/v4", "glm-4"),
-        "deepseek" => call_openai(api_key, prompt, "api.deepseek.com", "deepseek-chat"),
+        "deepseek" => call_openai(api_key, prompt, "api.deepseek.com", "deepseek-v4-flash"),
         _ => Err(format!("Provider '{}' tidak didukung.", provider)),
     }
 }

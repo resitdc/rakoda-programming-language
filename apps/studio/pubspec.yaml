@@ -19,7 +19,7 @@ dependencies:
   flutter_code_editor: ^0.3.5
   flutter_highlight: ^0.7.0
   flutter_svg: ^2.0.17
-  archive: ^4.0.4
+  archive: any
   mobile_scanner: ^7.0.2
   rust_lib_rpl_studio:
     path: rust_builder
@@ -35,6 +35,12 @@ dependencies:
   flutter_riverpod: ^3.3.2
   hugeicons: ^1.1.7
   http: ^1.2.1
+  xterm: ^4.0.0
+  flutter_pty: ^0.4.0
+  desktop_drop: ^0.4.4
+  pdfx: any
+  excel: any
+  csv: any
 
 dev_dependencies:
   flutter_test:
@@ -43,7 +49,7 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   flutter_launcher_icons: ^0.13.1
-  flutter_native_splash: ^2.4.8
+  flutter_native_splash: ^2.4.4
 
 flutter_icons:
   android: "launcher_icon"
