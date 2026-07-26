@@ -93,7 +93,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Berhasil diekspor ke: ${zipPath.split(Platform.pathSeparator).last}'),
+            content: Text(
+              'Berhasil diekspor ke: ${zipPath.split(Platform.pathSeparator).last}',
+            ),
             backgroundColor: const Color(0xFF2568E7),
           ),
         );
@@ -180,7 +182,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
           'assets/rakoda-white.svg',
           width: 64,
           height: 64,
-          colorFilter: const ColorFilter.mode(Color(0xFF2568E7), BlendMode.srcIn),
+          colorFilter: const ColorFilter.mode(
+            Color(0xFF2568E7),
+            BlendMode.srcIn,
+          ),
         ),
         const SizedBox(height: 16),
         const Text(
@@ -195,10 +200,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
         const SizedBox(height: 8),
         Text(
           'IDE Resmi Rakoda Programming Language',
-          style: TextStyle(
-            fontSize: 13,
-            color: Colors.white.withOpacity(0.5),
-          ),
+          style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.5)),
         ),
       ],
     );
@@ -257,11 +259,15 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
   Widget _buildRecentSection() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
           children: [
-            HugeIcon(icon: HugeIcons.strokeRoundedClock01, size: 16, color: Colors.white54),
+            HugeIcon(
+              icon: HugeIcons.strokeRoundedClock01,
+              size: 16,
+              color: Colors.white54,
+            ),
             const SizedBox(width: 8),
             Text(
               'PROJECT TERAKHIR',
@@ -300,7 +306,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       ),
       child: Column(
         children: [
-          HugeIcon(icon: HugeIcons.strokeRoundedInbox, size: 48, color: Colors.white.withOpacity(0.15),
+          HugeIcon(
+            icon: HugeIcons.strokeRoundedInbox,
+            size: 48,
+            color: Colors.white.withOpacity(0.15),
           ),
           const SizedBox(height: 12),
           Text(
@@ -384,19 +393,33 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                 ),
                 // Export ZIP button
                 IconButton(
-                  icon: HugeIcon(icon: HugeIcons.strokeRoundedArchive, size: 16, color: Colors.white38),
+                  icon: HugeIcon(
+                    icon: HugeIcons.strokeRoundedArchive,
+                    size: 16,
+                    color: Colors.white38,
+                  ),
                   tooltip: 'Export ke ZIP',
                   onPressed: () => _exportToZip(project),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
                 ),
                 // Remove button
                 IconButton(
-                  icon: HugeIcon(icon: HugeIcons.strokeRoundedCancel01, size: 14, color: Colors.white24),
+                  icon: HugeIcon(
+                    icon: HugeIcons.strokeRoundedCancel01,
+                    size: 14,
+                    color: Colors.white24,
+                  ),
                   tooltip: 'Hapus dari recent',
                   onPressed: () => _removeFromRecent(project),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
                 ),
               ],
             ),
@@ -440,13 +463,17 @@ class _ActionCardState extends State<_ActionCard> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
-          duration: widget.isLowEndMode ? Duration.zero : const Duration(milliseconds: 200),
+          duration: widget.isLowEndMode
+              ? Duration.zero
+              : const Duration(milliseconds: 200),
           curve: Curves.easeOut,
           decoration: BoxDecoration(
             color: const Color(0xFF252526),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: _isHovered && !widget.isLowEndMode ? widget.color.withOpacity(0.6) : const Color(0xFF3C3C3C),
+              color: _isHovered && !widget.isLowEndMode
+                  ? widget.color.withOpacity(0.6)
+                  : const Color(0xFF3C3C3C),
               width: _isHovered && !widget.isLowEndMode ? 1.5 : 1,
             ),
           ),

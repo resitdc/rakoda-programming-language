@@ -1,10 +1,8 @@
 ai.penyedia("deepseek")
+ai.key("sk-2ec40c2e6762415082d65643fcc52f71")
 
-ai.kunci("sk-...")
+buat hasil = ai.tanya("Sebutkan 4 hewan berkaki 2")
+tampilkan hasil
+// dokumen.buat(hasil, "nama-hewan", "docx")
 
-coba
-  buat hasil = ai.tanya("Jelaskan cara kerja komputer secara sederhana.")
-  tampilkan hasil
-tangkap(error)
-  tampilkan "Penanganan Error: " + error
-selesai
+
