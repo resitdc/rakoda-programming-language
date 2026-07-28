@@ -10,6 +10,7 @@ import 'package:pluto_grid/pluto_grid.dart';
 import '../../models/database_connection.dart';
 import '../../services/database/connection_service.dart';
 import '../../services/database/database_service.dart';
+import '../../widgets/studio_toolbar_button.dart';
 import 'connection_dialog.dart';
 
 /// A fully self-contained database workspace (like DBeaver).
@@ -78,9 +79,12 @@ enum _DbTabType { tableData, tableStructure, query, databaseInfo, queryHistory }
 /// Helper class for the Create Table dialog
 class _ColumnDef {
   final TextEditingController nameCtrl = TextEditingController();
-  final TextEditingController typeCtrl = TextEditingController();
+  final TextEditingController typeCtrl = TextEditingController(text: 'TEXT');
+  final TextEditingController lengthCtrl = TextEditingController();
   bool isPrimaryKey = false;
   bool isNotNull = false;
+  bool isAutoIncrement = false;
+  bool isUnique = false;
 }
 
 class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
@@ -136,7 +140,7 @@ class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
 
   Future<void> _loadConnections() async {
     setState(() => _isSidebarLoading = true);
-    final conns = await ConnectionService.getConnections();
+    final conns = await ConnectionService.getConnections(widget.projectPath);
     setState(() {
       _roots = conns
           .map(
@@ -157,7 +161,7 @@ class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
       builder: (ctx) => ConnectionDialog(projectPath: widget.projectPath),
     );
     if (result != null) {
-      await ConnectionService.saveConnection(result);
+      await ConnectionService.saveConnection(widget.projectPath, result);
       _loadConnections();
     }
   }
@@ -171,7 +175,7 @@ class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
       ),
     );
     if (result != null) {
-      await ConnectionService.saveConnection(result);
+      await ConnectionService.saveConnection(widget.projectPath, result);
       _loadConnections();
     }
   }
@@ -202,7 +206,7 @@ class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
       ),
     );
     if (ok == true) {
-      await ConnectionService.deleteConnection(node.connection.id);
+      await ConnectionService.deleteConnection(widget.projectPath, node.connection.id);
       _loadConnections();
     }
   }
@@ -637,7 +641,7 @@ class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
 
       final res = await svc.executeQuery(finalQuery);
 
-      QueryHistoryService.addHistory(QueryHistoryItem(
+      QueryHistoryService.addHistory(widget.projectPath, QueryHistoryItem(
         query: query,
         executedAt: DateTime.now(),
         connectionName: tab.connection.name,
@@ -683,7 +687,7 @@ class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
       }
       final res = await svc.executeQuery(query);
 
-      QueryHistoryService.addHistory(QueryHistoryItem(
+      QueryHistoryService.addHistory(widget.projectPath, QueryHistoryItem(
         query: query,
         executedAt: DateTime.now(),
         connectionName: conn.name,
@@ -730,17 +734,68 @@ class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
     final tableNameCtrl = TextEditingController();
     final columns = <_ColumnDef>[_ColumnDef()];
 
+    Widget buildConstraintChip({
+      required String label,
+      required bool value,
+      required ValueChanged<bool> onChanged,
+      Color? activeColor,
+    }) {
+      return GestureDetector(
+        onTap: () => onChanged(!value),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: value ? (activeColor ?? const Color(0xFF2568E7)).withAlpha(40) : const Color(0xFF1E1E1E),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: value ? (activeColor ?? const Color(0xFF2568E7)) : const Color(0xFF3C3C3C),
+              width: 1,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: value ? (activeColor ?? const Color(0xFF2568E7)) : Colors.white38,
+              fontSize: 11,
+              fontWeight: value ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+        ),
+      );
+    }
+
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: const Color(0xFF252526),
-          title: const Text(
-            'Create Table',
-            style: TextStyle(color: Colors.white),
+          backgroundColor: const Color(0xFF1E1E1E),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Color(0xFF3C3C3C), width: 0.5),
+          ),
+          titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+          contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+          actionsPadding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2568E7).withAlpha(30),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: HugeIcon(icon: HugeIcons.strokeRoundedTable, size: 20, color: const Color(0xFF2568E7)),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Buat Tabel',
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+            ],
           ),
           content: SizedBox(
-            width: 500,
+            width: 560,
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -748,162 +803,258 @@ class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
                 children: [
                   // Table name
                   const Text(
-                    'Table Name',
-                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                    'Nama Tabel',
+                    style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   TextField(
                     controller: tableNameCtrl,
                     style: const TextStyle(color: Colors.white, fontSize: 14),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       isDense: true,
                       filled: true,
-                      fillColor: Color(0xFF1E1E1E),
-                      border: OutlineInputBorder(borderSide: BorderSide.none),
-                      hintText: 'e.g. users',
-                      hintStyle: TextStyle(color: Colors.white24),
+                      fillColor: const Color(0xFF2A2A2A),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFF3C3C3C)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFF3C3C3C)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFF2568E7)),
+                      ),
+                      hintStyle: const TextStyle(color: Colors.white24),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   // Columns header
                   Row(
                     children: [
                       const Text(
-                        'Columns',
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                        'Kolom',
+                        style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
                       ),
                       const Spacer(),
-                      TextButton.icon(
-                        onPressed: () =>
-                            setDialogState(() => columns.add(_ColumnDef())),
-                        icon: HugeIcon(icon: HugeIcons.strokeRoundedAdd01, size: 14, color: Colors.white70),
-                        label: const Text(
-                          'Add Column',
-                          style: TextStyle(fontSize: 12),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(6),
+                          onTap: () => setDialogState(() => columns.add(_ColumnDef())),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFF3C3C3C)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                HugeIcon(icon: HugeIcons.strokeRoundedAdd01, size: 14, color: const Color(0xFF4EC9B0)),
+                                const SizedBox(width: 4),
+                                const Text(
+                                  'Tambah Kolom',
+                                  style: TextStyle(color: Color(0xFF4EC9B0), fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  // Column list
+                  const SizedBox(height: 10),
+                  // Column list — each column is a card
                   ...columns.asMap().entries.map((entry) {
                     final i = entry.key;
                     final col = entry.value;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF252526),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF3C3C3C), width: 0.5),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Name
-                          Expanded(
-                            flex: 3,
-                            child: TextField(
-                              controller: col.nameCtrl,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                              ),
-                              decoration: InputDecoration(
-                                isDense: true,
-                                filled: true,
-                                fillColor: const Color(0xFF1E1E1E),
-                                border: const OutlineInputBorder(
-                                  borderSide: BorderSide.none,
+                          // Row 1: Column Name + Type + Delete
+                          Row(
+                            children: [
+                              // Column number
+                              Container(
+                                width: 24,
+                                height: 24,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF333333),
+                                  borderRadius: BorderRadius.circular(4),
                                 ),
-                                hintText: 'col_name',
-                                hintStyle: const TextStyle(
-                                  color: Colors.white24,
-                                  fontSize: 13,
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 8,
+                                child: Text(
+                                  '${i + 1}',
+                                  style: const TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.w600),
                                 ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          // Type
-                          Expanded(
-                            flex: 2,
-                            child: TextField(
-                              controller: col.typeCtrl,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                              ),
-                              decoration: InputDecoration(
-                                isDense: true,
-                                filled: true,
-                                fillColor: const Color(0xFF1E1E1E),
-                                border: const OutlineInputBorder(
-                                  borderSide: BorderSide.none,
+                              const SizedBox(width: 8),
+                              // Name
+                              Expanded(
+                                flex: 3,
+                                child: TextField(
+                                  controller: col.nameCtrl,
+                                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                                  decoration: InputDecoration(
+                                    isDense: true,
+                                    filled: true,
+                                    fillColor: const Color(0xFF1E1E1E),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                      borderSide: const BorderSide(color: Color(0xFF3C3C3C)),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                      borderSide: const BorderSide(color: Color(0xFF3C3C3C)),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                      borderSide: const BorderSide(color: Color(0xFF2568E7)),
+                                    ),
+                                    hintText: 'Nama kolom',
+                                    hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                  ),
                                 ),
-                                hintText: 'TEXT',
-                                hintStyle: const TextStyle(
-                                  color: Colors.white24,
-                                  fontSize: 13,
+                              ),
+                              const SizedBox(width: 8),
+                              // Type input
+                              Expanded(
+                                flex: 2,
+                                child: SizedBox(
+                                  height: 36,
+                                  child: TextField(
+                                    controller: col.typeCtrl,
+                                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor: const Color(0xFF1E1E1E),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                        borderSide: const BorderSide(color: Color(0xFF3C3C3C)),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                        borderSide: const BorderSide(color: Color(0xFF3C3C3C)),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                        borderSide: const BorderSide(color: Color(0xFF2568E7)),
+                                      ),
+                                      hintText: 'Tipe Data',
+                                      hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                    ),
+                                  ),
                                 ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 8,
+                              ),
+                              const SizedBox(width: 8),
+                              // Length input
+                              Expanded(
+                                flex: 1,
+                                child: SizedBox(
+                                  height: 36,
+                                  child: TextField(
+                                    controller: col.lengthCtrl,
+                                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor: const Color(0xFF1E1E1E),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                        borderSide: const BorderSide(color: Color(0xFF3C3C3C)),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                        borderSide: const BorderSide(color: Color(0xFF3C3C3C)),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                        borderSide: const BorderSide(color: Color(0xFF2568E7)),
+                                      ),
+                                      hintText: 'Panjang',
+                                      hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
+                              // Remove button
+                              if (columns.length > 1)
+                                Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(4),
+                                    onTap: () => setDialogState(() => columns.removeAt(i)),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(4),
+                                      child: HugeIcon(icon: HugeIcons.strokeRoundedDelete02, size: 16, color: Colors.redAccent),
+                                    ),
+                                  ),
+                                )
+                              else
+                                const SizedBox(width: 24),
+                            ],
                           ),
-                          const SizedBox(width: 4),
-                          // PK checkbox
-                          Tooltip(
-                            message: 'Primary Key',
-                            child: Checkbox(
-                              value: col.isPrimaryKey,
-                              onChanged: (v) => setDialogState(
-                                () => col.isPrimaryKey = v ?? false,
+                          const SizedBox(height: 10),
+                          // Row 2: Constraints as toggle chips
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              buildConstraintChip(
+                                label: 'Primary Key',
+                                value: col.isPrimaryKey,
+                                activeColor: const Color(0xFFE5C07B),
+                                onChanged: (v) => setDialogState(() {
+                                  col.isPrimaryKey = v;
+                                  if (v) col.isNotNull = true;
+                                }),
                               ),
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                              visualDensity: VisualDensity.compact,
-                            ),
-                          ),
-                          const Text(
-                            'PK',
-                            style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 10,
-                            ),
-                          ),
-                          // Not Null checkbox
-                          Tooltip(
-                            message: 'NOT NULL',
-                            child: Checkbox(
-                              value: col.isNotNull,
-                              onChanged: (v) => setDialogState(
-                                () => col.isNotNull = v ?? false,
+                              buildConstraintChip(
+                                label: 'Not Null',
+                                value: col.isNotNull,
+                                activeColor: const Color(0xFFE06C75),
+                                onChanged: (v) => setDialogState(() => col.isNotNull = v),
                               ),
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                              visualDensity: VisualDensity.compact,
-                            ),
-                          ),
-                          const Text(
-                            'NN',
-                            style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 10,
-                            ),
-                          ),
-                          // Remove
-                          if (columns.length > 1)
-                            IconButton(
-                              icon: HugeIcon(icon: HugeIcons.strokeRoundedCancel01, size: 14, color: Colors.red,
+                              buildConstraintChip(
+                                label: 'Auto Increment',
+                                value: col.isAutoIncrement,
+                                activeColor: const Color(0xFF61AFEF),
+                                onChanged: (v) => setDialogState(() {
+                                  col.isAutoIncrement = v;
+                                  if (v) {
+                                    col.isPrimaryKey = true;
+                                    col.isNotNull = true;
+                                    if (conn.engine == DatabaseEngine.sqlite) {
+                                      col.typeCtrl.text = 'INTEGER';
+                                    } else if (conn.engine == DatabaseEngine.mysql) {
+                                      col.typeCtrl.text = 'INT';
+                                    } else {
+                                      col.typeCtrl.text = 'SERIAL';
+                                    }
+                                  }
+                                }),
                               ),
-                              onPressed: () =>
-                                  setDialogState(() => columns.removeAt(i)),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(
-                                minWidth: 24,
-                                minHeight: 24,
+                              buildConstraintChip(
+                                label: 'Unique',
+                                value: col.isUnique,
+                                activeColor: const Color(0xFF56B6C2),
+                                onChanged: (v) => setDialogState(() => col.isUnique = v),
                               ),
-                            ),
+                            ],
+                          ),
                         ],
                       ),
                     );
@@ -916,7 +1067,7 @@ class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text(
-                'Cancel',
+                'Batal',
                 style: TextStyle(color: Colors.white54),
               ),
             ),
@@ -924,10 +1075,12 @@ class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
               onPressed: () => Navigator.pop(ctx, true),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2568E7),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
               child: const Text(
-                'Create',
-                style: TextStyle(color: Colors.white),
+                'Buat Tabel',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
               ),
             ),
           ],
@@ -945,12 +1098,18 @@ class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
         .where((c) => c.nameCtrl.text.trim().isNotEmpty)
         .map((c) {
           final name = c.nameCtrl.text.trim();
-          final type = c.typeCtrl.text.trim().isEmpty
-              ? 'TEXT'
-              : c.typeCtrl.text.trim();
+          final type = c.typeCtrl.text.trim();
+          final len = c.lengthCtrl.text.trim();
+          final typeStr = len.isNotEmpty ? '$type($len)' : type;
           final pk = c.isPrimaryKey ? ' PRIMARY KEY' : '';
-          final nn = c.isNotNull ? ' NOT NULL' : '';
-          return '"$name" $type$pk$nn';
+          final ai = c.isAutoIncrement
+              ? (conn.engine == DatabaseEngine.sqlite
+                  ? ' AUTOINCREMENT'
+                  : (conn.engine == DatabaseEngine.mysql ? ' AUTO_INCREMENT' : ''))
+              : '';
+          final nn = c.isNotNull && !c.isPrimaryKey ? ' NOT NULL' : '';
+          final uq = c.isUnique ? ' UNIQUE' : '';
+          return '"$name" $typeStr$pk$ai$nn$uq';
         })
         .join(', ');
 
@@ -1919,7 +2078,9 @@ class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
     }
   }
 
+
   // ── Database Info View ───────────────────────────────────────────────────
+
 
   Widget _buildDatabaseInfoView(_DbTab tab) {
     final loading = _loadingState[tab.id] ?? false;
@@ -1938,64 +2099,59 @@ class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
       children: [
         // Toolbar
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           color: const Color(0xFF2D2D30),
-          child: Row(
-            children: [
-              HugeIcon(icon: HugeIcons.strokeRoundedInformationCircle, size: 16, color: Colors.white70),
-              const SizedBox(width: 8),
-              Text(
-                'Info: ${tab.title}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Spacer(),
-              if (canCreateTable)
-                ElevatedButton.icon(
-                  onPressed: () => _showCreateTableDialog(
-                    tab.connection,
-                    tab.database,
-                    tab.schema,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                HugeIcon(icon: HugeIcons.strokeRoundedInformationCircle, size: 16, color: Colors.white70),
+                const SizedBox(width: 8),
+                Text(
+                  'Info: ${tab.title}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
                   ),
-                  icon: HugeIcon(icon: HugeIcons.strokeRoundedAdd01, size: 12, color: Colors.white70),
-                  label: const Text('Create Table'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4EC9B0),
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                ),
+                const SizedBox(width: 12),
+                if (canCreateTable)
+                  StudioToolbarButton(
+                    icon: HugeIcons.strokeRoundedAdd01,
+                    label: 'Buat Tabel',
+                    color: const Color(0xFF4EC9B0),
+                    onPressed: () => _showCreateTableDialog(
+                      tab.connection,
+                      tab.database,
+                      tab.schema,
                     ),
-                    textStyle: const TextStyle(fontSize: 11),
-                    minimumSize: const Size(0, 24),
+                  ),
+                if (canCreateTable) const SizedBox(width: 6),
+                StudioToolbarButton(
+                  icon: HugeIcons.strokeRoundedSourceCode,
+                  label: 'SQL Editor',
+                  color: const Color(0xFF61AFEF),
+                  onPressed: () => _openQueryTab(tab.connection, tab.database, tab.schema),
+                ),
+                const SizedBox(width: 6),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(6),
+                    onTap: () => _loadDatabaseInfo(tab),
+                    child: Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFF3C3C3C)),
+                      ),
+                      child: HugeIcon(icon: HugeIcons.strokeRoundedRefresh, size: 14, color: Colors.white54),
+                    ),
                   ),
                 ),
-              const SizedBox(width: 8),
-              ElevatedButton.icon(
-                onPressed: () =>
-                    _openQueryTab(tab.connection, tab.database, tab.schema),
-                icon: HugeIcon(icon: HugeIcons.strokeRoundedSourceCode, size: 12, color: Colors.white70),
-                label: const Text('SQL Editor'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2568E7),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 4,
-                  ),
-                  textStyle: const TextStyle(fontSize: 11),
-                  minimumSize: const Size(0, 24),
-                ),
-              ),
-              const SizedBox(width: 8),
-              InkWell(
-                onTap: () => _loadDatabaseInfo(tab),
-                child: HugeIcon(icon: HugeIcons.strokeRoundedRefresh, size: 16, color: Colors.white54,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         // Content
@@ -2342,7 +2498,7 @@ class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
 
   Widget _buildQueryHistoryGrid(_DbTab tab) {
     return FutureBuilder<List<QueryHistoryItem>>(
-      future: QueryHistoryService.getHistory(),
+      future: QueryHistoryService.getHistory(widget.projectPath),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -2367,7 +2523,7 @@ class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
                     icon: HugeIcon(icon: HugeIcons.strokeRoundedDelete02, color: Colors.redAccent, size: 20),
                     label: const Text('Clear History', style: TextStyle(color: Colors.redAccent)),
                     onPressed: () async {
-                      await QueryHistoryService.clearHistory();
+                      await QueryHistoryService.clearHistory(widget.projectPath);
                       setState(() {});
                     },
                   ),

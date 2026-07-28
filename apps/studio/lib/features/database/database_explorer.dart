@@ -49,7 +49,7 @@ class _DatabaseExplorerState extends State<DatabaseExplorer> {
 
   Future<void> _loadConnections() async {
     setState(() => _isLoading = true);
-    final conns = await ConnectionService.getConnections();
+    final conns = await ConnectionService.getConnections(widget.projectPath);
     setState(() {
       _roots = conns
           .map((c) => DbNode(label: c.name, connection: c, isExpandable: true))
@@ -64,7 +64,7 @@ class _DatabaseExplorerState extends State<DatabaseExplorer> {
       builder: (context) => ConnectionDialog(projectPath: widget.projectPath),
     );
     if (result != null) {
-      await ConnectionService.saveConnection(result);
+      await ConnectionService.saveConnection(widget.projectPath, result);
       _loadConnections();
     }
   }
@@ -75,7 +75,7 @@ class _DatabaseExplorerState extends State<DatabaseExplorer> {
       builder: (context) => ConnectionDialog(projectPath: widget.projectPath, connection: node.connection),
     );
     if (result != null) {
-      await ConnectionService.saveConnection(result);
+      await ConnectionService.saveConnection(widget.projectPath, result);
       _loadConnections();
     }
   }
@@ -106,7 +106,7 @@ class _DatabaseExplorerState extends State<DatabaseExplorer> {
       ),
     );
     if (confirm == true) {
-      await ConnectionService.deleteConnection(node.connection.id);
+      await ConnectionService.deleteConnection(widget.projectPath, node.connection.id);
       _loadConnections();
     }
   }

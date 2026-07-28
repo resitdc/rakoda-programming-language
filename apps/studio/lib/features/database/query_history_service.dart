@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
+import 'package:path/path.dart' as p;
 
 class QueryHistoryItem {
   final String query;
@@ -30,30 +31,50 @@ class QueryHistoryItem {
 }
 
 class QueryHistoryService {
-  static const String _key = 'rpl_studio_query_history';
+  static const String _fileName = 'query_history.json';
 
-  static Future<List<QueryHistoryItem>> getHistory() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? data = prefs.getString(_key);
-    if (data == null) return [];
+  static String _getFilePath(String projectPath) {
+    return p.join(projectPath, '.rpl_studio', _fileName);
+  }
+
+  static void _ensureDir(String projectPath) {
+    final dir = Directory(p.join(projectPath, '.rpl_studio'));
+    if (!dir.existsSync()) {
+      dir.createSync();
+      if (Platform.isWindows) {
+        try {
+          Process.runSync('attrib', ['+h', dir.path]);
+        } catch (_) {}
+      }
+    }
+  }
+
+  static Future<List<QueryHistoryItem>> getHistory(String projectPath) async {
+    final file = File(_getFilePath(projectPath));
+    if (!file.existsSync()) return [];
     try {
-      final List<dynamic> list = jsonDecode(data);
-      return list.map((e) => QueryHistoryItem.fromJson(e)).toList();
+      final content = await file.readAsString();
+      final List<dynamic> list = jsonDecode(content);
+      return list.map((e) => QueryHistoryItem.fromJson(e as Map<String, dynamic>)).toList();
     } catch (_) {
       return [];
     }
   }
 
-  static Future<void> addHistory(QueryHistoryItem item) async {
-    final history = await getHistory();
+  static Future<void> addHistory(String projectPath, QueryHistoryItem item) async {
+    final history = await getHistory(projectPath);
     history.insert(0, item);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-        _key, jsonEncode(history.map((e) => e.toJson()).toList()));
+    _ensureDir(projectPath);
+    final file = File(_getFilePath(projectPath));
+    await file.writeAsString(
+        jsonEncode(history.map((e) => e.toJson()).toList()),
+        flush: true);
   }
 
-  static Future<void> clearHistory() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_key);
+  static Future<void> clearHistory(String projectPath) async {
+    final file = File(_getFilePath(projectPath));
+    if (file.existsSync()) {
+      await file.delete();
+    }
   }
 }
