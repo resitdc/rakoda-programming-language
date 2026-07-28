@@ -14,6 +14,9 @@ import 'search_panel.dart';
 import '../browser/browser_workspace.dart';
 import '../database/database_workspace.dart';
 import '../http/http_workspace.dart';
+import '../classroom/classroom_panel.dart';
+import '../classroom/classroom_service.dart';
+import '../identity/identity_service.dart';
 import 'pdf_viewer_widget.dart';
 import 'spreadsheet_viewer_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,6 +25,9 @@ import 'package:xterm/xterm.dart';
 import 'package:flutter_pty/flutter_pty.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'dart:convert';
+import 'package:flutter_highlight/flutter_highlight.dart';
+import 'package:flutter_highlight/themes/vs2015.dart';
+import '../editor/rpl_languages.dart';
 
 enum WorkspaceType { editor, browser, database, http }
 
@@ -36,7 +42,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   late List<EditorTab> _openTabs;
   int _activeTabIndex = 0;
   ActivityType? _activeActivity = ActivityType.explorer;
-  bool _isTerminalMinimized = false;
+  bool _isTerminalMinimized = true;
   int _explorerVersion = 0;
   int? _targetLineNumber;
 
@@ -46,6 +52,14 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   String _localSearchQuery = '';
   final TextEditingController _localSearchController = TextEditingController();
 
+  final ClassroomService _classroomService = ClassroomService();
+  String _liveCodeContent = '';
+  bool _isLiveCodeVisible = false;
+  bool _isLiveCodeMinimized = false;
+  int? _liveSelectionStart;
+  int? _liveSelectionEnd;
+  String? _liveHostName;
+
   late final Terminal _terminal;
   Pty? _pty;
   final FocusNode _terminalFocusNode = FocusNode();
@@ -53,6 +67,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   @override
   void initState() {
     super.initState();
+    registerRplLanguages();
     _terminal = Terminal();
 
     String shell =
@@ -94,6 +109,62 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
       ),
     ];
     ProjectService.touchProject(widget.project);
+    
+    _classroomService.onMessage.listen((msg) {
+      if (msg.eventType == 'live_code' && mounted) {
+        setState(() {
+          _liveCodeContent = msg.text;
+          _liveSelectionStart = msg.selectionStart;
+          _liveSelectionEnd = msg.selectionEnd;
+          _liveHostName = msg.name;
+          _isLiveCodeVisible = true;
+        });
+      } else if (msg.eventType == 'hide_live_code' && mounted) {
+        setState(() {
+          _isLiveCodeVisible = false;
+          _liveCodeContent = '';
+          _liveSelectionStart = null;
+          _liveSelectionEnd = null;
+          _liveHostName = null;
+        });
+      } else if (msg.eventType == 'terminal_output' && mounted && !_classroomService.isHost) {
+        setState(() {
+          _isTerminalMinimized = false; // Buka terminal jika tertutup
+        });
+        // Ubah warna text menjadi Cyan (\x1b[36m) agar berbeda dengan output siswa sendiri
+        final coloredText = '\x1b[36m' + 
+            msg.text
+               .replaceAll('\x1b[0m', '\x1b[0m\x1b[36m')
+               .replaceAll('\x1B[0m', '\x1B[0m\x1b[36m') + 
+            '\x1b[0m';
+        _terminal.write(coloredText);
+      } else if (msg.eventType == 'request_code_stream' && mounted && !_classroomService.isHost) {
+        if (msg.uuid == IdentityService.uuid) {
+          _classroomService.isBroadcastingToHost = msg.text == 'true';
+          if (_classroomService.isBroadcastingToHost && _openTabs.isNotEmpty) {
+            _classroomService.sendStudentLiveCode(
+              _openTabs[_activeTabIndex].content ?? '',
+            );
+          }
+        }
+      } else if (msg.eventType == 'student_live_code' && mounted && _classroomService.isHost) {
+        setState(() {
+          _liveCodeContent = msg.text;
+          _liveSelectionStart = msg.selectionStart;
+          _liveSelectionEnd = msg.selectionEnd;
+          _liveHostName = "Siswa: ${msg.name}";
+          _isLiveCodeVisible = true;
+        });
+      }
+    });
+    _classroomService.onStatusChanged.listen((status) {
+      if (status == ClassroomStatus.disconnected && mounted) {
+        setState(() {
+          _isLiveCodeVisible = false;
+          _liveCodeContent = '';
+        });
+      }
+    });
   }
 
   String _readFile(String path) {
@@ -505,7 +576,6 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     final isDatabase = _activeWorkspace == WorkspaceType.database;
     final isHttp = _activeWorkspace == WorkspaceType.http;
     final isKeyboardOpen = mediaQuery.viewInsets.bottom > 0;
-    final isTerminalFocused = _terminalFocusNode.hasFocus;
 
     // Determine if any input is focused so we can show the toolbar
     final showToolbar = isMobile && isKeyboardOpen;
@@ -517,7 +587,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
         child: Column(
           children: [
             // ═══ Title Bar / Navbar ═══
-            if (!isBrowser && !isDatabase && !isHttp) _buildTitleBar(),
+            _buildTitleBar(),
             // ═══ Main Content ═══
             Expanded(
               child: Row(
@@ -557,16 +627,25 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                             if (!isMobile) _buildSidePanel(),
                             // Editor + Terminal
                             Expanded(
-                              child: Stack(
+                              child: Flex(
+                                direction: isMobile ? Axis.vertical : Axis.horizontal,
                                 children: [
-                                  Column(
-                                    children: [
+                                  Expanded(
+                                    flex: 1,
+                                    child: Stack(
+                                      children: [
+                                        Column(
+                                          children: [
                                       // Tab Bar
                                       EditorTabBar(
                                         tabs: _openTabs,
                                         activeIndex: _activeTabIndex,
-                                        onTap: (i) =>
-                                            setState(() => _activeTabIndex = i),
+                                        onTap: (i) {
+                                          setState(() => _activeTabIndex = i);
+                                          if (_classroomService.isHost && _openTabs.isNotEmpty) {
+                                            _classroomService.broadcastLiveCode(_openTabs[i].content ?? '');
+                                          }
+                                        },
                                         onClose: _closeTab,
                                       ),
                                       // Code Editor
@@ -614,8 +693,115 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                                 ],
                               ),
                             ),
+                            // Live Code Viewer Split
+                            if (_isLiveCodeVisible && _classroomService.status == ClassroomStatus.connected)
+                              _isLiveCodeMinimized
+                                ? _buildMinimizedLiveCode(isMobile)
+                                : Expanded(
+                                    flex: 1,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        border: Border(
+                                          left: isMobile ? BorderSide.none : const BorderSide(color: Color(0xFF3C3C3C)),
+                                          top: isMobile ? const BorderSide(color: Color(0xFF3C3C3C)) : BorderSide.none,
+                                        ),
+                                      ),
+                                      child: Column(
+                                      children: [
+                                        Container(
+                                          height: 35,
+                                          color: const Color(0xFF2D2D2D),
+                                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                                          child: Row(
+                                            children: [
+                                              HugeIcon(icon: HugeIcons.strokeRoundedLaptopProgramming, size: 16, color: Colors.blueAccent),
+                                              const SizedBox(width: 8),
+                                              const Text(
+                                                "Live Code Guru",
+                                                style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                              ),
+                                              const Spacer(),
+                                              IconButton(
+                                                icon: Icon(isMobile ? Icons.expand_more : Icons.chevron_right, size: 16, color: Colors.white54),
+                                                onPressed: () => setState(() => _isLiveCodeMinimized = true),
+                                              )
+                                            ],
+                                          ),
+                                        ),
+                                      Expanded(
+                                        child: Container(
+                                          color: const Color(0xFF1E1E1E),
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.all(8),
+                                          child: SingleChildScrollView(
+                                            child: Row(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.only(top: 4, right: 8),
+                                                  width: 40,
+                                                  child: Text(
+                                                    List.generate(
+                                                      _liveCodeContent.split('\n').length,
+                                                      (i) => '${i + 1}'
+                                                    ).join('\n'),
+                                                    textAlign: TextAlign.right,
+                                                    style: const TextStyle(
+                                                      color: Color(0xFF858585),
+                                                      fontFamily: 'monospace',
+                                                      fontSize: 13,
+                                                      height: 1.5,
+                                                    ),
+                                                  ),
+                                                ),
+                                                Expanded(
+                                                  child: Stack(
+                                                    children: [
+                                                      HighlightView(
+                                                        _liveCodeContent,
+                                                        language: 'rpl',
+                                                        theme: vs2015Theme,
+                                                        padding: const EdgeInsets.all(4),
+                                                        textStyle: const TextStyle(
+                                                          fontFamily: 'monospace',
+                                                          fontSize: 13,
+                                                          height: 1.5,
+                                                        ),
+                                                      ),
+                                                      if (_liveSelectionStart != null)
+                                                        Positioned.fill(
+                                                          child: CustomPaint(
+                                                            painter: _LiveCursorPainter(
+                                                              text: _liveCodeContent,
+                                                              selectionStart: _liveSelectionStart!,
+                                                              selectionEnd: _liveSelectionEnd ?? _liveSelectionStart!,
+                                                              hostName: _liveHostName ?? 'Guru',
+                                                              textStyle: const TextStyle(
+                                                                fontFamily: 'monospace',
+                                                                fontSize: 13,
+                                                                height: 1.5,
+                                                                color: Colors.transparent,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
+                      ),
+                    ],
+                  ),
                         // Index 1: Browser Workspace
                         ref.watch(settingsProvider).isLowEndMode &&
                                 _activeActivity != ActivityType.browser
@@ -654,10 +840,50 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
             tooltip: 'Kembali ke Welcome',
-            onPressed: () => Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-            ),
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  backgroundColor: const Color(0xFF252526),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  title: const Text(
+                    'Konfirmasi Keluar',
+                    style: TextStyle(color: Colors.white, fontSize: 14),
+                  ),
+                  content: const Text(
+                    'Apakah kamu yakin akan keluar?\n\nJika kamu terhubung di Room, kamu akan otomatis terputus.',
+                    style: TextStyle(color: Colors.white60, fontSize: 13),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      style: TextButton.styleFrom(foregroundColor: Colors.white54),
+                      child: const Text('Batal'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE53935), // Warna merah untuk aksi destruktif
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Keluar'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true) {
+                // Keluar dari sesi room juga jika ada
+                _classroomService.disconnect();
+                
+                if (context.mounted) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+                  );
+                }
+              }
+            },
           ),
           const SizedBox(width: 4),
           // Project name
@@ -677,62 +903,70 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
             ),
           ),
           // Action buttons
-          if (_openTabs.isNotEmpty) ...[
-            ValueListenableBuilder<UndoHistoryValue>(
-              valueListenable: _openTabs[_activeTabIndex].undoController,
-              builder: (context, value, child) {
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _TitleBarButton(
-                      icon: HugeIcons.strokeRoundedUndo,
-                      tooltip: 'Undo',
-                      color: value.canUndo ? Colors.white70 : Colors.white24,
-                      onPressed: value.canUndo
-                          ? () =>
-                                _openTabs[_activeTabIndex].undoController.undo()
-                          : null,
-                    ),
-                    _TitleBarButton(
-                      icon: HugeIcons.strokeRoundedRedo,
-                      tooltip: 'Redo',
-                      color: value.canRedo ? Colors.white70 : Colors.white24,
-                      onPressed: value.canRedo
-                          ? () =>
-                                _openTabs[_activeTabIndex].undoController.redo()
-                          : null,
-                    ),
-                  ],
-                );
+          if (_activeWorkspace == WorkspaceType.editor) ...[
+            if (_openTabs.isNotEmpty) ...[
+              ValueListenableBuilder<UndoHistoryValue>(
+                valueListenable: _openTabs[_activeTabIndex].undoController,
+                builder: (context, value, child) {
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _TitleBarButton(
+                        icon: HugeIcons.strokeRoundedUndo,
+                        tooltip: 'Undo',
+                        color: value.canUndo ? Colors.white70 : Colors.white24,
+                        onPressed: value.canUndo
+                            ? () =>
+                                  _openTabs[_activeTabIndex].undoController.undo()
+                            : null,
+                      ),
+                      _TitleBarButton(
+                        icon: HugeIcons.strokeRoundedRedo,
+                        tooltip: 'Redo',
+                        color: value.canRedo ? Colors.white70 : Colors.white24,
+                        onPressed: value.canRedo
+                            ? () =>
+                                  _openTabs[_activeTabIndex].undoController.redo()
+                            : null,
+                      ),
+                    ],
+                  );
+                },
+              ),
+              _TitleBarButton(
+                icon: Icons.save_outlined,
+                tooltip: 'Simpan',
+                isActive: _openTabs[_activeTabIndex].isModified,
+                onPressed: _openTabs[_activeTabIndex].isModified
+                    ? _saveActiveTab
+                    : null,
+              ),
+            ],
+            _TitleBarButton(
+              icon: Icons.play_arrow,
+              tooltip: 'Run',
+              color: const Color(0xFF4EC9B0),
+              onPressed: () async {
+                if (_openTabs.isEmpty) return;
+                setState(() {
+                  _isTerminalMinimized = false;
+                });
+                final cmdString = '\r\n>_ run ${_openTabs[_activeTabIndex].fileName}\r\n';
+                _terminal.write(cmdString);
+                
+                final content = _openTabs[_activeTabIndex].content;
+                final result = await runCode(code: content);
+                if (!mounted) return;
+                
+                final resultString = result.replaceAll('\n', '\r\n') + '\r\n';
+                _terminal.write(resultString);
+                
+                if (_classroomService.isHost && _classroomService.isLiveCodeSharingEnabled) {
+                  _classroomService.broadcastTerminalOutput(cmdString + resultString);
+                }
               },
             ),
-            _TitleBarButton(
-              icon: Icons.save_outlined,
-              tooltip: 'Simpan',
-              isActive: _openTabs[_activeTabIndex].isModified,
-              onPressed: _openTabs[_activeTabIndex].isModified
-                  ? _saveActiveTab
-                  : null,
-            ),
           ],
-          _TitleBarButton(
-            icon: Icons.play_arrow,
-            tooltip: 'Run',
-            color: const Color(0xFF4EC9B0),
-            onPressed: () async {
-              if (_openTabs.isEmpty) return;
-              setState(() {
-                _isTerminalMinimized = false;
-              });
-              _terminal.write(
-                '\r\n>_ run ${_openTabs[_activeTabIndex].fileName}\r\n',
-              );
-              final content = _openTabs[_activeTabIndex].content;
-              final result = await runCode(code: content);
-              if (!mounted) return;
-              _terminal.write(result.replaceAll('\n', '\r\n') + '\r\n');
-            },
-          ),
         ],
       ),
     );
@@ -879,6 +1113,9 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           onMatchTap: (filePath, line) => _openFile(filePath, lineNumber: line),
         );
         break;
+      case ActivityType.chat:
+        panel = ClassroomPanel(projectPath: widget.project.path);
+        break;
       default:
         panel = Container(
           color: const Color(0xFF252526),
@@ -944,7 +1181,14 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
       tab: tab,
       initialLineNumber: _targetLineNumber,
       searchQuery: _localSearchQuery,
-      onChanged: () => setState(() {}),
+      onChanged: (content, selStart, selEnd) {
+        if (_classroomService.isHost) {
+          _classroomService.broadcastLiveCode(content, selectionStart: selStart, selectionEnd: selEnd);
+        } else if (_classroomService.isBroadcastingToHost) {
+          _classroomService.sendStudentLiveCode(content, selectionStart: selStart, selectionEnd: selEnd);
+        }
+        setState(() {});
+      },
       onSave: (path, content) => setState(() {}),
     );
   }
@@ -971,6 +1215,44 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildMinimizedLiveCode(bool isMobile) {
+    return InkWell(
+      onTap: () => setState(() => _isLiveCodeMinimized = false),
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF2D2D2D),
+          border: Border(
+            left: isMobile ? BorderSide.none : const BorderSide(color: Color(0xFF3C3C3C)),
+            top: isMobile ? const BorderSide(color: Color(0xFF3C3C3C)) : BorderSide.none,
+          ),
+        ),
+        height: isMobile ? 35 : null,
+        width: isMobile ? null : 40,
+        child: isMobile
+            ? Row(
+                children: [
+                  const SizedBox(width: 12),
+                  HugeIcon(icon: HugeIcons.strokeRoundedLaptopProgramming, size: 16, color: Colors.blueAccent),
+                  const SizedBox(width: 8),
+                  const Text("Live Code Guru", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                  const Spacer(),
+                  const Icon(Icons.expand_less, size: 16, color: Colors.white54),
+                  const SizedBox(width: 12),
+                ],
+              )
+            : Column(
+                children: [
+                  const SizedBox(height: 12),
+                  HugeIcon(icon: HugeIcons.strokeRoundedLaptopProgramming, size: 16, color: Colors.blueAccent),
+                  const Spacer(),
+                  const Icon(Icons.chevron_left, size: 16, color: Colors.white54),
+                  const SizedBox(height: 12),
+                ],
+              ),
       ),
     );
   }
@@ -1146,3 +1428,107 @@ class _TitleBarButton extends StatelessWidget {
     );
   }
 }
+
+class _LiveCursorPainter extends CustomPainter {
+  final String text;
+  final int selectionStart;
+  final int selectionEnd;
+  final String hostName;
+  final TextStyle textStyle;
+
+  _LiveCursorPainter({
+    required this.text,
+    required this.selectionStart,
+    required this.selectionEnd,
+    required this.hostName,
+    required this.textStyle,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (text.isEmpty) return;
+
+    final paddingOffset = const Offset(4, 4); // Sesuai dengan padding HighlightView(EdgeInsets.all(4))
+
+    final textPainter = TextPainter(
+      text: TextSpan(text: text, style: textStyle),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout(minWidth: 0, maxWidth: size.width);
+
+    final start = selectionStart <= selectionEnd ? selectionStart : selectionEnd;
+    final end = selectionStart <= selectionEnd ? selectionEnd : selectionStart;
+
+    // 1. Draw Selection Boxes
+    if (start != end) {
+      final selectionPaint = Paint()..color = Colors.blueAccent.withAlpha(80);
+      try {
+        final boxes = textPainter.getBoxesForSelection(
+          TextSelection(baseOffset: start, extentOffset: end),
+        );
+        
+        for (final box in boxes) {
+          canvas.drawRect(
+            box.toRect().shift(paddingOffset),
+            selectionPaint,
+          );
+        }
+      } catch (e) {
+        // Abaikan error layout (mis. index di luar teks)
+      }
+    }
+
+    // 2. Draw Cursor Line
+    final cursorPaint = Paint()
+      ..color = Colors.orangeAccent
+      ..strokeWidth = 2.0;
+
+    Offset caretOffset;
+    try {
+      caretOffset = textPainter.getOffsetForCaret(
+        TextPosition(offset: selectionEnd),
+        Rect.zero,
+      );
+    } catch (e) {
+      caretOffset = Offset.zero;
+    }
+    
+    final finalCaretOffset = caretOffset + paddingOffset;
+
+    canvas.drawLine(
+      finalCaretOffset,
+      finalCaretOffset + Offset(0, textStyle.fontSize! * (textStyle.height ?? 1.0)),
+      cursorPaint,
+    );
+
+    // 3. Draw Host Name Label
+    final labelPainter = TextPainter(
+      text: TextSpan(
+        text: ' $hostName ',
+        style: const TextStyle(
+          color: Colors.black,
+          backgroundColor: Colors.orangeAccent,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    labelPainter.layout();
+    
+    // Position label slightly di atas cursor
+    labelPainter.paint(
+      canvas,
+      finalCaretOffset - const Offset(0, 14),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _LiveCursorPainter oldDelegate) {
+    return text != oldDelegate.text ||
+        selectionStart != oldDelegate.selectionStart ||
+        selectionEnd != oldDelegate.selectionEnd ||
+        hostName != oldDelegate.hostName;
+  }
+}
+

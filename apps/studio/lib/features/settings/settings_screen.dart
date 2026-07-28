@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'settings_provider.dart';
+import '../identity/identity_service.dart';
+import '../identity/identity_dialog.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -35,6 +37,13 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
+          // ── Profil Section ──
+          _sectionHeader(HugeIcons.strokeRoundedUserCircle, 'Profil Anda'),
+          const SizedBox(height: 8),
+          _profileCard(context),
+
+          const SizedBox(height: 24),
+
           // ── Performa Section ──
           _sectionHeader(HugeIcons.strokeRoundedDashboardSpeed02, 'Performa'),
           const SizedBox(height: 8),
@@ -258,6 +267,46 @@ class SettingsScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _profileCard(BuildContext context) {
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return Material(
+          color: const Color(0xFF252526),
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(color: Colors.white.withAlpha(12)),
+          ),
+          child: ListTile(
+            leading: CircleAvatar(
+              radius: 20,
+              backgroundColor: const Color(0xFF1E1E1E),
+              backgroundImage: NetworkImage('https://api.dicebear.com/9.x/adventurer/png?seed=${Uri.encodeComponent(IdentityService.avatar ?? '🐼')}'),
+            ),
+            title: Text(
+              IdentityService.name ?? 'Belum ada nama',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+            ),
+            subtitle: const Text(
+              "Ketuk untuk mengubah avatar dan nama",
+              style: TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+            trailing: const HugeIcon(icon: HugeIcons.strokeRoundedEdit02, color: Colors.blueAccent, size: 20),
+            onTap: () async {
+              await showDialog(
+                context: context,
+                barrierDismissible: true,
+                builder: (_) => const IdentityDialog(isCancellable: true),
+              );
+              // Trigger rebuild pada StatefulBuilder ini untuk menampilkan data terbaru
+              setState(() {});
+            },
+          ),
+        );
+      },
     );
   }
 }

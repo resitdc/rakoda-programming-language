@@ -31,7 +31,7 @@ class CodeEditor extends ConsumerStatefulWidget {
   final String? searchQuery;
   final void Function(String path, String content)? onSave;
   final void Function(String path)? onClose;
-  final VoidCallback? onChanged;
+  final void Function(String content, int? selStart, int? selEnd)? onChanged;
 
   const CodeEditor({
     super.key,
@@ -118,14 +118,24 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
   }
 
   void _onTextChanged() {
-    if (_controller.text != _content) {
-      setState(() {
-        _content = _controller.text;
-        widget.tab.content = _content;
+    final hasContentChanged = _controller.text != _content;
+    
+    setState(() {
+      _content = _controller.text;
+      widget.tab.content = _content;
+      if (hasContentChanged) {
         widget.tab.isModified = true;
-      });
-      widget.onChanged?.call();
-      
+      }
+    });
+
+    // Selalu trigger onChanged karena seleksi (kursor) mungkin berubah
+    widget.onChanged?.call(
+      _content,
+      _controller.selection.baseOffset,
+      _controller.selection.extentOffset,
+    );
+    
+    if (hasContentChanged) {
       final settings = ref.read(settingsProvider);
       if (settings.isAutoSave) {
         _autoSaveTimer?.cancel();
