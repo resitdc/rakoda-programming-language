@@ -68,8 +68,6 @@ class _IdentityDialogState extends State<IdentityDialog> {
                 controller: _nameController,
                 style: const TextStyle(color: Colors.white, fontSize: 14),
                 decoration: InputDecoration(
-                  hintText: 'Misal: Budi, Sinta...',
-                  hintStyle: const TextStyle(color: Colors.white38),
                   filled: true,
                   fillColor: const Color(0xFF1E1E1E),
                   border: OutlineInputBorder(

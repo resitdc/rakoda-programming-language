@@ -77,12 +77,15 @@ class _ConnectionDialogState extends State<ConnectionDialog> {
       username: _userController.text.isNotEmpty ? _userController.text : null,
       password: _passController.text.isNotEmpty ? _passController.text : null,
       database: _dbController.text.isNotEmpty ? _dbController.text : null,
-      sqlitePath: p.join(
-        widget.projectPath,
-        _sqlitePathController.text.trim().isNotEmpty
+      sqlitePath: () {
+        var fileName = _sqlitePathController.text.trim().isNotEmpty
             ? _sqlitePathController.text.trim()
-            : 'database.db',
-      ),
+            : 'database.db';
+        if (!fileName.endsWith('.db')) {
+          fileName = '$fileName.db';
+        }
+        return p.join(widget.projectPath, fileName);
+      }(),
     );
 
     Navigator.of(context).pop(connection);
