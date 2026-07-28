@@ -64,40 +64,55 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   Pty? _pty;
   final FocusNode _terminalFocusNode = FocusNode();
 
+  // iOS Custom Terminal States
+  final List<String> _iosTerminalLines = [];
+  final TextEditingController _iosTerminalInputController = TextEditingController();
+  final ScrollController _iosTerminalScrollController = ScrollController();
+  late String _iosTerminalCwd;
+
   @override
   void initState() {
     super.initState();
     registerRplLanguages();
     _terminal = Terminal();
 
-    String shell =
-        Platform.environment['SHELL'] ??
-        (Platform.isWindows ? 'cmd.exe' : 'sh');
-    try {
-      _pty = Pty.start(
-        shell,
-        columns: 80,
-        rows: 24,
-        workingDirectory: widget.project.path,
-        environment: Platform.environment,
-      );
+    if (!Platform.isIOS) {
+      String shell =
+          Platform.environment['SHELL'] ??
+          (Platform.isWindows ? 'cmd.exe' : 'sh');
+      try {
+        _pty = Pty.start(
+          shell,
+          columns: 80,
+          rows: 24,
+          workingDirectory: widget.project.path,
+          environment: Platform.environment,
+        );
 
-      _pty!.output
-          .cast<List<int>>()
-          .transform(const Utf8Decoder(allowMalformed: true))
-          .listen((data) {
-            _terminal.write(data);
-          });
+        _pty!.output
+            .cast<List<int>>()
+            .transform(const Utf8Decoder(allowMalformed: true))
+            .listen((data) {
+              _terminal.write(data);
+            });
 
-      _terminal.onOutput = (data) {
-        _pty?.write(const Utf8Encoder().convert(data));
-      };
+        _terminal.onOutput = (data) {
+          _pty?.write(const Utf8Encoder().convert(data));
+        };
 
-      _terminal.onResize = (w, h, pw, ph) {
-        _pty?.resize(h, w);
-      };
-    } catch (e) {
-      _terminal.write('\x1b[31mTerminal Error: $e\x1b[0m\r\n');
+        _terminal.onResize = (w, h, pw, ph) {
+          _pty?.resize(h, w);
+        };
+      } catch (e) {
+        _terminal.write('\x1b[31mTerminal Error: $e\x1b[0m\r\n');
+      }
+    }
+
+    if (Platform.isIOS) {
+      _iosTerminalCwd = widget.project.path;
+      _iosTerminalLines.add('Selamat datang di RPL Studio Terminal!');
+      _iosTerminalLines.add('Ketik "help" untuk melihat daftar perintah.');
+      _iosTerminalLines.add('');
     }
 
     final mainFile = _findMainFile();
@@ -178,8 +193,10 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   @override
   void dispose() {
     _pty?.kill();
-    _terminalFocusNode.dispose();
+    _iosTerminalInputController.dispose();
+    _iosTerminalScrollController.dispose();
     _localSearchController.dispose();
+    _terminalFocusNode.dispose();
     super.dispose();
   }
 
@@ -1257,6 +1274,154 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     );
   }
 
+  void _scrollIosTerminalToBottom() {
+    Future.delayed(const Duration(milliseconds: 50), () {
+      if (_iosTerminalScrollController.hasClients) {
+        _iosTerminalScrollController.animateTo(
+          _iosTerminalScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  void _handleIosTerminalCommand(String input) async {
+    final cmd = input.trim();
+    if (cmd.isEmpty) return;
+
+    _iosTerminalInputController.clear();
+    setState(() {
+      _iosTerminalLines.add('>_ $cmd');
+    });
+
+    final parts = cmd.split(' ');
+    final baseCmd = parts[0].toLowerCase();
+    final args = parts.sublist(1);
+
+    final forbiddenKeywords = ['rm', 'rf', 'format', 'mkfs', 'dd', 'shred', 'wipe', 'fdisk', 'parted', 'chmod', 'chown', 'sudo', 'su', 'del', 'rd', 'erase'];
+    if (forbiddenKeywords.contains(baseCmd) || cmd.contains('rm ') || cmd.contains('del ')) {
+      setState(() {
+        _iosTerminalLines.add('⚠ Perintah ini dilarang demi keamanan.');
+      });
+      _scrollIosTerminalToBottom();
+      return;
+    }
+
+    switch (baseCmd) {
+      case 'clear':
+      case 'cls':
+        setState(() => _iosTerminalLines.clear());
+        break;
+      case 'help':
+        setState(() {
+          _iosTerminalLines.addAll([
+            '╭─ Perintah yang tersedia ──────────╮',
+            '│  help        Bantuan               │',
+            '│  pwd         Direktori saat ini     │',
+            '│  ls          Daftar berkas          │',
+            '│  cd [dir]    Pindah direktori       │',
+            '│  cat [file]  Baca isi berkas        │',
+            '│  run [file]  Jalankan program RPL   │',
+            '│  clear       Bersihkan layar        │',
+            '╰─────────────────────────────────────╯',
+          ]);
+        });
+        break;
+      case 'pwd':
+        setState(() => _iosTerminalLines.add(_iosTerminalCwd));
+        break;
+      case 'ls':
+        try {
+          final dir = Directory(_iosTerminalCwd);
+          if (dir.existsSync()) {
+            final contents = dir.listSync();
+            if (contents.isEmpty) {
+              setState(() => _iosTerminalLines.add('(kosong)'));
+            } else {
+              for (var entity in contents) {
+                final isDir = entity is Directory;
+                final name = entity.path.split(Platform.pathSeparator).last;
+                setState(() {
+                  _iosTerminalLines.add('${isDir ? "📁" : "📄"} $name');
+                });
+              }
+            }
+          }
+        } catch (e) {
+          setState(() => _iosTerminalLines.add('⚠ $e'));
+        }
+        break;
+      case 'cd':
+        if (args.isEmpty) {
+          setState(() => _iosTerminalCwd = widget.project.path);
+        } else {
+          final target = args.join(' ');
+          String newPath;
+          if (target == '..') {
+            final parent = Directory(_iosTerminalCwd).parent.path;
+            newPath = parent.startsWith(widget.project.path) ? parent : widget.project.path;
+          } else {
+            newPath = Directory('$_iosTerminalCwd${Platform.pathSeparator}$target').path;
+          }
+          final dir = Directory(newPath);
+          if (dir.existsSync()) {
+            setState(() => _iosTerminalCwd = newPath);
+          } else {
+            setState(() => _iosTerminalLines.add('⚠ Folder "$target" tidak ditemukan.'));
+          }
+        }
+        break;
+      case 'cat':
+        if (args.isEmpty) {
+          setState(() => _iosTerminalLines.add('Gunakan: cat [nama_file]'));
+        } else {
+          final fileName = args.join(' ');
+          final filePath = '$_iosTerminalCwd${Platform.pathSeparator}$fileName';
+          final file = File(filePath);
+          if (file.existsSync()) {
+            try {
+              final content = file.readAsStringSync();
+              setState(() => _iosTerminalLines.addAll(content.split('\n')));
+            } catch (e) {
+              setState(() => _iosTerminalLines.add('⚠ $e'));
+            }
+          } else {
+            setState(() => _iosTerminalLines.add('⚠ File "$fileName" tidak ditemukan.'));
+          }
+        }
+        break;
+      case 'run':
+      case 'rpl':
+        if (args.isEmpty) {
+          setState(() => _iosTerminalLines.add('Gunakan: run [nama_file.rpl]'));
+        } else {
+          final fileName = args.join(' ');
+          final filePath = '$_iosTerminalCwd${Platform.pathSeparator}$fileName';
+          final file = File(filePath);
+          if (file.existsSync()) {
+            setState(() => _iosTerminalLines.add('⏳ Menjalankan $fileName...'));
+            try {
+              final content = file.readAsStringSync();
+              final output = await runCode(code: content);
+              setState(() => _iosTerminalLines.addAll(output.split('\n')));
+            } catch (e) {
+              setState(() => _iosTerminalLines.add('⚠ $e'));
+            }
+          } else {
+            setState(() => _iosTerminalLines.add('⚠ File "$fileName" tidak ditemukan.'));
+          }
+        }
+        break;
+      default:
+        setState(() {
+          _iosTerminalLines.add('⚠ "$baseCmd" tidak dikenali. Ketik "help".');
+        });
+        break;
+    }
+    _scrollIosTerminalToBottom();
+  }
+
   /// Terminal panel — always present, can be minimized.
   Widget _buildTerminal() {
     return AnimatedContainer(
@@ -1299,8 +1464,12 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                   if (!_isTerminalMinimized)
                     GestureDetector(
                       onTap: () {
-                        _terminal.buffer.clear();
-                        _terminal.buffer.setCursor(0, 0);
+                        if (Platform.isIOS) {
+                          setState(() => _iosTerminalLines.clear());
+                        } else {
+                          _terminal.buffer.clear();
+                          _terminal.buffer.setCursor(0, 0);
+                        }
                       },
                       child: HugeIcon(
                         icon: HugeIcons.strokeRoundedDelete02,
@@ -1314,19 +1483,94 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           ),
           // Terminal Body
           if (!_isTerminalMinimized) ...[
-            Expanded(
-              child: Container(
-                color: Colors.black,
-                child: TerminalView(
-                  _terminal,
-                  focusNode: _terminalFocusNode,
-                  textStyle: const TerminalStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 13,
+            if (Platform.isIOS)
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _terminalFocusNode.requestFocus(),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: ListView.builder(
+                      controller: _iosTerminalScrollController,
+                      itemCount: _iosTerminalLines.length,
+                      itemBuilder: (context, idx) {
+                        final line = _iosTerminalLines[idx];
+                        final isPrompt = line.startsWith('>_');
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 1.0),
+                          child: Text(
+                            line,
+                            style: TextStyle(
+                              color: isPrompt ? const Color(0xFF4EC9B0) : Colors.white70,
+                              fontFamily: 'monospace',
+                              fontSize: 12,
+                              fontWeight: isPrompt ? FontWeight.w600 : FontWeight.normal,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              )
+            else
+              Expanded(
+                child: Container(
+                  color: Colors.black,
+                  child: TerminalView(
+                    _terminal,
+                    focusNode: _terminalFocusNode,
+                    textStyle: const TerminalStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ),
-            ),
+            if (Platform.isIOS)
+              Container(
+                height: 28,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: [
+                    const Text(
+                      '>_ ',
+                      style: TextStyle(
+                        color: Color(0xFF4EC9B0),
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Expanded(
+                      child: Theme(
+                        data: Theme.of(context).copyWith(
+                          inputDecorationTheme: const InputDecorationTheme(
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            filled: false,
+                          ),
+                        ),
+                        child: TextField(
+                          controller: _iosTerminalInputController,
+                          focusNode: _terminalFocusNode,
+                          onSubmitted: _handleIosTerminalCommand,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontFamily: 'monospace',
+                            fontSize: 12,
+                          ),
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(vertical: 4),
+                            border: InputBorder.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ],
       ),
