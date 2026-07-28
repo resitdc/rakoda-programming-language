@@ -364,18 +364,26 @@ impl TypeChecker {
                     }
                 }
             }
-            Statement::IndexAssignment { kiri, indeks, nilai, lokasi } => {
+            Statement::IndexAssignment {
+                kiri,
+                indeks,
+                nilai,
+                lokasi,
+            } => {
                 let tipe_kiri = self.infer_expression(kiri);
                 let _tipe_indeks = self.infer_expression(indeks);
                 let _tipe_nilai = self.infer_expression(nilai);
-                
+
                 match tipe_kiri {
                     RplType::Array(_) | RplType::Kamus(_) | RplType::TidakDiketahui => {
                         // Di masa depan bisa diperiksa tipe indeks secara mendetail
                     }
                     _ => {
                         self.error(
-                            format!("Tidak dapat menggunakan indeks/property pada tipe {}", tipe_kiri),
+                            format!(
+                                "Tidak dapat menggunakan indeks/property pada tipe {}",
+                                tipe_kiri
+                            ),
                             *lokasi,
                             Some("Pastikan nilai sebelumnya adalah Array atau Kamus".to_string()),
                         );

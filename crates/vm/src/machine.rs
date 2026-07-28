@@ -571,7 +571,7 @@ impl VM {
                     let nilai = self.stack.pop().unwrap();
                     let indeks = self.stack.pop().unwrap();
                     let target = self.stack.pop().unwrap();
-                    
+
                     match target {
                         Value::Kamus(k_idx) => {
                             if let Value::String(key_idx) = indeks {
@@ -590,13 +590,19 @@ impl VM {
                                 } else if i == arr.len() {
                                     arr.push(nilai);
                                 } else {
-                                    return Err(self.err("Indeks array di luar batas untuk penugasan"));
+                                    return Err(
+                                        self.err("Indeks array di luar batas untuk penugasan")
+                                    );
                                 }
                             } else {
                                 return Err(self.err("Indeks array harus berupa angka"));
                             }
                         }
-                        _ => return Err(self.err("Operasi penugasan index tidak didukung untuk tipe ini")),
+                        _ => {
+                            return Err(
+                                self.err("Operasi penugasan index tidak didukung untuk tipe ini")
+                            );
+                        }
                     }
                 }
                 OpCode::MakeArray => {

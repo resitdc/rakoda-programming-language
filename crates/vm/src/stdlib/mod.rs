@@ -18,8 +18,8 @@ pub mod tugas;
 pub mod waktu;
 pub mod web;
 
-pub mod regex;
 pub mod dokumen;
+pub mod regex;
 
 use crate::machine::VM;
 
