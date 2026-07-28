@@ -40,12 +40,12 @@ pub fn register(vm: &mut VM) {
 
             let provider_lower = provider.to_lowercase();
 
-            if let Some(vm) = ctx.as_any().downcast_mut::<VM>() {
-                if let Some(Value::Kamus(ai_idx)) = vm.environments[0].get("ai").cloned() {
-                    let provider_idx = vm.heap.alloc(crate::heap::HeapData::String(provider_lower));
-                    let k = vm.heap.get_kamus_mut(ai_idx);
-                    k.insert("_penyedia".to_string(), Value::String(provider_idx));
-                }
+            if let Some(vm) = ctx.as_any().downcast_mut::<VM>()
+                && let Some(Value::Kamus(ai_idx)) = vm.environments[0].get("ai").cloned()
+            {
+                let provider_idx = vm.heap.alloc(crate::heap::HeapData::String(provider_lower));
+                let k = vm.heap.get_kamus_mut(ai_idx);
+                k.insert("_penyedia".to_string(), Value::String(provider_idx));
             }
 
             Ok(Value::Kosong)
