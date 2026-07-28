@@ -1,0 +1,40 @@
+PODS:
+  - Flutter (1.0.0)
+  - flutter_native_splash (0.0.1):
+    - Flutter
+  - flutter_pty (0.0.1):
+    - Flutter
+  - pdfx (1.0.0):
+    - Flutter
+  - rust_lib_rpl_studio (0.0.1):
+    - Flutter
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - flutter_native_splash (from `.symlinks/plugins/flutter_native_splash/ios`)
+  - flutter_pty (from `.symlinks/plugins/flutter_pty/ios`)
+  - pdfx (from `.symlinks/plugins/pdfx/ios`)
+  - rust_lib_rpl_studio (from `.symlinks/plugins/rust_lib_rpl_studio/ios`)
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  flutter_native_splash:
+    :path: ".symlinks/plugins/flutter_native_splash/ios"
+  flutter_pty:
+    :path: ".symlinks/plugins/flutter_pty/ios"
+  pdfx:
+    :path: ".symlinks/plugins/pdfx/ios"
+  rust_lib_rpl_studio:
+    :path: ".symlinks/plugins/rust_lib_rpl_studio/ios"
+
+SPEC CHECKSUMS:
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  flutter_native_splash: 9e672d3818957718ee006a491730c09deeecace9
+  flutter_pty: 206742da6092b413cb683de17436c16d1f3c7997
+  pdfx: 77f4dddc48361fbb01486fa2bdee4532cbb97ef3
+  rust_lib_rpl_studio: 7726b10c01f070e47784d122b281fe328543785f
+
+PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e
+
+COCOAPODS: 1.16.2

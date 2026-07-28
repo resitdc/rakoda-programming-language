@@ -39,8 +39,9 @@ dependencies:
   flutter_pty: ^0.4.0
   desktop_drop: ^0.4.4
   pdfx: any
-  excel: any
+  excel: ^4.0.6
   csv: any
+  flutter_native_splash: 2.3.1
 
 dev_dependencies:
   flutter_test:
@@ -49,8 +50,6 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   flutter_launcher_icons: ^0.13.1
-  flutter_native_splash: ^2.4.4
-
 flutter_icons:
   android: "launcher_icon"
   ios: true

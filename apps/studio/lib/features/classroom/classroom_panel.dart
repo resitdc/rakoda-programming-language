@@ -215,15 +215,19 @@ class _ClassroomPanelState extends State<ClassroomPanel> with SingleTickerProvid
           ),
           const Spacer(),
           if (_status != ClassroomStatus.disconnected)
-            IconButton(
-              icon: const Icon(Icons.logout, color: Colors.white54, size: 16),
-              tooltip: 'Keluar',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              onPressed: () {
-                _classroomService.disconnect();
-                if (mounted) setState(() => _status = ClassroomStatus.disconnected);
-              },
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  _classroomService.disconnect();
+                  if (mounted) setState(() => _status = ClassroomStatus.disconnected);
+                },
+                borderRadius: BorderRadius.circular(4),
+                child: const Padding(
+                  padding: EdgeInsets.all(6),
+                  child: Icon(Icons.logout, color: Colors.white54, size: 16),
+                ),
+              ),
             ),
         ],
       ),
