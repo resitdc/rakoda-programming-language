@@ -12,17 +12,11 @@ class IdentityDialog extends StatefulWidget {
 
 class _IdentityDialogState extends State<IdentityDialog> {
   final TextEditingController _nameController = TextEditingController();
-  final List<String> _avatars = ['🐼', '🦊', '🐱', '🐶', '🐯', '🦁', '🐸', '🐨', '🐻', '🐰'];
-  String _selectedAvatar = '🐼';
-
   @override
   void initState() {
     super.initState();
     if (IdentityService.name != null) {
       _nameController.text = IdentityService.name!;
-    }
-    if (IdentityService.avatar != null && _avatars.contains(IdentityService.avatar)) {
-      _selectedAvatar = IdentityService.avatar!;
     }
   }
 
@@ -36,7 +30,7 @@ class _IdentityDialogState extends State<IdentityDialog> {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
 
-    await IdentityService.saveIdentity(name, _selectedAvatar);
+    await IdentityService.saveIdentity(name, name); // Gunakan nama sebagai seed
     if (mounted) {
       Navigator.of(context).pop(true);
     }
@@ -66,32 +60,6 @@ class _IdentityDialogState extends State<IdentityDialog> {
                   ? "Pilih avatar dan nama baru Anda."
                   : "Sebelum memulai, mari buat profil Anda agar teman-teman mengenali Anda di Chat Room lokal.",
                 style: const TextStyle(color: Colors.white70, fontSize: 13),
-              ),
-              const SizedBox(height: 24),
-              const Text("Pilih Avatar:", style: TextStyle(color: Colors.white, fontSize: 13)),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _avatars.map((avatar) {
-                  final isSelected = _selectedAvatar == avatar;
-                  return InkWell(
-                    onTap: () => setState(() => _selectedAvatar = avatar),
-                    borderRadius: BorderRadius.circular(30),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: isSelected ? Colors.blueAccent.withAlpha(50) : const Color(0xFF1E1E1E),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isSelected ? Colors.blueAccent : Colors.transparent,
-                          width: 2,
-                        ),
-                      ),
-                      child: Text(avatar, style: const TextStyle(fontSize: 24)),
-                    ),
-                  );
-                }).toList(),
               ),
               const SizedBox(height: 24),
               const Text("Nama Tampilan:", style: TextStyle(color: Colors.white, fontSize: 13)),

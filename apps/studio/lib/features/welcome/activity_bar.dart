@@ -63,7 +63,7 @@ class ActivityBar extends StatelessWidget {
             context,
             type: ActivityType.chat,
             icon: HugeIcons.strokeRoundedChatting01,
-            tooltip: 'LAN Chat',
+            tooltip: 'Room',
           ),
           const Spacer(),
           _buildIcon(
