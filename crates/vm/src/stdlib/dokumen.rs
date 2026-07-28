@@ -58,8 +58,9 @@ pub fn register(vm: &mut VM) {
                     }
                     _ => {
                         return Err(
-                            "Argumen 'jenis' harus berupa teks ('docx', 'pdf', atau 'excel')".to_string()
-                        )
+                            "Argumen 'jenis' harus berupa teks ('docx', 'pdf', atau 'excel')"
+                                .to_string(),
+                        );
                     }
                 };
 
@@ -90,7 +91,12 @@ pub fn register(vm: &mut VM) {
 
                 let sumber = match &args[0] {
                     Value::String(idx) => ctx.get_heap_mut().get_string(*idx).clone(),
-                    _ => return Err(format!("Argumen 'sumber' harus berupa teks untuk tipe {}", jenis)),
+                    _ => {
+                        return Err(format!(
+                            "Argumen 'sumber' harus berupa teks untuk tipe {}",
+                            jenis
+                        ));
+                    }
                 };
 
                 let html_content =
@@ -112,14 +118,17 @@ pub fn register(vm: &mut VM) {
                     doc.build().pack(file).map_err(|e| e.to_string())?;
                 } else if jenis == "pdf" {
                     use turbo_html2pdf_core::{
-                        build_cascade, compile, emit_pdf, render_pages, style::TokenSet,
-                        CompileOptions, Diagnostics, EmitOptions, FontRegistry, RenderInputs, NoImages
+                        CompileOptions, Diagnostics, EmitOptions, FontRegistry, NoImages,
+                        RenderInputs, build_cascade, compile, emit_pdf, render_pages,
+                        style::TokenSet,
                     };
-                    
+
                     let mut final_html = html_content.clone();
                     // Jika sumber bukan dokumen HTML penuh, kita asumsikan teks biasa / snippet
                     // Ubah \n menjadi <br/> agar baris baru dirender dengan benar di PDF
-                    if !final_html.to_lowercase().contains("<html") && !final_html.to_lowercase().contains("<body") {
+                    if !final_html.to_lowercase().contains("<html")
+                        && !final_html.to_lowercase().contains("<body")
+                    {
                         final_html = final_html.replace("\n", "<br/>");
                         // Tambahkan styling dasar agar teks lebih rapi jika tidak ada style
                         final_html = format!(
@@ -130,20 +139,21 @@ pub fn register(vm: &mut VM) {
 
                     let (program, _diags) = compile(&final_html, &CompileOptions::default())
                         .map_err(|e| format!("Gagal kompilasi HTML: {:?}", e.code))?;
-                        
+
                     let data = serde_json::Value::Null;
-                    
+
                     let mut author_css = String::new();
-                    if let (Some(start), Some(end)) = (final_html.find("<style>"), final_html.find("</style>")) 
-                        && start < end 
+                    if let (Some(start), Some(end)) =
+                        (final_html.find("<style>"), final_html.find("</style>"))
+                        && start < end
                     {
                         author_css = final_html[start + 7..end].to_string();
                     }
-                    
+
                     let cascade = build_cascade(&author_css, "", TokenSet::default());
                     let fonts = FontRegistry::new();
                     let rules = turbo_html2pdf_core::style::parse_stylesheet(&author_css).at_rules;
-                    
+
                     let inputs = RenderInputs {
                         program: &program,
                         data: &data,
@@ -153,13 +163,13 @@ pub fn register(vm: &mut VM) {
                         images: &NoImages,
                         now: Some(0),
                     };
-                    
+
                     let mut diags = Diagnostics::default();
                     let pages = render_pages(&inputs, &mut diags)
                         .map_err(|e| format!("Gagal render PDF: {:?}", e.code))?;
-                        
+
                     let pdf_bytes = emit_pdf(&pages, &EmitOptions::default());
-                    
+
                     std::fs::write(&final_filename, pdf_bytes).map_err(|e| e.to_string())?;
                 } else {
                     return Err(
@@ -179,12 +189,19 @@ pub fn register(vm: &mut VM) {
     vm.environments[0].insert("dokumen".to_string(), Value::Kamus(dokumen_idx));
 }
 
-fn build_excel(ctx: &mut dyn VmContext, sumber: &Value, final_filename: &str) -> Result<Value, String> {
-    use rust_xlsxwriter::{Workbook, Format};
+fn build_excel(
+    ctx: &mut dyn VmContext,
+    sumber: &Value,
+    final_filename: &str,
+) -> Result<Value, String> {
+    use rust_xlsxwriter::{Format, Workbook};
 
     let mut workbook = Workbook::new();
 
-    let process_sheet = |workbook: &mut Workbook, sheet_data: &HashMap<String, Value>, ctx: &mut dyn VmContext| -> Result<(), String> {
+    let process_sheet = |workbook: &mut Workbook,
+                         sheet_data: &HashMap<String, Value>,
+                         ctx: &mut dyn VmContext|
+     -> Result<(), String> {
         // Resolve sheet name
         let mut sheet_name = String::new();
         for key in &["lembar", "judul", "title"] {
@@ -193,11 +210,14 @@ fn build_excel(ctx: &mut dyn VmContext, sumber: &Value, final_filename: &str) ->
                 break;
             }
         }
-        
+
         let worksheet = if sheet_name.is_empty() {
             workbook.add_worksheet()
         } else {
-            workbook.add_worksheet().set_name(&sheet_name).map_err(|e| e.to_string())?
+            workbook
+                .add_worksheet()
+                .set_name(&sheet_name)
+                .map_err(|e| e.to_string())?
         };
 
         // Process cells
@@ -256,8 +276,10 @@ fn build_excel(ctx: &mut dyn VmContext, sumber: &Value, final_filename: &str) ->
                 for merge_ref in &merges {
                     let parts: Vec<&str> = merge_ref.split(':').collect();
                     if parts.len() == 2
-                        && let (Some((r1, c1)), Some((r2, c2))) = (parse_cell_ref(parts[0]), parse_cell_ref(parts[1]))
-                        && row == r1 && col == c1 
+                        && let (Some((r1, c1)), Some((r2, c2))) =
+                            (parse_cell_ref(parts[0]), parse_cell_ref(parts[1]))
+                        && row == r1
+                        && col == c1
                     {
                         is_merge_top_left = true;
                         merge_r2 = r2;
@@ -300,17 +322,30 @@ fn build_excel(ctx: &mut dyn VmContext, sumber: &Value, final_filename: &str) ->
                     let format_opt = if has_format { Some(&format) } else { None };
 
                     let mut wrote = false;
-                    
+
                     for key in &["rumus", "formula"] {
                         if let Some(Value::String(idx)) = props.get(*key) {
                             let formula = ctx.get_heap_mut().get_string(*idx).clone();
                             if is_merge_top_left {
-                                worksheet.merge_range(row, col, merge_r2, merge_c2, formula.as_str(), format_opt.unwrap_or(&Format::new())).map_err(|e| e.to_string())?;
+                                worksheet
+                                    .merge_range(
+                                        row,
+                                        col,
+                                        merge_r2,
+                                        merge_c2,
+                                        formula.as_str(),
+                                        format_opt.unwrap_or(&Format::new()),
+                                    )
+                                    .map_err(|e| e.to_string())?;
                             } else {
                                 if let Some(fmt) = format_opt {
-                                    worksheet.write_formula_with_format(row, col, formula.as_str(), fmt).map_err(|e| e.to_string())?;
+                                    worksheet
+                                        .write_formula_with_format(row, col, formula.as_str(), fmt)
+                                        .map_err(|e| e.to_string())?;
                                 } else {
-                                    worksheet.write_formula(row, col, formula.as_str()).map_err(|e| e.to_string())?;
+                                    worksheet
+                                        .write_formula(row, col, formula.as_str())
+                                        .map_err(|e| e.to_string())?;
                                 }
                             }
                             wrote = true;
@@ -322,12 +357,25 @@ fn build_excel(ctx: &mut dyn VmContext, sumber: &Value, final_filename: &str) ->
                         for key in &["angka", "number"] {
                             if let Some(Value::Angka(num)) = props.get(*key) {
                                 if is_merge_top_left {
-                                    worksheet.merge_range(row, col, merge_r2, merge_c2, &num.to_string(), format_opt.unwrap_or(&Format::new())).map_err(|e| e.to_string())?;
+                                    worksheet
+                                        .merge_range(
+                                            row,
+                                            col,
+                                            merge_r2,
+                                            merge_c2,
+                                            &num.to_string(),
+                                            format_opt.unwrap_or(&Format::new()),
+                                        )
+                                        .map_err(|e| e.to_string())?;
                                 } else {
                                     if let Some(fmt) = format_opt {
-                                        worksheet.write_number_with_format(row, col, *num, fmt).map_err(|e| e.to_string())?;
+                                        worksheet
+                                            .write_number_with_format(row, col, *num, fmt)
+                                            .map_err(|e| e.to_string())?;
                                     } else {
-                                        worksheet.write_number(row, col, *num).map_err(|e| e.to_string())?;
+                                        worksheet
+                                            .write_number(row, col, *num)
+                                            .map_err(|e| e.to_string())?;
                                     }
                                 }
                                 wrote = true;
@@ -341,12 +389,25 @@ fn build_excel(ctx: &mut dyn VmContext, sumber: &Value, final_filename: &str) ->
                             if let Some(Value::String(idx)) = props.get(*key) {
                                 let text = ctx.get_heap_mut().get_string(*idx).clone();
                                 if is_merge_top_left {
-                                    worksheet.merge_range(row, col, merge_r2, merge_c2, text.as_str(), format_opt.unwrap_or(&Format::new())).map_err(|e| e.to_string())?;
+                                    worksheet
+                                        .merge_range(
+                                            row,
+                                            col,
+                                            merge_r2,
+                                            merge_c2,
+                                            text.as_str(),
+                                            format_opt.unwrap_or(&Format::new()),
+                                        )
+                                        .map_err(|e| e.to_string())?;
                                 } else {
                                     if let Some(fmt) = format_opt {
-                                        worksheet.write_string_with_format(row, col, text.as_str(), fmt).map_err(|e| e.to_string())?;
+                                        worksheet
+                                            .write_string_with_format(row, col, text.as_str(), fmt)
+                                            .map_err(|e| e.to_string())?;
                                     } else {
-                                        worksheet.write_string(row, col, text.as_str()).map_err(|e| e.to_string())?;
+                                        worksheet
+                                            .write_string(row, col, text.as_str())
+                                            .map_err(|e| e.to_string())?;
                                     }
                                 }
                                 wrote = true;
@@ -354,15 +415,23 @@ fn build_excel(ctx: &mut dyn VmContext, sumber: &Value, final_filename: &str) ->
                             }
                         }
                     }
-                    
+
                     if !wrote && is_merge_top_left {
                         // Empty merge range
-                        worksheet.merge_range(row, col, merge_r2, merge_c2, "", format_opt.unwrap_or(&Format::new())).map_err(|e| e.to_string())?;
+                        worksheet
+                            .merge_range(
+                                row,
+                                col,
+                                merge_r2,
+                                merge_c2,
+                                "",
+                                format_opt.unwrap_or(&Format::new()),
+                            )
+                            .map_err(|e| e.to_string())?;
                     }
                 }
             }
         }
-
 
         Ok(())
     };

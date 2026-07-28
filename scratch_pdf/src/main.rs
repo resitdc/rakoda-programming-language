@@ -1,6 +1,6 @@
 use turbo_html2pdf_core::{
-    build_cascade, compile, emit_pdf, render_pages, style::TokenSet,
-    CompileOptions, Diagnostics, EmitOptions, FontRegistry, RenderInputs, NoImages
+    CompileOptions, Diagnostics, EmitOptions, FontRegistry, NoImages, RenderInputs, build_cascade,
+    compile, emit_pdf, render_pages, style::TokenSet,
 };
 
 fn main() {
@@ -27,20 +27,20 @@ fn main() {
 </html>"##;
 
     let mut author_css = String::new();
-    if let (Some(start), Some(end)) = (html_content.find("<style>"), html_content.find("</style>")) 
-        && start < end 
+    if let (Some(start), Some(end)) = (html_content.find("<style>"), html_content.find("</style>"))
+        && start < end
     {
         author_css = html_content[start + 7..end].to_string();
     }
-    
+
     let (program, _diags) = compile(html_content, &CompileOptions::default()).unwrap();
     let data = serde_json::Value::Null;
     let (_nodes, _) = program.render_nodes(&data, Some(0)).unwrap();
-    
+
     let cascade = build_cascade(&author_css, "", TokenSet::default());
     let fonts = FontRegistry::new();
     let rules = turbo_html2pdf_core::style::parse_stylesheet(&author_css).at_rules;
-    
+
     let inputs = RenderInputs {
         program: &program,
         data: &data,
@@ -50,11 +50,11 @@ fn main() {
         images: &NoImages,
         now: Some(0),
     };
-    
+
     let mut diags = Diagnostics::default();
     let pages = render_pages(&inputs, &mut diags).unwrap();
     let pdf_bytes = emit_pdf(&pages, &EmitOptions::default());
-    
+
     std::fs::write("test_styled.pdf", pdf_bytes).unwrap();
     println!("Generated test_styled.pdf");
 }

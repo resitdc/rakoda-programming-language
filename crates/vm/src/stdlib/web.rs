@@ -414,7 +414,7 @@ pub fn register(vm: &mut VM) {
                             if url.starts_with(prefix) {
                                 let file_path = url[prefix.len()..].trim_start_matches('/');
                                 let mut full_path = std::path::Path::new(folder).join(file_path);
-                                
+
                                 if full_path.is_dir() {
                                     full_path = full_path.join("index.html");
                                 }
@@ -594,7 +594,7 @@ pub fn register(vm: &mut VM) {
                                                 } else if let Some(v) = dict.get("body") {
                                                     val_string = v.to_string(&local_vm.heap);
                                                 }
-                                                
+
                                                 if let Some(Value::Kamus(h_idx)) = dict.get("headers") {
                                                     let headers_dict = local_vm.heap.get_kamus(*h_idx).clone();
                                                     for (k, v) in headers_dict {
@@ -645,7 +645,7 @@ pub fn register(vm: &mut VM) {
                                         let mut builder = axum::response::Response::builder()
                                             .status(response_status)
                                             .header("Content-Type", &content_type);
-                                            
+
                                         for (k, v) in &extra_headers {
                                             builder = builder.header(k, v);
                                         }
@@ -706,7 +706,7 @@ pub fn register(vm: &mut VM) {
                                     }
                                     Err(e) => {
                                         let is_api = url.starts_with("/api/") || headers_map.get("accept").map(|s| s.contains("application/json")).unwrap_or(false);
-                                        
+
                                         if is_api {
                                             let escaped_e = e.replace("\"", "\\\"").replace("\n", "\\n");
                                             let json = format!(r#"{{"pesan": "{}"}}"#, escaped_e);

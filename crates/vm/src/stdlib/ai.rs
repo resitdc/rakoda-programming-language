@@ -111,9 +111,7 @@ pub fn register(vm: &mut VM) {
             Ok(Value::Kosong)
         }),
     };
-    let url_idx = vm
-        .heap
-        .alloc(crate::heap::HeapData::FungsiBawaan(url_func));
+    let url_idx = vm.heap.alloc(crate::heap::HeapData::FungsiBawaan(url_func));
     map.insert("url".to_string(), Value::FungsiBawaan(url_idx));
 
     // ai.model("...")
@@ -222,34 +220,74 @@ fn call_ai_api(
         "openai" => call_openai(
             api_key,
             prompt,
-            if custom_url.is_empty() { "https://api.openai.com/v1/chat/completions" } else { custom_url },
-            if custom_model.is_empty() { "gpt-4o" } else { custom_model },
+            if custom_url.is_empty() {
+                "https://api.openai.com/v1/chat/completions"
+            } else {
+                custom_url
+            },
+            if custom_model.is_empty() {
+                "gpt-4o"
+            } else {
+                custom_model
+            },
         ),
         "anthropic" => call_anthropic(api_key, prompt, custom_model),
         "glm" => call_openai(
             api_key,
             prompt,
-            if custom_url.is_empty() { "https://open.bigmodel.cn/api/paas/v4/chat/completions" } else { custom_url },
-            if custom_model.is_empty() { "glm-4" } else { custom_model },
+            if custom_url.is_empty() {
+                "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+            } else {
+                custom_url
+            },
+            if custom_model.is_empty() {
+                "glm-4"
+            } else {
+                custom_model
+            },
         ),
         "deepseek" => call_openai(
             api_key,
             prompt,
-            if custom_url.is_empty() { "https://api.deepseek.com/v1/chat/completions" } else { custom_url },
-            if custom_model.is_empty() { "deepseek-chat" } else { custom_model },
+            if custom_url.is_empty() {
+                "https://api.deepseek.com/v1/chat/completions"
+            } else {
+                custom_url
+            },
+            if custom_model.is_empty() {
+                "deepseek-chat"
+            } else {
+                custom_model
+            },
         ),
         "ollama" => call_openai(
             api_key,
             prompt,
-            if custom_url.is_empty() { "http://localhost:11434/v1/chat/completions" } else { custom_url },
-            if custom_model.is_empty() { "llama3" } else { custom_model },
+            if custom_url.is_empty() {
+                "http://localhost:11434/v1/chat/completions"
+            } else {
+                custom_url
+            },
+            if custom_model.is_empty() {
+                "llama3"
+            } else {
+                custom_model
+            },
         ),
         // Fallback untuk provider custom lainnya yang kompatibel dengan format OpenAI
         _ => call_openai(
             api_key,
             prompt,
-            if custom_url.is_empty() { "https://api.openai.com/v1/chat/completions" } else { custom_url },
-            if custom_model.is_empty() { "gpt-3.5-turbo" } else { custom_model },
+            if custom_url.is_empty() {
+                "https://api.openai.com/v1/chat/completions"
+            } else {
+                custom_url
+            },
+            if custom_model.is_empty() {
+                "gpt-3.5-turbo"
+            } else {
+                custom_model
+            },
         ),
     }
 }
@@ -259,7 +297,11 @@ fn call_ai_api(
 // -----------------------------------------------------------------------------
 
 fn call_gemini(api_key: &str, prompt: &str, custom_model: &str) -> Result<String, String> {
-    let model = if custom_model.is_empty() { "gemini-1.5-flash" } else { custom_model };
+    let model = if custom_model.is_empty() {
+        "gemini-1.5-flash"
+    } else {
+        custom_model
+    };
     let url = format!(
         "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
         model, api_key
@@ -289,13 +331,7 @@ fn call_gemini(api_key: &str, prompt: &str, custom_model: &str) -> Result<String
     }
 }
 
-fn call_openai(
-    api_key: &str,
-    prompt: &str,
-    url: &str,
-    model: &str,
-) -> Result<String, String> {
-
+fn call_openai(api_key: &str, prompt: &str, url: &str, model: &str) -> Result<String, String> {
     let json_body = serde_json::json!({
         "model": model,
         "messages": [
@@ -328,7 +364,11 @@ fn call_openai(
 
 fn call_anthropic(api_key: &str, prompt: &str, custom_model: &str) -> Result<String, String> {
     let url = "https://api.anthropic.com/v1/messages";
-    let model = if custom_model.is_empty() { "claude-3-haiku-20240307" } else { custom_model };
+    let model = if custom_model.is_empty() {
+        "claude-3-haiku-20240307"
+    } else {
+        custom_model
+    };
 
     let json_body = serde_json::json!({
         "model": model,

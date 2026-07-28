@@ -84,8 +84,6 @@ impl Parser {
         &self.tokens[self.posisi]
     }
 
-
-
     fn advance(&mut self) {
         if self.posisi < self.tokens.len() - 1 {
             self.posisi += 1;
@@ -203,7 +201,6 @@ impl Parser {
         }
     }
 
-
     fn parse_kembalikan(&mut self) -> Statement {
         let lokasi = self.current_lokasi();
         self.advance();
@@ -260,7 +257,7 @@ impl Parser {
             Ok(expr) => {
                 if self.current().token == Token::Assign {
                     self.advance(); // lewati '='
-                    
+
                     let nilai = match self.parse_expression(Precedence::Lowest) {
                         Ok(e) => e,
                         Err(e) => {
@@ -268,14 +265,19 @@ impl Parser {
                             return Statement::Error(lokasi);
                         }
                     };
-                    
+
                     match expr {
-                        Expression::Identifier(nama, _) => {
-                            Statement::Assignment { nama, nilai, lokasi }
-                        }
-                        Expression::Index { kiri, indeks, .. } => {
-                            Statement::IndexAssignment { kiri: *kiri, indeks: *indeks, nilai, lokasi }
-                        }
+                        Expression::Identifier(nama, _) => Statement::Assignment {
+                            nama,
+                            nilai,
+                            lokasi,
+                        },
+                        Expression::Index { kiri, indeks, .. } => Statement::IndexAssignment {
+                            kiri: *kiri,
+                            indeks: *indeks,
+                            nilai,
+                            lokasi,
+                        },
                         _ => {
                             self.push_error(
                                 "Sisi kiri assignment tidak valid".to_string(),
@@ -296,7 +298,6 @@ impl Parser {
             }
         }
     }
-
 
     fn parse_block(&mut self) -> Vec<Statement> {
         let is_maka = self.current().token == Token::Maka;
