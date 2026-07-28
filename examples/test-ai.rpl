@@ -2,7 +2,8 @@ ai.penyedia("deepseek")
 ai.key("sk-2ec40c2e6762415082d65643fcc52f71")
 
 buat hasil = ai.tanya("Sebutkan 4 hewan berkaki 2")
+dokumen.buat(hasil, "nama-hewan", "pdf")
+dokumen.buat(hasil, "nama-hewan", "docx")
 tampilkan hasil
-// dokumen.buat(hasil, "nama-hewan", "docx")
 
 

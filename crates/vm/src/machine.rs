@@ -54,6 +54,7 @@ pub struct VM {
     pub next_gc_threshold: usize,
     pub capture_output: bool,
     pub output_buffer: String,
+    pub base_path: Option<std::path::PathBuf>,
 }
 
 impl Default for VM {
@@ -76,6 +77,7 @@ impl VM {
             next_gc_threshold: 1000,
             capture_output: false,
             output_buffer: String::new(),
+            base_path: None,
         }
     }
 
@@ -92,6 +94,7 @@ impl VM {
             next_gc_threshold: 1000,
             capture_output: false,
             output_buffer: String::new(),
+            base_path: self.base_path.clone(),
         }
     }
 
