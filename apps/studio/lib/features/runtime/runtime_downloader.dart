@@ -44,12 +44,17 @@ final runtimeDownloaderProvider = Provider.family<RuntimeDownloaderNotifier, Str
 });
 
 class RuntimeDownloaderNotifier extends ChangeNotifier {
-  final String runtimeId;
+  final String runtimeId; // Format: "name@version" (e.g. "node@22.0.0")
+  late final String runtimeName;
+  late final String runtimeVersion;
   
   RuntimeDownloadStatus _status = RuntimeDownloadStatus();
   RuntimeDownloadStatus get status => _status;
 
   RuntimeDownloaderNotifier(this.runtimeId) {
+    final parts = runtimeId.split('@');
+    runtimeName = parts[0];
+    runtimeVersion = parts.length > 1 ? parts[1] : 'unknown';
     _checkInstalled();
   }
   
@@ -61,7 +66,7 @@ class RuntimeDownloaderNotifier extends ChangeNotifier {
   Future<void> _checkInstalled() async {
     try {
       final supportDir = await getApplicationSupportDirectory();
-      final runtimeDir = Directory('${supportDir.path}/runtimes/$runtimeId');
+      final runtimeDir = Directory('${supportDir.path}/runtimes/$runtimeName-$runtimeVersion');
       if (await runtimeDir.exists()) {
         _updateStatus(_status.copyWith(state: DownloadState.installed));
       }
@@ -74,7 +79,7 @@ class RuntimeDownloaderNotifier extends ChangeNotifier {
     try {
       final supportDir = await getApplicationSupportDirectory();
       final runtimesBaseDir = Directory('${supportDir.path}/runtimes');
-      final targetRuntimeDir = Directory('${runtimesBaseDir.path}/$runtimeId');
+      final targetRuntimeDir = Directory('${runtimesBaseDir.path}/$runtimeName-$runtimeVersion');
       
       if (!await runtimesBaseDir.exists()) {
         await runtimesBaseDir.create(recursive: true);
@@ -86,7 +91,7 @@ class RuntimeDownloaderNotifier extends ChangeNotifier {
 
       final isWindows = Platform.isWindows;
       final ext = isWindows ? '.zip' : '.tar.gz';
-      final downloadFile = File('${runtimesBaseDir.path}/$runtimeId$ext');
+      final downloadFile = File('${runtimesBaseDir.path}/$runtimeName-$runtimeVersion$ext');
 
       try {
         final request = http.Request('GET', Uri.parse(target.url));
@@ -134,7 +139,7 @@ class RuntimeDownloaderNotifier extends ChangeNotifier {
         await Future.delayed(const Duration(milliseconds: 500));
         
         await targetRuntimeDir.create(recursive: true);
-        final dummyExe = File('${targetRuntimeDir.path}/$runtimeId');
+        final dummyExe = File('${targetRuntimeDir.path}/$runtimeName');
         if (isWindows) {
           await dummyExe.writeAsString('@echo off\necho "Dummy $runtimeId executed!"\n');
         } else {
@@ -143,7 +148,7 @@ class RuntimeDownloaderNotifier extends ChangeNotifier {
       }
 
       if (!Platform.isWindows) {
-        final binFile = File('${targetRuntimeDir.path}/$runtimeId');
+        final binFile = File('${targetRuntimeDir.path}/$runtimeName');
         if (await binFile.exists()) {
           await Process.run('chmod', ['+x', binFile.path]);
         }
@@ -152,6 +157,21 @@ class RuntimeDownloaderNotifier extends ChangeNotifier {
       _updateStatus(_status.copyWith(state: DownloadState.installed));
     } catch (e) {
       _updateStatus(_status.copyWith(state: DownloadState.error, error: e.toString()));
+    }
+  }
+
+  Future<void> deleteRuntime() async {
+    try {
+      final supportDir = await getApplicationSupportDirectory();
+      final targetRuntimeDir = Directory('${supportDir.path}/runtimes/$runtimeName-$runtimeVersion');
+      
+      if (await targetRuntimeDir.exists()) {
+        await targetRuntimeDir.delete(recursive: true);
+      }
+      
+      _updateStatus(RuntimeDownloadStatus(state: DownloadState.idle));
+    } catch (e) {
+      _updateStatus(_status.copyWith(state: DownloadState.error, error: 'Gagal menghapus: ${e.toString()}'));
     }
   }
 }

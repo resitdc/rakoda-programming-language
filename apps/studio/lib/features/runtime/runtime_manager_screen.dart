@@ -63,27 +63,48 @@ class RuntimeManagerScreen extends ConsumerWidget {
           if (manifest.runtimes.isEmpty) {
             return const Center(child: Text('Tidak ada runtime tersedia', style: TextStyle(color: Colors.white70)));
           }
-          
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: manifest.runtimes.length,
-            itemBuilder: (context, index) {
-              final runtimeKey = manifest.runtimes.keys.elementAt(index);
-              final runtimeData = manifest.runtimes[runtimeKey]!;
-              final latestVersion = runtimeData.versions[runtimeData.latest];
-              
+
+          final List<Map<String, dynamic>> flattenedVersions = [];
+          for (final runtimeEntry in manifest.runtimes.entries) {
+            final runtimeKey = runtimeEntry.key;
+            final versions = runtimeEntry.value.versions;
+            
+            // Sort versions descending
+            final sortedVersions = versions.keys.toList()..sort((a, b) => b.compareTo(a));
+            
+            for (final versionStr in sortedVersions) {
+              final versionData = versions[versionStr]!;
               bool isCompatible = false;
               RuntimeTarget? compatibleTarget;
               
-              if (latestVersion != null) {
-                final osMap = latestVersion.osTargets[systemInfo.os];
-                if (osMap != null) {
-                  compatibleTarget = osMap[systemInfo.arch];
-                  if (compatibleTarget != null) {
-                    isCompatible = true;
-                  }
+              final osMap = versionData.osTargets[systemInfo.os];
+              if (osMap != null) {
+                compatibleTarget = osMap[systemInfo.arch];
+                if (compatibleTarget != null) {
+                  isCompatible = true;
                 }
               }
+
+              flattenedVersions.add({
+                'runtimeKey': runtimeKey,
+                'version': versionStr,
+                'isCompatible': isCompatible,
+                'target': compatibleTarget,
+              });
+            }
+          }
+          
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: flattenedVersions.length,
+            itemBuilder: (context, index) {
+              final item = flattenedVersions[index];
+              final runtimeKey = item['runtimeKey'] as String;
+              final versionStr = item['version'] as String;
+              final isCompatible = item['isCompatible'] as bool;
+              final compatibleTarget = item['target'] as RuntimeTarget?;
+              
+              final downloaderId = '$runtimeKey@$versionStr';
 
               return Card(
                 color: const Color(0xFF2D2D30),
@@ -125,7 +146,7 @@ class RuntimeManagerScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Versi: ${runtimeData.latest}',
+                              'Versi: $versionStr',
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.7),
                                 fontSize: 14,
@@ -148,7 +169,7 @@ class RuntimeManagerScreen extends ConsumerWidget {
                       if (isCompatible)
                         Consumer(
                           builder: (context, ref, child) {
-                            final downloader = ref.watch(runtimeDownloaderProvider(runtimeKey));
+                            final downloader = ref.watch(runtimeDownloaderProvider(downloaderId));
 
                             return ListenableBuilder(
                               listenable: downloader,
@@ -166,6 +187,14 @@ class RuntimeManagerScreen extends ConsumerWidget {
                                           color: Colors.green.shade400,
                                           fontWeight: FontWeight.bold,
                                         ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                                        onPressed: () {
+                                          downloader.deleteRuntime();
+                                        },
+                                        tooltip: 'Hapus Runtime',
                                       ),
                                     ],
                                   );
