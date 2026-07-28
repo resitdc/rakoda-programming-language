@@ -70,11 +70,19 @@ pub fn register(vm: &mut VM) {
 
                 let ext = if jenis == "excel" { "xlsx" } else { &jenis };
 
-                let final_filename = if nama_file.ends_with(&format!(".{}", ext)) {
+                let mut final_filename = if nama_file.ends_with(&format!(".{}", ext)) {
                     nama_file.clone()
                 } else {
                     format!("{}.{}", nama_file, ext)
                 };
+
+                // Pastikan file disimpan di direktori script (project_root), bukan di CWD eksekusi
+                if let Some(root) = &ctx.get_heap_mut().project_root {
+                    let path = std::path::Path::new(&final_filename);
+                    if path.is_relative() {
+                        final_filename = root.join(path).to_string_lossy().into_owned();
+                    }
+                }
 
                 if jenis == "excel" {
                     return crate::stdlib::dokumen::build_excel(ctx, &args[0], &final_filename);
@@ -108,16 +116,28 @@ pub fn register(vm: &mut VM) {
                         CompileOptions, Diagnostics, EmitOptions, FontRegistry, RenderInputs, NoImages
                     };
                     
-                    let (program, _diags) = compile(&html_content, &CompileOptions::default())
+                    let mut final_html = html_content.clone();
+                    // Jika sumber bukan dokumen HTML penuh, kita asumsikan teks biasa / snippet
+                    // Ubah \n menjadi <br/> agar baris baru dirender dengan benar di PDF
+                    if !final_html.to_lowercase().contains("<html") && !final_html.to_lowercase().contains("<body") {
+                        final_html = final_html.replace("\n", "<br/>");
+                        // Tambahkan styling dasar agar teks lebih rapi jika tidak ada style
+                        final_html = format!(
+                            "<div style=\"font-family: sans-serif; font-size: 14px; line-height: 1.5;\">{}</div>",
+                            final_html
+                        );
+                    }
+
+                    let (program, _diags) = compile(&final_html, &CompileOptions::default())
                         .map_err(|e| format!("Gagal kompilasi HTML: {:?}", e.code))?;
                         
                     let data = serde_json::Value::Null;
                     
                     let mut author_css = String::new();
-                    if let (Some(start), Some(end)) = (html_content.find("<style>"), html_content.find("</style>")) 
+                    if let (Some(start), Some(end)) = (final_html.find("<style>"), final_html.find("</style>")) 
                         && start < end 
                     {
-                        author_css = html_content[start + 7..end].to_string();
+                        author_css = final_html[start + 7..end].to_string();
                     }
                     
                     let cascade = build_cascade(&author_css, "", TokenSet::default());
