@@ -11,7 +11,7 @@ import '../../models/project.dart';
 import '../../services/project_service.dart';
 import 'create_project_dialog.dart';
 import 'project_screen.dart';
-import 'scan_barcode_screen.dart';
+import '../runtime/runtime_manager_screen.dart';
 import '../identity/identity_service.dart';
 import '../identity/identity_dialog.dart';
 
@@ -124,10 +124,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     }
   }
 
-  void _scanBarcode() {
+  void _openRuntimeManager() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const ScanBarcodeScreen()),
+      MaterialPageRoute(builder: (_) => const RuntimeManagerScreen()),
     );
   }
 
@@ -247,11 +247,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
         ),
         _ActionCard(
           isLowEndMode: isLowEndMode,
-          icon: Icons.qr_code_outlined,
-          label: 'Scan Barcode',
-          subtitle: 'Download sample project',
+          icon: Icons.memory_outlined,
+          label: 'Runtime Manager',
+          subtitle: 'Kelola bahasa & SDK',
           color: const Color(0xFFDCDCAA),
-          onTap: _scanBarcode,
+          onTap: _openRuntimeManager,
         ),
         _ActionCard(
           isLowEndMode: isLowEndMode,
