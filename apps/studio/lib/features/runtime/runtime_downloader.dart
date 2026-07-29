@@ -148,9 +148,18 @@ class RuntimeDownloaderNotifier extends ChangeNotifier {
       }
 
       if (!Platform.isWindows) {
+        // Berikan akses execute secara spesifik (karena chmod -R sering gagal di Android/Toybox)
         final binFile = File('${targetRuntimeDir.path}/$runtimeName');
         if (await binFile.exists()) {
-          await Process.run('chmod', ['+x', binFile.path]);
+          final res1 = await Process.run('chmod', ['755', binFile.path]);
+          if (res1.exitCode != 0) print('chmod 755 failed on ${binFile.path}: ${res1.stderr}');
+        }
+        
+        // Untuk Node.js di Android, ada file .bin tambahan yang butuh di-chmod
+        final binFile2 = File('${targetRuntimeDir.path}/$runtimeName.bin');
+        if (await binFile2.exists()) {
+          final res2 = await Process.run('chmod', ['755', binFile2.path]);
+          if (res2.exitCode != 0) print('chmod 755 failed on ${binFile2.path}: ${res2.stderr}');
         }
       }
 

@@ -16,9 +16,15 @@ import 'package:highlight/highlight.dart';
 import 'package:highlight/languages/css.dart';
 import 'package:highlight/languages/javascript.dart';
 import 'package:highlight/languages/xml.dart';
+import 'package:highlight/languages/php.dart';
+import 'package:highlight/languages/python.dart';
+import 'package:highlight/languages/rust.dart';
+import 'package:highlight/languages/json.dart';
+import 'package:highlight/languages/java.dart';
 import 'rpl_languages.dart';
 import 'editor_tab.dart';
 import '../../features/theme/theme_state.dart';
+import '../../shared/file_icon_helper.dart';
 import 'dart:async';
 
 class KeyboardEventNotifier {
@@ -105,16 +111,16 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
     if (filePath.endsWith('.rpl.html') || filePath.endsWith('.html')) {
       return rplHtml;
     }
-    if (ext == 'rpl') {
-      return rpl;
-    }
-    if (ext == 'js') {
-      return javascript;
-    }
-    if (ext == 'css') {
-      return css;
-    }
-    return xml; // HTML/XML fallback
+    if (ext == 'rpl') return rpl;
+    if (ext == 'js') return javascript;
+    if (ext == 'css') return css;
+    if (ext == 'php') return php;
+    if (ext == 'py') return python;
+    if (ext == 'rs') return rust;
+    if (ext == 'json') return json;
+    if (ext == 'java') return java;
+    if (ext == 'html' || ext == 'xml') return xml;
+    return null;
   }
 
   void _onTextChanged() {
@@ -463,12 +469,8 @@ class _EditorTabBarState extends State<EditorTabBar> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    _getFileIcon(widget.tabs[i].fileName),
-                    size: 14,
-                    color: isActive ? _getFileIconColor(widget.tabs[i].fileName) : const Color(0xFF858585),
-                  ),
-                  const SizedBox(width: 6),
+                  FileIconHelper.getFileIcon(widget.tabs[i].fileName, size: 14),
+                  const SizedBox(width: 8),
                   Text(
                     widget.tabs[i].fileName,
                     style: TextStyle(
@@ -500,43 +502,5 @@ class _EditorTabBarState extends State<EditorTabBar> {
         },
       ),
     );
-  }
-
-  IconData _getFileIcon(String fileName) {
-    final ext = fileName.split('.').last.toLowerCase();
-    switch (ext) {
-      case 'rpl':
-        return Icons.code;
-      case 'html':
-        return Icons.public;
-      case 'css':
-        return Icons.style;
-      case 'js':
-        return Icons.javascript;
-      case 'json':
-        return Icons.data_object;
-      case 'md':
-        return Icons.insert_drive_file;
-      default:
-        return Icons.insert_drive_file;
-    }
-  }
-
-  Color _getFileIconColor(String fileName) {
-    final ext = fileName.split('.').last.toLowerCase();
-    switch (ext) {
-      case 'rpl':
-        return const Color(0xFF519ABA);
-      case 'html':
-        return const Color(0xFFE44D26);
-      case 'css':
-        return const Color(0xFF42A5F5);
-      case 'js':
-        return const Color(0xFFDCDCAA);
-      case 'json':
-        return const Color(0xFFDCDCAA);
-      default:
-        return const Color(0xFF519ABA);
-    }
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import '../../shared/file_icon_helper.dart';
 
 /// File/folder node untuk tree view.
 class FileNode {
@@ -238,15 +239,13 @@ class _FileExplorerState extends State<FileExplorer> {
                 else
                   const SizedBox(width: 14),
                 const SizedBox(width: 2),
-                Icon(
-                  node.isDirectory
-                      ? (node.isExpanded ? Icons.folder_open : Icons.folder_outlined)
-                      : _fileIcon(node.name),
-                  size: 15,
-                  color: node.isDirectory
-                      ? const Color(0xFFE2C08D)
-                      : _fileIconColor(node.name),
-                ),
+                node.isDirectory 
+                    ? Icon(
+                        node.isExpanded ? Icons.folder_open : Icons.folder_outlined,
+                        size: 15,
+                        color: const Color(0xFFE2C08D),
+                      )
+                    : FileIconHelper.getFileIcon(node.name, size: 15),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -268,44 +267,7 @@ class _FileExplorerState extends State<FileExplorer> {
     );
   }
 
-  IconData _fileIcon(String name) {
-    final lowerName = name.toLowerCase();
-    if (lowerName.endsWith('.rpl')) return Icons.code;
-    if (lowerName.endsWith('.html')) return Icons.public;
-    if (lowerName.endsWith('.css')) return Icons.style;
-    if (lowerName.endsWith('.js')) return Icons.javascript;
-    if (lowerName.endsWith('.json')) return Icons.data_object;
-    if (lowerName.endsWith('.db') || lowerName.endsWith('.sqlite')) return Icons.storage;
-    if (lowerName.endsWith('.md')) return Icons.insert_drive_file;
-    if (lowerName.endsWith('.txt')) return Icons.text_snippet;
 
-    if (lowerName.endsWith('.pdf')) return Icons.picture_as_pdf;
-    if (lowerName.endsWith('.doc') || lowerName.endsWith('.docx')) return Icons.description;
-    if (lowerName.endsWith('.xls') || lowerName.endsWith('.xlsx') || lowerName.endsWith('.csv')) return Icons.table_chart;
-    if (lowerName.endsWith('.png') || lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.endsWith('.webp') || lowerName.endsWith('.bmp') || lowerName.endsWith('.gif')) {
-      return Icons.image;
-    }
-
-    return Icons.insert_drive_file;
-  }
-
-  Color _fileIconColor(String name) {
-    final lowerName = name.toLowerCase();
-    if (lowerName.endsWith('.rpl')) return const Color(0xFF519ABA);
-    if (lowerName.endsWith('.html')) return const Color(0xFFE44D26);
-    if (lowerName.endsWith('.css')) return const Color(0xFF42A5F5);
-    if (lowerName.endsWith('.js')) return const Color(0xFFDCDCAA);
-    if (lowerName.endsWith('.json')) return const Color(0xFFDCDCAA);
-
-    if (lowerName.endsWith('.pdf')) return const Color(0xFFE53935);
-    if (lowerName.endsWith('.doc') || lowerName.endsWith('.docx')) return const Color(0xFF1E88E5);
-    if (lowerName.endsWith('.xls') || lowerName.endsWith('.xlsx') || lowerName.endsWith('.csv')) return const Color(0xFF43A047);
-    if (lowerName.endsWith('.png') || lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.endsWith('.webp') || lowerName.endsWith('.bmp') || lowerName.endsWith('.gif')) {
-      return const Color(0xFFAB47BC);
-    }
-
-    return const Color(0xFFCCCCCC);
-  }
 
   void _showContextMenu(BuildContext context, FileNode node) {
     showModalBottomSheet(

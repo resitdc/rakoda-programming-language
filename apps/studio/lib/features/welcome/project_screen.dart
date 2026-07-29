@@ -8,6 +8,7 @@ import '../editor/editor_tab.dart';
 import '../editor/code_editor.dart';
 import '../explorer/file_explorer.dart';
 import 'welcome_screen.dart';
+import '../editor/code_executor_service.dart';
 import '../../src/rust/api/simple.dart';
 import 'activity_bar.dart';
 import 'search_panel.dart';
@@ -968,14 +969,73 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                 setState(() {
                   _isTerminalMinimized = false;
                 });
-                final cmdString = '\r\n>_ run ${_openTabs[_activeTabIndex].fileName}\r\n';
+                final tab = _openTabs[_activeTabIndex];
+                final fileName = tab.fileName;
+                final ext = fileName.contains('.') ? fileName.split('.').last.toLowerCase() : '';
+                final content = tab.content;
+
+                final cmdString = '\r\n>_ run $fileName\r\n';
                 _terminal.write(cmdString);
                 
-                final content = _openTabs[_activeTabIndex].content;
-                final result = await runCode(code: content);
+                String resultString = '';
+                
+                if (ext == 'php' || ext == 'js') {
+                  final language = ext == 'js' ? 'node' : 'php';
+                  final availableRuntimes = await CodeExecutorService.getInstalledRuntimePaths(language);
+                  
+                  if (availableRuntimes.isEmpty) {
+                    resultString = 'Error: Runtime ${language.toUpperCase()} belum terpasang. Silakan unduh melalui Runtime Manager.\r\n';
+                  } else {
+                    String selectedExe = availableRuntimes.first;
+                    
+                    if (availableRuntimes.length > 1 && mounted) {
+                      final selected = await showDialog<String>(
+                        context: context,
+                        builder: (ctx) {
+                          return AlertDialog(
+                            backgroundColor: const Color(0xFF252526),
+                            title: Text('Pilih Versi ${language.toUpperCase()}', style: const TextStyle(color: Colors.white, fontSize: 16)),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: availableRuntimes.map((path) {
+                                final parts = path.split('/');
+                                final folderName = parts[parts.length - 2];
+                                return ListTile(
+                                  title: Text(folderName, style: const TextStyle(color: Colors.white)),
+                                  trailing: const Icon(Icons.play_arrow, color: Color(0xFF4EC9B0), size: 16),
+                                  onTap: () => Navigator.pop(ctx, path),
+                                );
+                              }).toList(),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                child: const Text('Batal', style: TextStyle(color: Colors.white54)),
+                              )
+                            ],
+                          );
+                        }
+                      );
+                      if (selected != null) {
+                        selectedExe = selected;
+                      } else {
+                        resultString = 'Eksekusi dibatalkan.\r\n';
+                      }
+                    }
+                    
+                    if (resultString.isEmpty) {
+                      final result = await CodeExecutorService.executeWithRuntime(selectedExe, content, language);
+                      resultString = result.replaceAll('\n', '\r\n') + '\r\n';
+                    }
+                  }
+                } else {
+                  // Fallback to internal Rust VM for RPL or others
+                  final result = await runCode(code: content);
+                  resultString = result.replaceAll('\n', '\r\n') + '\r\n';
+                }
+                
                 if (!mounted) return;
                 
-                final resultString = result.replaceAll('\n', '\r\n') + '\r\n';
                 _terminal.write(resultString);
                 
                 if (_classroomService.isHost && _classroomService.isLiveCodeSharingEnabled) {

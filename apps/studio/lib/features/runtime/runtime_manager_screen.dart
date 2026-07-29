@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
+import '../../shared/file_icon_helper.dart';
 import 'runtime_service.dart';
 import 'runtime_model.dart';
 import 'runtime_downloader.dart';
@@ -121,14 +123,7 @@ class RuntimeManagerScreen extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Center(
-                          child: Text(
-                            runtimeKey.substring(0, 1).toUpperCase(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          child: FileIconHelper.getFileIcon('dummy.$runtimeKey', size: 32),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -147,8 +142,8 @@ class RuntimeManagerScreen extends ConsumerWidget {
                             const SizedBox(height: 4),
                             Text(
                               'Versi: $versionStr',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.7),
+                              style: const TextStyle(
+                                color: Colors.white70,
                                 fontSize: 14,
                               ),
                             ),
@@ -217,8 +212,8 @@ class RuntimeManagerScreen extends ConsumerWidget {
                                         downloadStatus.state == DownloadState.extracting
                                             ? 'Mengekstrak...'
                                             : '${(downloadStatus.progress * 100).toStringAsFixed(1)}%',
-                                        style: TextStyle(
-                                          color: Colors.white.withOpacity(0.7),
+                                        style: const TextStyle(
+                                          color: Colors.white70,
                                           fontSize: 12,
                                         ),
                                       ),
