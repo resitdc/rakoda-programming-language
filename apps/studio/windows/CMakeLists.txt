@@ -50,11 +50,11 @@ endfunction()
 set(FLUTTER_MANAGED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/flutter")
 
 # --- HOTFIX FOR PDFX PLUGIN ON WINDOWS ---
-# Patch the hardcoded CMake version in DownloadProject.cmake
-set(PDFX_CMAKE_FILE "${FLUTTER_MANAGED_DIR}/ephemeral/.plugin_symlinks/pdfx/windows/DownloadProject.cmake")
+# Patch the hardcoded CMake version in DownloadProject.cmake.in
+set(PDFX_CMAKE_FILE "${FLUTTER_MANAGED_DIR}/ephemeral/.plugin_symlinks/pdfx/windows/DownloadProject.CMakeLists.cmake.in")
 if(EXISTS "${PDFX_CMAKE_FILE}")
   file(READ "${PDFX_CMAKE_FILE}" PDFX_CMAKE_CONTENT)
-  string(REPLACE "cmake_minimum_required(VERSION 2.8.2)" "cmake_minimum_required(VERSION 3.14)" PDFX_CMAKE_CONTENT "${PDFX_CMAKE_CONTENT}")
+  string(REPLACE "cmake_minimum_required(VERSION 2.8.12)" "cmake_minimum_required(VERSION 3.14)" PDFX_CMAKE_CONTENT "${PDFX_CMAKE_CONTENT}")
   file(WRITE "${PDFX_CMAKE_FILE}" "${PDFX_CMAKE_CONTENT}")
 endif()
 # -----------------------------------------
