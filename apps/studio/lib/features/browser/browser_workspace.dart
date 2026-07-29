@@ -8,7 +8,8 @@ import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 import 'devtools_panel.dart';
 
 class BrowserWorkspace extends StatefulWidget {
-  const BrowserWorkspace({super.key});
+  final String? initialUrl;
+  const BrowserWorkspace({super.key, this.initialUrl});
 
   @override
   State<BrowserWorkspace> createState() => _BrowserWorkspaceState();
@@ -16,8 +17,8 @@ class BrowserWorkspace extends StatefulWidget {
 
 class _BrowserWorkspaceState extends State<BrowserWorkspace> {
   late final WebViewController _controller;
-  final TextEditingController _urlController = TextEditingController(
-    text: 'https://flutter.dev',
+  late final TextEditingController _urlController = TextEditingController(
+    text: widget.initialUrl ?? 'https://flutter.dev',
   );
   bool _isLoading = true;
   double _progress = 0;

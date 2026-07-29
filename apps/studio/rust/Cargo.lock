@@ -113,7 +113,7 @@ checksum = "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
 
 [[package]]
 name = "ast"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "errors",
 ]
@@ -808,7 +808,7 @@ dependencies = [
 
 [[package]]
 name = "errors"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "thiserror 2.0.18",
 ]
@@ -1541,7 +1541,7 @@ checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 
 [[package]]
 name = "lexer"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "errors",
 ]
@@ -2058,7 +2058,7 @@ dependencies = [
 
 [[package]]
 name = "parser"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "ast",
  "errors",
@@ -2529,7 +2529,7 @@ dependencies = [
 
 [[package]]
 name = "runtime"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "anyhow",
  "ast",
@@ -2954,7 +2954,7 @@ dependencies = [
 
 [[package]]
 name = "stdlib"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "chrono",
  "docx-rs",
@@ -3712,7 +3712,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vm"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "ast",
  "axum",
@@ -3838,7 +3838,7 @@ dependencies = [
 
 [[package]]
 name = "web"
-version = "4.0.0"
+version = "5.0.0"
 dependencies = [
  "anyhow",
  "ast",

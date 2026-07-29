@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import '../../shared/file_icon_helper.dart';
 
 class FileMatch {
   final String filePath;
@@ -304,11 +305,7 @@ class _SearchPanelState extends State<SearchPanel> {
                   color: Colors.white38,
                 ),
                 const SizedBox(width: 4),
-                Icon(
-                  _getFileIcon(fileMatch.fileName),
-                  size: 14,
-                  color: _getFileIconColor(fileMatch.fileName),
-                ),
+                  FileIconHelper.getFileIcon(fileMatch.fileName, size: 14),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -424,28 +421,7 @@ class _SearchPanelState extends State<SearchPanel> {
     );
   }
 
-  IconData _getFileIcon(String fileName) {
-    final ext = fileName.split('.').last.toLowerCase();
-    switch (ext) {
-      case 'rpl': return Icons.code;
-      case 'html': return Icons.public;
-      case 'css': return Icons.style;
-      case 'js': return Icons.javascript;
-      case 'json': return Icons.data_object;
-      default: return Icons.insert_drive_file;
-    }
-  }
 
-  Color _getFileIconColor(String fileName) {
-    final ext = fileName.split('.').last.toLowerCase();
-    switch (ext) {
-      case 'rpl': return const Color(0xFF519ABA);
-      case 'html': return const Color(0xFFE44D26);
-      case 'css': return const Color(0xFF42A5F5);
-      case 'js': return const Color(0xFFDCDCAA);
-      default: return const Color(0xFFCCCCCC);
-    }
-  }
 }
 
 class _SmallButton extends StatelessWidget {

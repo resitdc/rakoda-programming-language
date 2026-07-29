@@ -56,6 +56,7 @@ class SettingsScreen extends ConsumerWidget {
                 '• Membatasi maksimal 2 tab Editor terbuka\n'
                 '• Menunda pewarnaan sintaks, atau mematikannya untuk file lebih dari 800 baris\n'
                 '• Membersihkan RAM Browser ( WebView ) otomatis saat tidak aktif\n'
+                '• Membatasi log yang muncul di terminal hanya sampai 70 baris\n'
                 '• Membatasi pembacaan data Database & SQL Query maksimal 20 baris',
             value: settings.isLowEndMode,
             onChanged: (v) => ref.read(settingsProvider.notifier).toggleLowEndMode(v),
@@ -69,7 +70,7 @@ class SettingsScreen extends ConsumerWidget {
           _settingCard(
             icon: HugeIcons.strokeRoundedFloppyDisk,
             title: 'Auto Save',
-            subtitle: 'Menyimpan file secara otomatis setiap kali Anda mengetik di editor.',
+            subtitle: 'Menyimpan file secara otomatis setiap kali Anda mengetik di editor. Fitur ini mungkin akan mengakibatkan lag di beberapa HP jadul',
             value: settings.isAutoSave,
             onChanged: (v) => ref.read(settingsProvider.notifier).toggleAutoSave(v),
           ),
@@ -101,6 +102,20 @@ class SettingsScreen extends ConsumerWidget {
             onChanged: (v) {
               if (v != null) ref.read(settingsProvider.notifier).setEditorTheme(v);
             },
+          ),
+          const SizedBox(height: 24),
+
+          // ── Terminal Section ──
+          _sectionHeader(HugeIcons.strokeRoundedTerminal, 'Terminal'),
+          const SizedBox(height: 8),
+          _settingSlider(
+            icon: HugeIcons.strokeRoundedArrowExpand02,
+            title: 'Tinggi Terminal',
+            subtitle: 'Mengatur tinggi panel terminal (dalam piksel).',
+            value: settings.terminalHeight,
+            min: 150,
+            max: 500,
+            onChanged: (v) => ref.read(settingsProvider.notifier).setTerminalHeight(v),
           ),
         ],
       ),

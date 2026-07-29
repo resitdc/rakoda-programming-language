@@ -6,6 +6,7 @@ const _kAutoSaveKey = 'setting_auto_save';
 const _kWordWrapKey = 'setting_word_wrap';
 const _kEditorFontSizeKey = 'setting_editor_font_size';
 const _kEditorThemeKey = 'setting_editor_theme';
+const _kTerminalHeightKey = 'setting_terminal_height';
 
 final settingsProvider = NotifierProvider<SettingsNotifier, SettingsState>(() {
   return SettingsNotifier();
@@ -17,6 +18,7 @@ class SettingsState {
   final bool isWordWrap;
   final double editorFontSize;
   final String editorTheme;
+  final double terminalHeight;
 
   const SettingsState({
     this.isLowEndMode = false,
@@ -24,6 +26,7 @@ class SettingsState {
     this.isWordWrap = false,
     this.editorFontSize = 13.0,
     this.editorTheme = 'VS2015',
+    this.terminalHeight = 170.0,
   });
 
   SettingsState copyWith({
@@ -32,6 +35,7 @@ class SettingsState {
     bool? isWordWrap,
     double? editorFontSize,
     String? editorTheme,
+    double? terminalHeight,
   }) {
     return SettingsState(
       isLowEndMode: isLowEndMode ?? this.isLowEndMode,
@@ -39,6 +43,7 @@ class SettingsState {
       isWordWrap: isWordWrap ?? this.isWordWrap,
       editorFontSize: editorFontSize ?? this.editorFontSize,
       editorTheme: editorTheme ?? this.editorTheme,
+      terminalHeight: terminalHeight ?? this.terminalHeight,
     );
   }
 }
@@ -57,12 +62,14 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final isWordWrap = prefs.getBool(_kWordWrapKey) ?? false;
     final editorFontSize = prefs.getDouble(_kEditorFontSizeKey) ?? 13.0;
     final editorTheme = prefs.getString(_kEditorThemeKey) ?? 'VS2015';
+    final terminalHeight = prefs.getDouble(_kTerminalHeightKey) ?? 170.0;
     state = state.copyWith(
       isLowEndMode: isLowEndMode,
       isAutoSave: isAutoSave,
       isWordWrap: isWordWrap,
       editorFontSize: editorFontSize,
       editorTheme: editorTheme,
+      terminalHeight: terminalHeight,
     );
   }
 
@@ -94,5 +101,11 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kEditorThemeKey, value);
     state = state.copyWith(editorTheme: value);
+  }
+
+  Future<void> setTerminalHeight(double value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_kTerminalHeightKey, value);
+    state = state.copyWith(terminalHeight: value);
   }
 }
