@@ -170,7 +170,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           _classroomService.isBroadcastingToHost = msg.text == 'true';
           if (_classroomService.isBroadcastingToHost && _openTabs.isNotEmpty) {
             _classroomService.sendStudentLiveCode(
-              _openTabs[_activeTabIndex].content ?? '',
+              _openTabs[_activeTabIndex].content,
             );
           }
         }
@@ -1348,6 +1348,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
       initialLineNumber: _targetLineNumber,
       searchQuery: _localSearchQuery,
       onChanged: (content, selStart, selEnd) {
+        tab.content = content;
         if (_classroomService.isHost) {
           _classroomService.broadcastLiveCode(content, selectionStart: selStart, selectionEnd: selEnd);
         } else if (_classroomService.isBroadcastingToHost) {
