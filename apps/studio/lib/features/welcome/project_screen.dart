@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:file_picker/file_picker.dart';
@@ -63,6 +64,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   String? _liveHostName;
 
   late final Terminal _terminal;
+  late final TerminalController _terminalController;
   Pty? _pty;
   final FocusNode _terminalFocusNode = FocusNode();
 
@@ -77,6 +79,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     super.initState();
     registerRplLanguages();
     _terminal = Terminal();
+    _terminalController = TerminalController();
 
     if (!Platform.isIOS) {
       String shell =
@@ -669,6 +672,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = ref.watch(settingsProvider);
     final mediaQuery = MediaQuery.of(context);
     final isMobile = mediaQuery.size.width < 600;
     final isBrowser = _activeWorkspace == WorkspaceType.browser;
@@ -756,7 +760,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                                             : _buildEmptyEditor(),
                                       ),
                                       // Terminal
-                                      _buildTerminal(),
+                                      _buildTerminal(settings.terminalHeight),
                                       // Status Bar
                                       EditorStatusBar(
                                         tab: _openTabs.isNotEmpty
@@ -1564,11 +1568,11 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   }
 
   /// Terminal panel — always present, can be minimized.
-  Widget _buildTerminal() {
+  Widget _buildTerminal(double settingsHeight) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
-      height: _isTerminalMinimized ? 29 : 180,
+      height: _isTerminalMinimized ? 29 : settingsHeight,
       decoration: const BoxDecoration(
         color: Color(0xFF1E1E1E),
         border: Border(top: BorderSide(color: Color(0xFF3C3C3C))),
@@ -1602,7 +1606,33 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                     ),
                   ),
                   const Spacer(),
-                  if (!_isTerminalMinimized)
+                  if (!_isTerminalMinimized) ...[
+                    GestureDetector(
+                      onTap: () {
+                        String textToCopy = '';
+                        if (Platform.isIOS) {
+                          textToCopy = _iosTerminalLines.join('\n');
+                        } else {
+                          textToCopy = _terminal.buffer.getText();
+                        }
+                        if (textToCopy.isNotEmpty) {
+                          Clipboard.setData(ClipboardData(text: textToCopy));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Terminal output disalin ke clipboard'),
+                              backgroundColor: Color(0xFF2568E7),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                      child: const HugeIcon(
+                        icon: HugeIcons.strokeRoundedCopy01,
+                        size: 14,
+                        color: Colors.white30,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     GestureDetector(
                       onTap: () {
                         if (Platform.isIOS) {
@@ -1612,12 +1642,13 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                           _terminal.buffer.setCursor(0, 0);
                         }
                       },
-                      child: HugeIcon(
+                      child: const HugeIcon(
                         icon: HugeIcons.strokeRoundedDelete02,
                         size: 14,
                         color: Colors.white30,
                       ),
                     ),
+                  ],
                 ],
               ),
             ),
@@ -1638,7 +1669,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                         final isPrompt = line.startsWith('>_');
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 1.0),
-                          child: Text(
+                          child: SelectableText(
                             line,
                             style: TextStyle(
                               color: isPrompt ? const Color(0xFF4EC9B0) : Colors.white70,
@@ -1659,6 +1690,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                   color: Colors.black,
                   child: TerminalView(
                     _terminal,
+                    controller: _terminalController,
                     focusNode: _terminalFocusNode,
                     textStyle: const TerminalStyle(
                       fontFamily: 'monospace',

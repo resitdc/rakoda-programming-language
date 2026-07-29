@@ -102,6 +102,20 @@ class SettingsScreen extends ConsumerWidget {
               if (v != null) ref.read(settingsProvider.notifier).setEditorTheme(v);
             },
           ),
+          const SizedBox(height: 24),
+
+          // ── Terminal Section ──
+          _sectionHeader(HugeIcons.strokeRoundedTerminal, 'Terminal'),
+          const SizedBox(height: 8),
+          _settingSlider(
+            icon: HugeIcons.strokeRoundedArrowExpand02,
+            title: 'Tinggi Terminal',
+            subtitle: 'Mengatur tinggi panel terminal (dalam piksel).',
+            value: settings.terminalHeight,
+            min: 150,
+            max: 500,
+            onChanged: (v) => ref.read(settingsProvider.notifier).setTerminalHeight(v),
+          ),
         ],
       ),
     );
