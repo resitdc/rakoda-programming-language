@@ -54,8 +54,8 @@ class CodeExecutorService {
       
       // Khusus untuk Node.js di Android:
       // OS Android sering memblokir execve() langsung pada binary dinamis di folder data aplikasi (SELinux).
-      // Triknya adalah mengeksekusi sistem linker secara eksplisit dan melempar node.bin sebagai argumen pertama!
-      if (!Platform.isWindows && exePath.endsWith('node')) {
+      // Triknya adalah mengeksekusi sistem linker secara eksplisit dan melempar binary sebagai argumen pertama!
+      if (!Platform.isWindows) {
         final binFile = File('${exePath}.bin');
         if (await binFile.exists()) {
           targetExe = '/system/bin/linker64'; // Trik bypass SELinux

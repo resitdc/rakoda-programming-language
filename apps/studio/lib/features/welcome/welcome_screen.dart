@@ -248,7 +248,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
         _ActionCard(
           isLowEndMode: isLowEndMode,
           icon: Icons.memory_outlined,
-          label: 'Runtime Manager',
+          label: 'Pengelola Runtime',
           subtitle: 'Kelola bahasa & SDK',
           color: const Color(0xFFDCDCAA),
           onTap: _openRuntimeManager,

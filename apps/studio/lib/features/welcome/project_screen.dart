@@ -48,6 +48,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   int? _targetLineNumber;
 
   WorkspaceType _activeWorkspace = WorkspaceType.editor;
+  String? _browserInitialUrl;
 
   bool _showLocalSearch = false;
   String _localSearchQuery = '';
@@ -95,6 +96,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
             .transform(const Utf8Decoder(allowMalformed: true))
             .listen((data) {
               _terminal.write(data);
+              _checkForLocalhostUrl(data);
             });
 
         _terminal.onOutput = (data) {
@@ -104,6 +106,8 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
         _terminal.onResize = (w, h, pw, ph) {
           _pty?.resize(h, w);
         };
+        
+        _injectPathsToPty();
       } catch (e) {
         _terminal.write('\x1b[31mTerminal Error: $e\x1b[0m\r\n');
       }
@@ -181,6 +185,83 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
         });
       }
     });
+  }
+
+  void _injectPathsToPty() async {
+    if (_pty == null) return;
+    try {
+      final nodePaths = await CodeExecutorService.getInstalledRuntimePaths('node');
+      final phpPaths = await CodeExecutorService.getInstalledRuntimePaths('php');
+      
+      String newPath = '';
+      String nodeDir = '';
+      String phpDir = '';
+      
+      if (nodePaths.isNotEmpty) {
+        nodeDir = File(nodePaths.first).parent.path;
+        newPath += '$nodeDir:';
+      }
+      if (phpPaths.isNotEmpty) {
+        phpDir = File(phpPaths.first).parent.path;
+        newPath += '$phpDir:';
+      }
+      
+      if (newPath.isNotEmpty) {
+        if (Platform.isWindows) {
+          final shellCmd = 'set PATH=$newPath%PATH%\r\ncls\r\n';
+          _pty?.write(const Utf8Encoder().convert(shellCmd));
+        } else {
+          String shellCmd = 'export PATH="$newPath\$PATH"\r\n';
+          if (Platform.isAndroid) {
+            // Android 10+ W^X memblokir eksekusi script/binary di /data/user/0/...
+            // Jadi kita harus mendefinisikan shell function agar memanggil 'sh' secara eksplisit.
+            if (nodeDir.isNotEmpty) {
+              shellCmd += 'node() { sh "$nodeDir/node" "\$@"; }\r\n';
+              shellCmd += 'npm() { sh "$nodeDir/npm" "\$@"; }\r\n';
+              shellCmd += 'npx() { sh "$nodeDir/npx" "\$@"; }\r\n';
+              shellCmd += 'pnpm() { sh "$nodeDir/pnpm" "\$@"; }\r\n';
+              shellCmd += 'pnpx() { sh "$nodeDir/pnpx" "\$@"; }\r\n';
+            }
+            if (phpDir.isNotEmpty) {
+              shellCmd += 'php() { sh "$phpDir/php" "\$@"; }\r\n';
+              shellCmd += 'composer() { sh "$phpDir/composer" "\$@"; }\r\n';
+            }
+          }
+          shellCmd += 'clear\r\n';
+          _pty?.write(const Utf8Encoder().convert(shellCmd));
+        }
+      }
+    } catch (_) {}
+  }
+
+  void _checkForLocalhostUrl(String data) {
+    // Regex untuk mendeteksi URL localhost/127.0.0.1 dengan port
+    final regExp = RegExp(r'http:\/\/(?:localhost|127\.0\.0\.1):\d+');
+    final match = regExp.firstMatch(data);
+    if (match != null) {
+      final url = match.group(0)!;
+      
+      if (_activeWorkspace != WorkspaceType.browser) {
+        // Tampilkan notifikasi agar siswa tahu Web Server sudah menyala
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🌐 Web Server terdeteksi berjalan di $url\r\nBuka tab RPL Browser untuk melihat hasilnya!'),
+            backgroundColor: const Color(0xFF2568E7),
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'BUKA BROWSER',
+              textColor: Colors.white,
+              onPressed: () {
+                setState(() {
+                  _browserInitialUrl = url;
+                  _activeWorkspace = WorkspaceType.browser;
+                });
+              },
+            ),
+          ),
+        );
+      }
+    }
   }
 
   String _readFile(String path) {
@@ -984,7 +1065,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                   final availableRuntimes = await CodeExecutorService.getInstalledRuntimePaths(language);
                   
                   if (availableRuntimes.isEmpty) {
-                    resultString = 'Error: Runtime ${language.toUpperCase()} belum terpasang. Silakan unduh melalui Runtime Manager.\r\n';
+                    resultString = 'Error: Runtime ${language.toUpperCase()} belum terpasang. Silakan unduh melalui Pengelola Runtime.\r\n';
                   } else {
                     String selectedExe = availableRuntimes.first;
                     
