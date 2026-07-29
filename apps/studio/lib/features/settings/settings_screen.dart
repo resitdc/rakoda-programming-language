@@ -56,6 +56,7 @@ class SettingsScreen extends ConsumerWidget {
                 '• Membatasi maksimal 2 tab Editor terbuka\n'
                 '• Menunda pewarnaan sintaks, atau mematikannya untuk file lebih dari 800 baris\n'
                 '• Membersihkan RAM Browser ( WebView ) otomatis saat tidak aktif\n'
+                '• Membatasi log yang muncul di terminal hanya sampai 70 baris\n'
                 '• Membatasi pembacaan data Database & SQL Query maksimal 20 baris',
             value: settings.isLowEndMode,
             onChanged: (v) => ref.read(settingsProvider.notifier).toggleLowEndMode(v),
@@ -69,7 +70,7 @@ class SettingsScreen extends ConsumerWidget {
           _settingCard(
             icon: HugeIcons.strokeRoundedFloppyDisk,
             title: 'Auto Save',
-            subtitle: 'Menyimpan file secara otomatis setiap kali Anda mengetik di editor.',
+            subtitle: 'Menyimpan file secara otomatis setiap kali Anda mengetik di editor. Fitur ini mungkin akan mengakibatkan lag di beberapa HP jadul',
             value: settings.isAutoSave,
             onChanged: (v) => ref.read(settingsProvider.notifier).toggleAutoSave(v),
           ),

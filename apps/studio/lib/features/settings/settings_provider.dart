@@ -26,7 +26,7 @@ class SettingsState {
     this.isWordWrap = false,
     this.editorFontSize = 13.0,
     this.editorTheme = 'VS2015',
-    this.terminalHeight = 250.0,
+    this.terminalHeight = 170.0,
   });
 
   SettingsState copyWith({
@@ -62,7 +62,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final isWordWrap = prefs.getBool(_kWordWrapKey) ?? false;
     final editorFontSize = prefs.getDouble(_kEditorFontSizeKey) ?? 13.0;
     final editorTheme = prefs.getString(_kEditorThemeKey) ?? 'VS2015';
-    final terminalHeight = prefs.getDouble(_kTerminalHeightKey) ?? 250.0;
+    final terminalHeight = prefs.getDouble(_kTerminalHeightKey) ?? 170.0;
     state = state.copyWith(
       isLowEndMode: isLowEndMode,
       isAutoSave: isAutoSave,

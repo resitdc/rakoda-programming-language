@@ -78,7 +78,11 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   void initState() {
     super.initState();
     registerRplLanguages();
-    _terminal = Terminal();
+    final isLowEnd = ref.read(settingsProvider).isLowEndMode;
+    _terminal = Terminal(maxLines: isLowEnd ? 70 : 1000);
+    if (isLowEnd) {
+      _terminal.setCursorBlinkMode(false);
+    }
     _terminalController = TerminalController();
 
     if (!Platform.isIOS) {
