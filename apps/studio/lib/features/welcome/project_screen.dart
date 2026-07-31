@@ -341,6 +341,12 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     });
   }
 
+  void _closeActiveTab() {
+    if (_activeTabIndex >= 0 && _activeTabIndex < _openTabs.length) {
+      _closeTab(_activeTabIndex);
+    }
+  }
+
   void _closeTab(int index) async {
     final tab = _openTabs[index];
     if (tab.isModified) {
@@ -402,6 +408,46 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     }
 
     if (!mounted) return;
+
+    if (_openTabs.length == 1) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFF252526),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          title: const Text(
+            'Konfirmasi Keluar',
+            style: TextStyle(color: Colors.white, fontSize: 14),
+          ),
+          content: const Text(
+            'Apakah kamu yakin akan keluar?\n\nJika kamu terhubung di Room, kamu akan otomatis terputus.',
+            style: TextStyle(color: Colors.white60, fontSize: 13),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              style: TextButton.styleFrom(foregroundColor: Colors.white54),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFE53935), // Warna merah untuk aksi destruktif
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Keluar'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) {
+        return;
+      }
+      
+      // Keluar dari sesi room juga jika ada
+      _classroomService.disconnect();
+    }
 
     setState(() {
       final currentTab =
@@ -720,6 +766,8 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
         const SingleActivator(LogicalKeyboardKey.minus, meta: true): _handleTerminalZoomOut,
         const SingleActivator(LogicalKeyboardKey.numpadSubtract, control: true): _handleTerminalZoomOut,
         const SingleActivator(LogicalKeyboardKey.numpadSubtract, meta: true): _handleTerminalZoomOut,
+        const SingleActivator(LogicalKeyboardKey.keyW, control: true): _closeActiveTab,
+        const SingleActivator(LogicalKeyboardKey.keyW, meta: true): _closeActiveTab,
       },
       child: Scaffold(
         backgroundColor: const Color(0xFF1E1E1E),
