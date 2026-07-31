@@ -5,6 +5,7 @@ const _kLowEndModeKey = 'setting_low_end_mode';
 const _kAutoSaveKey = 'setting_auto_save';
 const _kWordWrapKey = 'setting_word_wrap';
 const _kEditorFontSizeKey = 'setting_editor_font_size';
+const _kTerminalFontSizeKey = 'setting_terminal_font_size';
 const _kEditorThemeKey = 'setting_editor_theme';
 const _kTerminalHeightKey = 'setting_terminal_height';
 
@@ -17,6 +18,7 @@ class SettingsState {
   final bool isAutoSave;
   final bool isWordWrap;
   final double editorFontSize;
+  final double terminalFontSize;
   final String editorTheme;
   final double terminalHeight;
 
@@ -25,6 +27,7 @@ class SettingsState {
     this.isAutoSave = false,
     this.isWordWrap = false,
     this.editorFontSize = 13.0,
+    this.terminalFontSize = 12.0,
     this.editorTheme = 'VS2015',
     this.terminalHeight = 170.0,
   });
@@ -34,6 +37,7 @@ class SettingsState {
     bool? isAutoSave,
     bool? isWordWrap,
     double? editorFontSize,
+    double? terminalFontSize,
     String? editorTheme,
     double? terminalHeight,
   }) {
@@ -42,6 +46,7 @@ class SettingsState {
       isAutoSave: isAutoSave ?? this.isAutoSave,
       isWordWrap: isWordWrap ?? this.isWordWrap,
       editorFontSize: editorFontSize ?? this.editorFontSize,
+      terminalFontSize: terminalFontSize ?? this.terminalFontSize,
       editorTheme: editorTheme ?? this.editorTheme,
       terminalHeight: terminalHeight ?? this.terminalHeight,
     );
@@ -61,6 +66,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final isAutoSave = prefs.getBool(_kAutoSaveKey) ?? false;
     final isWordWrap = prefs.getBool(_kWordWrapKey) ?? false;
     final editorFontSize = prefs.getDouble(_kEditorFontSizeKey) ?? 13.0;
+    final terminalFontSize = prefs.getDouble(_kTerminalFontSizeKey) ?? 12.0;
     final editorTheme = prefs.getString(_kEditorThemeKey) ?? 'VS2015';
     final terminalHeight = prefs.getDouble(_kTerminalHeightKey) ?? 170.0;
     state = state.copyWith(
@@ -68,6 +74,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
       isAutoSave: isAutoSave,
       isWordWrap: isWordWrap,
       editorFontSize: editorFontSize,
+      terminalFontSize: terminalFontSize,
       editorTheme: editorTheme,
       terminalHeight: terminalHeight,
     );
@@ -95,6 +102,12 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(_kEditorFontSizeKey, value);
     state = state.copyWith(editorFontSize: value);
+  }
+
+  Future<void> setTerminalFontSize(double value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_kTerminalFontSizeKey, value);
+    state = state.copyWith(terminalFontSize: value);
   }
 
   Future<void> setEditorTheme(String value) async {

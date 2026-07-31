@@ -698,10 +698,28 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
       }
     }
 
+    void _handleTerminalZoomIn() {
+      final fontSize = settings.terminalFontSize;
+      ref.read(settingsProvider.notifier).setTerminalFontSize((fontSize + 1).clamp(8.0, 48.0));
+    }
+
+    void _handleTerminalZoomOut() {
+      final fontSize = settings.terminalFontSize;
+      ref.read(settingsProvider.notifier).setTerminalFontSize((fontSize - 1).clamp(8.0, 48.0));
+    }
+
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
         const SingleActivator(LogicalKeyboardKey.keyJ, control: true): _toggleTerminal,
         const SingleActivator(LogicalKeyboardKey.keyJ, meta: true): _toggleTerminal,
+        const SingleActivator(LogicalKeyboardKey.equal, control: true): _handleTerminalZoomIn,
+        const SingleActivator(LogicalKeyboardKey.equal, meta: true): _handleTerminalZoomIn,
+        const SingleActivator(LogicalKeyboardKey.numpadAdd, control: true): _handleTerminalZoomIn,
+        const SingleActivator(LogicalKeyboardKey.numpadAdd, meta: true): _handleTerminalZoomIn,
+        const SingleActivator(LogicalKeyboardKey.minus, control: true): _handleTerminalZoomOut,
+        const SingleActivator(LogicalKeyboardKey.minus, meta: true): _handleTerminalZoomOut,
+        const SingleActivator(LogicalKeyboardKey.numpadSubtract, control: true): _handleTerminalZoomOut,
+        const SingleActivator(LogicalKeyboardKey.numpadSubtract, meta: true): _handleTerminalZoomOut,
       },
       child: Scaffold(
         backgroundColor: const Color(0xFF1E1E1E),
@@ -780,7 +798,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                                               : _buildEmptyEditor(),
                                         ),
                                         // Terminal
-                                        _buildTerminal(settings.terminalHeight),
+                                        _buildTerminal(settings),
                                         // Status Bar
                                         EditorStatusBar(
                                           tab: _openTabs.isNotEmpty
@@ -1590,11 +1608,11 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   }
 
   /// Terminal panel — always present, can be minimized.
-  Widget _buildTerminal(double settingsHeight) {
+  Widget _buildTerminal(SettingsState settings) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
-      height: _isTerminalMinimized ? 29 : settingsHeight,
+      height: _isTerminalMinimized ? 29 : settings.terminalHeight,
       decoration: const BoxDecoration(
         color: Color(0xFF1E1E1E),
         border: Border(top: BorderSide(color: Color(0xFF3C3C3C))),
@@ -1696,7 +1714,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                             style: TextStyle(
                               color: isPrompt ? const Color(0xFF4EC9B0) : Colors.white70,
                               fontFamily: 'monospace',
-                              fontSize: 12,
+                              fontSize: settings.terminalFontSize,
                               fontWeight: isPrompt ? FontWeight.w600 : FontWeight.normal,
                             ),
                           ),
@@ -1714,9 +1732,9 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                     _terminal,
                     controller: _terminalController,
                     focusNode: _terminalFocusNode,
-                    textStyle: const TerminalStyle(
+                    textStyle: TerminalStyle(
                       fontFamily: 'monospace',
-                      fontSize: 13,
+                      fontSize: settings.terminalFontSize,
                     ),
                   ),
                 ),
