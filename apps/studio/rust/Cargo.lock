@@ -114,6 +114,7 @@ checksum = "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
 [[package]]
 name = "ast"
 version = "5.0.0"
+source = "git+https://github.com/resitdc/indonesia-programming-language?tag=v5.0.0#c4e37dab7a5de0d031c01e274c874393502071b6"
 dependencies = [
  "errors",
 ]
@@ -809,6 +810,7 @@ dependencies = [
 [[package]]
 name = "errors"
 version = "5.0.0"
+source = "git+https://github.com/resitdc/indonesia-programming-language?tag=v5.0.0#c4e37dab7a5de0d031c01e274c874393502071b6"
 dependencies = [
  "thiserror 2.0.18",
 ]
@@ -1542,6 +1544,7 @@ checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 [[package]]
 name = "lexer"
 version = "5.0.0"
+source = "git+https://github.com/resitdc/indonesia-programming-language?tag=v5.0.0#c4e37dab7a5de0d031c01e274c874393502071b6"
 dependencies = [
  "errors",
 ]
@@ -2059,6 +2062,7 @@ dependencies = [
 [[package]]
 name = "parser"
 version = "5.0.0"
+source = "git+https://github.com/resitdc/indonesia-programming-language?tag=v5.0.0#c4e37dab7a5de0d031c01e274c874393502071b6"
 dependencies = [
  "ast",
  "errors",
@@ -2530,6 +2534,7 @@ dependencies = [
 [[package]]
 name = "runtime"
 version = "5.0.0"
+source = "git+https://github.com/resitdc/indonesia-programming-language?tag=v5.0.0#c4e37dab7a5de0d031c01e274c874393502071b6"
 dependencies = [
  "anyhow",
  "ast",
@@ -2955,6 +2960,7 @@ dependencies = [
 [[package]]
 name = "stdlib"
 version = "5.0.0"
+source = "git+https://github.com/resitdc/indonesia-programming-language?tag=v5.0.0#c4e37dab7a5de0d031c01e274c874393502071b6"
 dependencies = [
  "chrono",
  "docx-rs",
@@ -3547,6 +3553,7 @@ checksum = "9ea3136b675547379c4bd395ca6b938e5ad3c3d20fad76e7fe85f9e0d011419c"
 [[package]]
 name = "typechecker"
 version = "0.1.0"
+source = "git+https://github.com/resitdc/indonesia-programming-language?tag=v5.0.0#c4e37dab7a5de0d031c01e274c874393502071b6"
 dependencies = [
  "ast",
  "errors",
@@ -3713,6 +3720,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "vm"
 version = "5.0.0"
+source = "git+https://github.com/resitdc/indonesia-programming-language?tag=v5.0.0#c4e37dab7a5de0d031c01e274c874393502071b6"
 dependencies = [
  "ast",
  "axum",
@@ -3839,6 +3847,7 @@ dependencies = [
 [[package]]
 name = "web"
 version = "5.0.0"
+source = "git+https://github.com/resitdc/indonesia-programming-language?tag=v5.0.0#c4e37dab7a5de0d031c01e274c874393502071b6"
 dependencies = [
  "anyhow",
  "ast",
