@@ -687,246 +687,263 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     // Determine if any input is focused so we can show the toolbar
     final showToolbar = isMobile && isKeyboardOpen;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF1E1E1E),
-      bottomNavigationBar: showToolbar ? _buildKeyboardToolbar() : null,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ═══ Title Bar / Navbar ═══
-            _buildTitleBar(),
-            // ═══ Main Content ═══
-            Expanded(
-              child: Row(
-                children: [
-                  // Activity Bar
-                  ActivityBar(
-                    activeActivity: _activeActivity,
-                    onActivitySelected: (type) {
-                      setState(() {
-                        if (_activeActivity == type) {
-                          _activeActivity = null;
-                        } else {
-                          _activeActivity = type;
-                          if (type == ActivityType.browser) {
-                            _activeWorkspace = WorkspaceType.browser;
-                          } else if (type == ActivityType.database) {
-                            _activeWorkspace = WorkspaceType.database;
-                          } else if (type == ActivityType.http) {
-                            _activeWorkspace = WorkspaceType.http;
+    void _toggleTerminal() {
+      setState(() {
+        _isTerminalMinimized = !_isTerminalMinimized;
+      });
+      if (!_isTerminalMinimized) {
+        if (!isMobile) {
+          _terminalFocusNode.requestFocus();
+        }
+      }
+    }
+
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.keyJ, control: true): _toggleTerminal,
+        const SingleActivator(LogicalKeyboardKey.keyJ, meta: true): _toggleTerminal,
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF1E1E1E),
+        bottomNavigationBar: showToolbar ? _buildKeyboardToolbar() : null,
+        body: SafeArea(
+          child: Column(
+            children: [
+              // ═══ Title Bar / Navbar ═══
+              _buildTitleBar(),
+              // ═══ Main Content ═══
+              Expanded(
+                child: Row(
+                  children: [
+                    // Activity Bar
+                    ActivityBar(
+                      activeActivity: _activeActivity,
+                      onActivitySelected: (type) {
+                        setState(() {
+                          if (_activeActivity == type) {
+                            _activeActivity = null;
                           } else {
-                            _activeWorkspace = WorkspaceType.editor;
+                            _activeActivity = type;
+                            if (type == ActivityType.browser) {
+                              _activeWorkspace = WorkspaceType.browser;
+                            } else if (type == ActivityType.database) {
+                              _activeWorkspace = WorkspaceType.database;
+                            } else if (type == ActivityType.http) {
+                              _activeWorkspace = WorkspaceType.http;
+                            } else {
+                              _activeWorkspace = WorkspaceType.editor;
+                            }
                           }
-                        }
-                      });
-                    },
-                  ),
-                  Expanded(
-                    child: IndexedStack(
-                      index: isBrowser
-                          ? 1
-                          : (isDatabase ? 2 : (isHttp ? 3 : 0)),
-                      children: [
-                        // Index 0: Editor & Terminal
-                        Row(
-                          children: [
-                            // Side Panel (only in layout hierarchy on Desktop)
-                            if (!isMobile) _buildSidePanel(),
-                            // Editor + Terminal
-                            Expanded(
-                              child: Flex(
-                                direction: isMobile ? Axis.vertical : Axis.horizontal,
-                                children: [
-                                  Expanded(
-                                    flex: 1,
-                                    child: Stack(
-                                      children: [
-                                        Column(
-                                          children: [
-                                      // Tab Bar
-                                      EditorTabBar(
-                                        tabs: _openTabs,
-                                        activeIndex: _activeTabIndex,
-                                        onTap: (i) {
-                                          setState(() => _activeTabIndex = i);
-                                          if (_classroomService.isHost && _openTabs.isNotEmpty) {
-                                            _classroomService.broadcastLiveCode(_openTabs[i].content ?? '');
-                                          }
-                                        },
-                                        onClose: _closeTab,
-                                      ),
-                                      // Code Editor
-                                      Expanded(
-                                        child: _openTabs.isNotEmpty
-                                            ? _buildEditorOrViewer(
-                                                _openTabs[_activeTabIndex],
-                                              )
-                                            : _buildEmptyEditor(),
-                                      ),
-                                      // Terminal
-                                      _buildTerminal(settings.terminalHeight),
-                                      // Status Bar
-                                      EditorStatusBar(
-                                        tab: _openTabs.isNotEmpty
-                                            ? _openTabs[_activeTabIndex]
-                                            : null,
-                                      ),
-                                    ],
-                                  ),
-                                  // Overlay Backdrop Scrim (on Mobile)
-                                  if (isMobile && _activeActivity != null)
-                                    Positioned.fill(
-                                      child: GestureDetector(
-                                        onTap: () => setState(
-                                          () => _activeActivity = null,
-                                        ),
-                                        behavior: HitTestBehavior.opaque,
-                                        child: Container(color: Colors.black45),
-                                      ),
-                                    ),
-                                  // Overlay Side Panel (on Mobile)
-                                  if (isMobile && _activeActivity != null)
-                                    Positioned(
-                                      left: 0,
-                                      top: 0,
-                                      bottom: 0,
-                                      width: 241, // 240 panel + 1 divider
-                                      child: Material(
-                                        elevation: 16,
-                                        color: Colors.transparent,
-                                        child: _buildSidePanel(),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                            // Live Code Viewer Split
-                            if (_isLiveCodeVisible && _classroomService.status == ClassroomStatus.connected)
-                              _isLiveCodeMinimized
-                                ? _buildMinimizedLiveCode(isMobile)
-                                : Expanded(
-                                    flex: 1,
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        border: Border(
-                                          left: isMobile ? BorderSide.none : const BorderSide(color: Color(0xFF3C3C3C)),
-                                          top: isMobile ? const BorderSide(color: Color(0xFF3C3C3C)) : BorderSide.none,
-                                        ),
-                                      ),
-                                      child: Column(
-                                      children: [
-                                        Container(
-                                          height: 35,
-                                          color: const Color(0xFF2D2D2D),
-                                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                                          child: Row(
+                        });
+                      },
+                    ),
+                    Expanded(
+                      child: IndexedStack(
+                        index: isBrowser
+                            ? 1
+                            : (isDatabase ? 2 : (isHttp ? 3 : 0)),
+                        children: [
+                          // Index 0: Editor & Terminal
+                          Row(
+                            children: [
+                              // Side Panel (only in layout hierarchy on Desktop)
+                              if (!isMobile) _buildSidePanel(),
+                              // Editor + Terminal
+                              Expanded(
+                                child: Flex(
+                                  direction: isMobile ? Axis.vertical : Axis.horizontal,
+                                  children: [
+                                    Expanded(
+                                      flex: 1,
+                                      child: Stack(
+                                        children: [
+                                          Column(
                                             children: [
-                                              HugeIcon(icon: HugeIcons.strokeRoundedLaptopProgramming, size: 16, color: Colors.blueAccent),
-                                              const SizedBox(width: 8),
-                                              const Text(
-                                                "Live Code Guru",
-                                                style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                                              ),
-                                              const Spacer(),
-                                              IconButton(
-                                                icon: Icon(isMobile ? Icons.expand_more : Icons.chevron_right, size: 16, color: Colors.white54),
-                                                onPressed: () => setState(() => _isLiveCodeMinimized = true),
-                                              )
-                                            ],
+                                        // Tab Bar
+                                        EditorTabBar(
+                                          tabs: _openTabs,
+                                          activeIndex: _activeTabIndex,
+                                          onTap: (i) {
+                                            setState(() => _activeTabIndex = i);
+                                            if (_classroomService.isHost && _openTabs.isNotEmpty) {
+                                              _classroomService.broadcastLiveCode(_openTabs[i].content ?? '');
+                                            }
+                                          },
+                                          onClose: _closeTab,
+                                        ),
+                                        // Code Editor
+                                        Expanded(
+                                          child: _openTabs.isNotEmpty
+                                              ? _buildEditorOrViewer(
+                                                  _openTabs[_activeTabIndex],
+                                                )
+                                              : _buildEmptyEditor(),
+                                        ),
+                                        // Terminal
+                                        _buildTerminal(settings.terminalHeight),
+                                        // Status Bar
+                                        EditorStatusBar(
+                                          tab: _openTabs.isNotEmpty
+                                              ? _openTabs[_activeTabIndex]
+                                              : null,
+                                        ),
+                                      ],
+                                    ),
+                                    // Overlay Backdrop Scrim (on Mobile)
+                                    if (isMobile && _activeActivity != null)
+                                      Positioned.fill(
+                                        child: GestureDetector(
+                                          onTap: () => setState(
+                                            () => _activeActivity = null,
+                                          ),
+                                          behavior: HitTestBehavior.opaque,
+                                          child: Container(color: Colors.black45),
+                                        ),
+                                      ),
+                                    // Overlay Side Panel (on Mobile)
+                                    if (isMobile && _activeActivity != null)
+                                      Positioned(
+                                        left: 0,
+                                        top: 0,
+                                        bottom: 0,
+                                        width: 241, // 240 panel + 1 divider
+                                        child: Material(
+                                          elevation: 16,
+                                          color: Colors.transparent,
+                                          child: _buildSidePanel(),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              // Live Code Viewer Split
+                              if (_isLiveCodeVisible && _classroomService.status == ClassroomStatus.connected)
+                                _isLiveCodeMinimized
+                                  ? _buildMinimizedLiveCode(isMobile)
+                                  : Expanded(
+                                      flex: 1,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          border: Border(
+                                            left: isMobile ? BorderSide.none : const BorderSide(color: Color(0xFF3C3C3C)),
+                                            top: isMobile ? const BorderSide(color: Color(0xFF3C3C3C)) : BorderSide.none,
                                           ),
                                         ),
-                                      Expanded(
-                                        child: Container(
-                                          color: const Color(0xFF1E1E1E),
-                                          width: double.infinity,
-                                          padding: const EdgeInsets.all(8),
-                                          child: SingleChildScrollView(
+                                        child: Column(
+                                        children: [
+                                          Container(
+                                            height: 35,
+                                            color: const Color(0xFF2D2D2D),
+                                            padding: const EdgeInsets.symmetric(horizontal: 12),
                                             child: Row(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                Container(
-                                                  padding: const EdgeInsets.only(top: 4, right: 8),
-                                                  width: 40,
-                                                  child: Text(
-                                                    List.generate(
-                                                      _liveCodeContent.split('\n').length,
-                                                      (i) => '${i + 1}'
-                                                    ).join('\n'),
-                                                    textAlign: TextAlign.right,
-                                                    style: const TextStyle(
-                                                      color: Color(0xFF858585),
-                                                      fontFamily: 'monospace',
-                                                      fontSize: 13,
-                                                      height: 1.5,
-                                                    ),
-                                                  ),
+                                                HugeIcon(icon: HugeIcons.strokeRoundedLaptopProgramming, size: 16, color: Colors.blueAccent),
+                                                const SizedBox(width: 8),
+                                                const Text(
+                                                  "Live Code Guru",
+                                                  style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                                                 ),
-                                                Expanded(
-                                                  child: Stack(
-                                                    children: [
-                                                      HighlightView(
-                                                        _liveCodeContent,
-                                                        language: 'rpl',
-                                                        theme: vs2015Theme,
-                                                        padding: const EdgeInsets.all(4),
-                                                        textStyle: const TextStyle(
-                                                          fontFamily: 'monospace',
-                                                          fontSize: 13,
-                                                          height: 1.5,
-                                                        ),
-                                                      ),
-                                                      if (_liveSelectionStart != null)
-                                                        Positioned.fill(
-                                                          child: CustomPaint(
-                                                            painter: _LiveCursorPainter(
-                                                              text: _liveCodeContent,
-                                                              selectionStart: _liveSelectionStart!,
-                                                              selectionEnd: _liveSelectionEnd ?? _liveSelectionStart!,
-                                                              hostName: _liveHostName ?? 'Guru',
-                                                              textStyle: const TextStyle(
-                                                                fontFamily: 'monospace',
-                                                                fontSize: 13,
-                                                                height: 1.5,
-                                                                color: Colors.transparent,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                    ],
-                                                  ),
-                                                ),
+                                                const Spacer(),
+                                                IconButton(
+                                                  icon: Icon(isMobile ? Icons.expand_more : Icons.chevron_right, size: 16, color: Colors.white54),
+                                                  onPressed: () => setState(() => _isLiveCodeMinimized = true),
+                                                )
                                               ],
                                             ),
                                           ),
+                                        Expanded(
+                                          child: Container(
+                                            color: const Color(0xFF1E1E1E),
+                                            width: double.infinity,
+                                            padding: const EdgeInsets.all(8),
+                                            child: SingleChildScrollView(
+                                              child: Row(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Container(
+                                                    padding: const EdgeInsets.only(top: 4, right: 8),
+                                                    width: 40,
+                                                    child: Text(
+                                                      List.generate(
+                                                        _liveCodeContent.split('\n').length,
+                                                        (i) => '${i + 1}'
+                                                      ).join('\n'),
+                                                      textAlign: TextAlign.right,
+                                                      style: const TextStyle(
+                                                        color: Color(0xFF858585),
+                                                        fontFamily: 'monospace',
+                                                        fontSize: 13,
+                                                        height: 1.5,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Expanded(
+                                                    child: Stack(
+                                                      children: [
+                                                        HighlightView(
+                                                          _liveCodeContent,
+                                                          language: 'rpl',
+                                                          theme: vs2015Theme,
+                                                          padding: const EdgeInsets.all(4),
+                                                          textStyle: const TextStyle(
+                                                            fontFamily: 'monospace',
+                                                            fontSize: 13,
+                                                            height: 1.5,
+                                                          ),
+                                                        ),
+                                                        if (_liveSelectionStart != null)
+                                                          Positioned.fill(
+                                                            child: CustomPaint(
+                                                              painter: _LiveCursorPainter(
+                                                                text: _liveCodeContent,
+                                                                selectionStart: _liveSelectionStart!,
+                                                                selectionEnd: _liveSelectionEnd ?? _liveSelectionStart!,
+                                                                hostName: _liveHostName ?? 'Guru',
+                                                                textStyle: const TextStyle(
+                                                                  fontFamily: 'monospace',
+                                                                  fontSize: 13,
+                                                                  height: 1.5,
+                                                                  color: Colors.transparent,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                        // Index 1: Browser Workspace
-                        ref.watch(settingsProvider).isLowEndMode &&
-                                _activeActivity != ActivityType.browser
-                            ? const SizedBox() // Bebaskan memori webview saat tidak aktif
-                            : const BrowserWorkspace(),
-                        // Index 2: Database Workspace
-                        DatabaseWorkspace(projectPath: widget.project.path),
-                        // Index 3: HTTP Workspace
-                        const HttpWorkspace(),
                       ],
                     ),
-                  ),
-                ],
+                          // Index 1: Browser Workspace
+                          ref.watch(settingsProvider).isLowEndMode &&
+                                  _activeActivity != ActivityType.browser
+                              ? const SizedBox() // Bebaskan memori webview saat tidak aktif
+                              : const BrowserWorkspace(),
+                          // Index 2: Database Workspace
+                          DatabaseWorkspace(projectPath: widget.project.path),
+                          // Index 3: HTTP Workspace
+                          const HttpWorkspace(),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+      )
     );
   }
 
