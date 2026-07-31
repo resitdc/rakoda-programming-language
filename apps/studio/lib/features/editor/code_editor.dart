@@ -260,6 +260,34 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
     );
   }
 
+  void _deleteLine() {
+    if (!_focusNode.hasFocus) return;
+    final selection = _controller.selection;
+    if (!selection.isValid) return;
+
+    final text = _controller.text;
+    int lineStart = text.lastIndexOf('\n', selection.start - 1) + 1;
+    int lineEnd = text.indexOf('\n', selection.end);
+    if (lineEnd == -1) lineEnd = text.length;
+
+    // We also want to delete the trailing newline if it exists, or the leading newline if it's the last line.
+    int removeEnd = lineEnd;
+    if (removeEnd < text.length && text[removeEnd] == '\n') {
+      removeEnd += 1;
+    } else if (lineStart > 0 && text[lineStart - 1] == '\n') {
+      lineStart -= 1;
+    }
+
+    final newText = text.replaceRange(lineStart, removeEnd, '');
+    
+    _controller.value = _controller.value.copyWith(
+      text: newText,
+      selection: TextSelection.collapsed(
+        offset: lineStart.clamp(0, newText.length),
+      ),
+    );
+  }
+
   void _indentSelection() {
     if (!_focusNode.hasFocus) return;
     final selection = _controller.selection;
@@ -398,6 +426,8 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
         const SingleActivator(LogicalKeyboardKey.arrowDown, alt: true): () => _moveLine(1),
         const SingleActivator(LogicalKeyboardKey.arrowUp, alt: true, shift: true): () => _duplicateLine(-1),
         const SingleActivator(LogicalKeyboardKey.arrowDown, alt: true, shift: true): () => _duplicateLine(1),
+        const SingleActivator(LogicalKeyboardKey.keyK, control: true, shift: true): _deleteLine,
+        const SingleActivator(LogicalKeyboardKey.keyK, meta: true, shift: true): _deleteLine,
       },
       child: Focus(
         autofocus: true,
