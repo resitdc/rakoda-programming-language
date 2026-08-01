@@ -198,6 +198,16 @@ class ClassroomService {
   // --- Utility Room Code ---
   Future<String?> _getLocalIp() async {
     final interfaces = await NetworkInterface.list();
+    
+    // Sort interfaces to prioritize standard Wi-Fi / Ethernet and deprioritize VirtualBox/VMware/WSL
+    interfaces.sort((a, b) {
+      final nameA = a.name.toLowerCase();
+      final nameB = b.name.toLowerCase();
+      int scoreA = _getInterfaceScore(nameA);
+      int scoreB = _getInterfaceScore(nameB);
+      return scoreA.compareTo(scoreB);
+    });
+
     for (var interface in interfaces) {
       for (var addr in interface.addresses) {
         if (addr.type == InternetAddressType.IPv4 && !addr.isLoopback) {
@@ -208,6 +218,21 @@ class ClassroomService {
     return null;
   }
 
+  int _getInterfaceScore(String name) {
+    if (name.contains('virtual') || name.contains('vmware') || name.contains('vbox') || name.contains('wsl') || name.contains('ethernet adapter vethernet')) {
+      return 100; // lower priority
+    }
+    if (name.contains('wi-fi') || name.contains('wifi') || name.contains('wlan') || name.contains('en0')) {
+      return 0; // highest priority
+    }
+    if (name.contains('eth') || name.contains('ethernet') || name.contains('en')) {
+      return 1; // high priority
+    }
+    return 50; // default
+  }
+
+  static const String _base32Chars = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+
   String _encodeRoomCode(String ip, int port) {
     final parts = ip.split('.');
     final b = BytesBuilder();
@@ -217,24 +242,46 @@ class ClassroomService {
     b.addByte(port >> 8);
     b.addByte(port & 0xFF);
     
-    // Konversi ke hex lalu ke BigInt untuk base36 (case-insensitive)
     final hexString = b.toBytes().map((e) => e.toRadixString(16).padLeft(2, '0')).join();
-    final bigInt = BigInt.parse(hexString, radix: 16);
-    final base36 = bigInt.toRadixString(36).toUpperCase();
+    var bigInt = BigInt.parse(hexString, radix: 16);
+    
+    if (bigInt == BigInt.zero) return "0";
+    String result = "";
+    final base = BigInt.from(32);
+    while (bigInt > BigInt.zero) {
+      final rem = (bigInt % base).toInt();
+      result = _base32Chars[rem] + result;
+      bigInt = bigInt ~/ base;
+    }
     
     // Format dengan hyphen di tengah agar mudah dibaca, misal: ABCD-EFGH
-    if (base36.length > 5) {
-      final mid = base36.length ~/ 2;
-      return '${base36.substring(0, mid)}-${base36.substring(mid)}';
+    if (result.length > 5) {
+      final mid = result.length ~/ 2;
+      return '${result.substring(0, mid)}-${result.substring(mid)}';
     }
-    return base36;
+    return result;
   }
 
   List<dynamic>? _decodeRoomCode(String code) {
     try {
-      // Hilangkan spasi, hyphen, dan buat menjadi huruf besar/kecil (base36 case-insensitive)
-      final cleanCode = code.replaceAll('-', '').replaceAll(' ', '').trim();
-      final bigInt = BigInt.parse(cleanCode, radix: 36);
+      final cleanCode = code.replaceAll('-', '').replaceAll(' ', '').toUpperCase().trim();
+      
+      // Auto-correct common typos from students (O->0, I/L->1, U->V)
+      final correctedCode = cleanCode
+          .replaceAll('O', '0')
+          .replaceAll('I', '1')
+          .replaceAll('L', '1')
+          .replaceAll('U', 'V');
+
+      BigInt bigInt = BigInt.zero;
+      final base = BigInt.from(32);
+      for (int i = 0; i < correctedCode.length; i++) {
+        final char = correctedCode[i];
+        final val = _base32Chars.indexOf(char);
+        if (val == -1) return null; // Invalid character
+        bigInt = bigInt * base + BigInt.from(val);
+      }
+      
       final hexString = bigInt.toRadixString(16).padLeft(12, '0');
       
       if (hexString.length != 12) return null;

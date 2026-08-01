@@ -1,5 +1,11 @@
+// ignore_for_file: implementation_imports
+import 'package:flutter_code_editor/src/single_line_comments/parser/single_line_comments.dart';
 import 'package:highlight/highlight.dart';
 import 'package:highlight/languages/xml.dart';
+import 'package:highlight/languages/rust.dart';
+import 'package:highlight/languages/json.dart';
+import 'package:highlight/languages/css.dart';
+import 'package:highlight/languages/cpp.dart';
 
 // Custom syntax highlighting mode for RPL language
 final rpl = Mode(
@@ -70,4 +76,14 @@ final rplHtml = Mode(
 void registerRplLanguages() {
   highlight.registerLanguage('rpl', rpl);
   highlight.registerLanguage('rpl-html', rplHtml);
+
+  // Menyuntikkan konfigurasi komentar baris tunggal secara langsung 
+  // ke dalam mesin flutter_code_editor agar jalan secara natif
+  SingleLineComments.byMode[rpl] = ['//'];
+  SingleLineComments.byMode[rplHtml] = ['//'];
+  SingleLineComments.byMode[rust] = ['//'];
+  SingleLineComments.byMode[json] = ['//'];
+  SingleLineComments.byMode[css] = ['//'];
+  SingleLineComments.byMode[cpp] = ['//'];
+  SingleLineComments.byMode[xml] = ['<!--'];
 }

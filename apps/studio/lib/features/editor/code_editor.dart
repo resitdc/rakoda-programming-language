@@ -193,6 +193,165 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
     }
   }
 
+  void _handleZoomIn() {
+    final fontSize = ref.read(settingsProvider).editorFontSize;
+    ref.read(settingsProvider.notifier).setEditorFontSize((fontSize + 1).clamp(8.0, 48.0));
+  }
+
+  void _handleZoomOut() {
+    final fontSize = ref.read(settingsProvider).editorFontSize;
+    ref.read(settingsProvider.notifier).setEditorFontSize((fontSize - 1).clamp(8.0, 48.0));
+  }
+
+  int _getOffsetForLine(List<String> lines, int lineIndex) {
+    int offset = 0;
+    for (int i = 0; i < lineIndex && i < lines.length; i++) {
+      offset += lines[i].length + 1;
+    }
+    return offset;
+  }
+
+  void _moveLine(int dir) {
+    if (!_focusNode.hasFocus) return;
+    final selection = _controller.selection;
+    if (!selection.isValid) return;
+
+    final text = _controller.text;
+    final lines = text.split('\n');
+    int startLine = '\n'.allMatches(text.substring(0, selection.start)).length;
+    int endLine = '\n'.allMatches(text.substring(0, selection.end)).length;
+
+    if (dir == -1 && startLine > 0) {
+      final lineAbove = lines.removeAt(startLine - 1);
+      lines.insert(endLine, lineAbove);
+    } else if (dir == 1 && endLine < lines.length - 1) {
+      final lineBelow = lines.removeAt(endLine + 1);
+      lines.insert(startLine, lineBelow);
+    } else {
+      return;
+    }
+
+    final newText = lines.join('\n');
+    int newStart = _getOffsetForLine(lines, startLine + dir) + (selection.start - _getOffsetForLine(text.split('\n'), startLine));
+    int newEnd = _getOffsetForLine(lines, endLine + dir) + (selection.end - _getOffsetForLine(text.split('\n'), endLine));
+
+    _controller.value = _controller.value.copyWith(
+      text: newText,
+      selection: TextSelection(baseOffset: newStart, extentOffset: newEnd),
+    );
+  }
+
+  void _duplicateLine(int dir) {
+    if (!_focusNode.hasFocus) return;
+    final selection = _controller.selection;
+    if (!selection.isValid) return;
+
+    final text = _controller.text;
+    int lineStart = text.lastIndexOf('\n', selection.start - 1) + 1;
+    int lineEnd = text.indexOf('\n', selection.end);
+    if (lineEnd == -1) lineEnd = text.length;
+
+    final selectedLinesText = text.substring(lineStart, lineEnd);
+    final newText = text.replaceRange(lineEnd, lineEnd, '\n' + selectedLinesText);
+    
+    _controller.value = _controller.value.copyWith(
+      text: newText,
+      selection: dir == 1 ? TextSelection(baseOffset: selection.start + selectedLinesText.length + 1, extentOffset: selection.end + selectedLinesText.length + 1) : selection,
+    );
+  }
+
+  void _deleteLine() {
+    if (!_focusNode.hasFocus) return;
+    final selection = _controller.selection;
+    if (!selection.isValid) return;
+
+    final text = _controller.text;
+    int lineStart = text.lastIndexOf('\n', selection.start - 1) + 1;
+    int lineEnd = text.indexOf('\n', selection.end);
+    if (lineEnd == -1) lineEnd = text.length;
+
+    // We also want to delete the trailing newline if it exists, or the leading newline if it's the last line.
+    int removeEnd = lineEnd;
+    if (removeEnd < text.length && text[removeEnd] == '\n') {
+      removeEnd += 1;
+    } else if (lineStart > 0 && text[lineStart - 1] == '\n') {
+      lineStart -= 1;
+    }
+
+    final newText = text.replaceRange(lineStart, removeEnd, '');
+    
+    _controller.value = _controller.value.copyWith(
+      text: newText,
+      selection: TextSelection.collapsed(
+        offset: lineStart.clamp(0, newText.length),
+      ),
+    );
+  }
+
+  void _indentSelection() {
+    if (!_focusNode.hasFocus) return;
+    final selection = _controller.selection;
+    if (!selection.isValid) return;
+
+    final text = _controller.text;
+    int lineStart = text.lastIndexOf('\n', selection.start - 1) + 1;
+    int lineEnd = text.indexOf('\n', selection.end);
+    if (lineEnd == -1) lineEnd = text.length;
+
+    final selectedText = text.substring(lineStart, lineEnd);
+    final indentedText = selectedText.split('\n').map((line) => '  ' + line).join('\n');
+    
+    final newText = text.replaceRange(lineStart, lineEnd, indentedText);
+    _controller.value = _controller.value.copyWith(
+      text: newText,
+      selection: TextSelection(
+        baseOffset: selection.start + 2,
+        extentOffset: selection.end + (indentedText.length - selectedText.length),
+      ),
+    );
+  }
+
+  void _outdentSelection() {
+    if (!_focusNode.hasFocus) return;
+    final selection = _controller.selection;
+    if (!selection.isValid) return;
+
+    final text = _controller.text;
+    int lineStart = text.lastIndexOf('\n', selection.start - 1) + 1;
+    int lineEnd = text.indexOf('\n', selection.end);
+    if (lineEnd == -1) lineEnd = text.length;
+
+    final selectedText = text.substring(lineStart, lineEnd);
+    int removedCount = 0;
+    int firstLineRemoved = 0;
+    bool isFirst = true;
+
+    final outdentedText = selectedText.split('\n').map((line) {
+      if (line.startsWith('  ')) {
+        removedCount += 2;
+        if (isFirst) firstLineRemoved = 2;
+        isFirst = false;
+        return line.substring(2);
+      } else if (line.startsWith(' ') || line.startsWith('\t')) {
+        removedCount += 1;
+        if (isFirst) firstLineRemoved = 1;
+        isFirst = false;
+        return line.substring(1);
+      }
+      isFirst = false;
+      return line;
+    }).join('\n');
+    
+    final newText = text.replaceRange(lineStart, lineEnd, outdentedText);
+    _controller.value = _controller.value.copyWith(
+      text: newText,
+      selection: TextSelection(
+        baseOffset: (selection.start - firstLineRemoved).clamp(lineStart, text.length),
+        extentOffset: (selection.end - removedCount).clamp(lineStart, text.length),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _debounceTimer?.cancel();
@@ -251,6 +410,24 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
       bindings: <ShortcutActivator, VoidCallback>{
         const SingleActivator(LogicalKeyboardKey.keyS, control: true): save,
         const SingleActivator(LogicalKeyboardKey.keyS, meta: true): save,
+        const SingleActivator(LogicalKeyboardKey.equal, control: true): _handleZoomIn,
+        const SingleActivator(LogicalKeyboardKey.equal, meta: true): _handleZoomIn,
+        const SingleActivator(LogicalKeyboardKey.numpadAdd, control: true): _handleZoomIn,
+        const SingleActivator(LogicalKeyboardKey.numpadAdd, meta: true): _handleZoomIn,
+        const SingleActivator(LogicalKeyboardKey.minus, control: true): _handleZoomOut,
+        const SingleActivator(LogicalKeyboardKey.minus, meta: true): _handleZoomOut,
+        const SingleActivator(LogicalKeyboardKey.numpadSubtract, control: true): _handleZoomOut,
+        const SingleActivator(LogicalKeyboardKey.numpadSubtract, meta: true): _handleZoomOut,
+        const SingleActivator(LogicalKeyboardKey.bracketRight, control: true): _indentSelection,
+        const SingleActivator(LogicalKeyboardKey.bracketRight, meta: true): _indentSelection,
+        const SingleActivator(LogicalKeyboardKey.bracketLeft, control: true): _outdentSelection,
+        const SingleActivator(LogicalKeyboardKey.bracketLeft, meta: true): _outdentSelection,
+        const SingleActivator(LogicalKeyboardKey.arrowUp, alt: true): () => _moveLine(-1),
+        const SingleActivator(LogicalKeyboardKey.arrowDown, alt: true): () => _moveLine(1),
+        const SingleActivator(LogicalKeyboardKey.arrowUp, alt: true, shift: true): () => _duplicateLine(-1),
+        const SingleActivator(LogicalKeyboardKey.arrowDown, alt: true, shift: true): () => _duplicateLine(1),
+        const SingleActivator(LogicalKeyboardKey.keyK, control: true, shift: true): _deleteLine,
+        const SingleActivator(LogicalKeyboardKey.keyK, meta: true, shift: true): _deleteLine,
       },
       child: Focus(
         autofocus: true,
