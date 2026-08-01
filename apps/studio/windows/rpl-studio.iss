@@ -1,5 +1,5 @@
 #define MyAppName "RPL Studio"
-#define MyAppVersion "4.1.0"
+#define MyAppVersion "4.2.0"
 #define MyAppPublisher "Rakoda"
 #define MyAppExeName "rpl_studio.exe"
 #define BuildDir "..\build\windows\x64\runner\Release"

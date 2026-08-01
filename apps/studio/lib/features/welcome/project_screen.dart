@@ -1202,7 +1202,18 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                   }
                 } else {
                   // Fallback to internal Rust VM for RPL or others
+                  final prevDir = Directory.current.path;
+                  final fileDir = File(tab.filePath).parent.path;
+                  try {
+                    Directory.current = fileDir;
+                  } catch (_) {}
+                  
                   final result = await runCode(code: content);
+                  
+                  try {
+                    Directory.current = prevDir;
+                  } catch (_) {}
+                  
                   resultString = result.replaceAll('\n', '\r\n') + '\r\n';
                 }
                 
@@ -1652,7 +1663,17 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
             setState(() => _iosTerminalLines.add('⏳ Menjalankan $fileName...'));
             try {
               final content = file.readAsStringSync();
+              final prevDir = Directory.current.path;
+              try {
+                Directory.current = _iosTerminalCwd;
+              } catch (_) {}
+              
               final output = await runCode(code: content);
+              
+              try {
+                Directory.current = prevDir;
+              } catch (_) {}
+              
               setState(() => _iosTerminalLines.addAll(output.split('\n')));
             } catch (e) {
               setState(() => _iosTerminalLines.add('⚠ $e'));
