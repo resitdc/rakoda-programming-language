@@ -1339,13 +1339,29 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                 } else {
                   File(path).deleteSync();
                 }
-                _openTabs.removeWhere((t) => t.filePath == path);
+
+                final currentTab = _openTabs.isNotEmpty && _activeTabIndex < _openTabs.length
+                    ? _openTabs[_activeTabIndex]
+                    : null;
+
+                _openTabs.removeWhere((t) => t.filePath == path || t.filePath.startsWith(path + Platform.pathSeparator));
+                
                 if (_openTabs.isEmpty) {
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(builder: (_) => const WelcomeScreen()),
                   );
+                } else {
+                  if (currentTab != null) {
+                    final newIndex = _openTabs.indexOf(currentTab);
+                    if (newIndex != -1) {
+                      _activeTabIndex = newIndex;
+                    } else if (_activeTabIndex >= _openTabs.length) {
+                      _activeTabIndex = _openTabs.length - 1;
+                    }
+                  }
                 }
+                
                 setState(() => _explorerVersion++);
               } catch (e) {
                 ScaffoldMessenger.of(

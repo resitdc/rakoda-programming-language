@@ -1,7 +1,10 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../shared/file_icon_helper.dart';
+import '../settings/settings_provider.dart';
 
 /// File/folder node untuk tree view.
 class FileNode {
@@ -21,7 +24,7 @@ class FileNode {
 }
 
 /// Widget tree view untuk project explorer.
-class FileExplorer extends StatefulWidget {
+class FileExplorer extends ConsumerStatefulWidget {
   final String rootPath;
   final int refreshTrigger;
   final void Function(String path)? onFileTap;
@@ -44,27 +47,65 @@ class FileExplorer extends StatefulWidget {
   });
 
   @override
-  State<FileExplorer> createState() => _FileExplorerState();
+  ConsumerState<FileExplorer> createState() => _FileExplorerState();
 }
 
-class _FileExplorerState extends State<FileExplorer> {
+class _FileExplorerState extends ConsumerState<FileExplorer> {
   late List<FileNode> _roots;
   bool _loading = true;
   String? _selectedPath;
   final Set<String> _expandedPaths = {};
+  
+  StreamSubscription<FileSystemEvent>? _watchSubscription;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
     super.initState();
     _loadRoot();
+    _startWatching();
   }
 
   @override
   void didUpdateWidget(FileExplorer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.rootPath != widget.rootPath || oldWidget.refreshTrigger != widget.refreshTrigger) {
+    if (oldWidget.rootPath != widget.rootPath) {
+      _stopWatching();
+      _loadRoot();
+      _startWatching();
+    } else if (oldWidget.refreshTrigger != widget.refreshTrigger) {
       _loadRoot();
     }
+  }
+
+  @override
+  void dispose() {
+    _stopWatching();
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startWatching() {
+    if (ref.read(settingsProvider).isLowEndMode) return;
+
+    try {
+      final dir = Directory(widget.rootPath);
+      if (dir.existsSync()) {
+        _watchSubscription = dir.watch(recursive: true).listen((event) {
+          _debounceTimer?.cancel();
+          _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+            if (mounted) _loadRoot();
+          });
+        });
+      }
+    } catch (e) {
+      // Ingore if filesystem doesn't support watching
+    }
+  }
+
+  void _stopWatching() {
+    _watchSubscription?.cancel();
+    _watchSubscription = null;
   }
 
   void _loadRoot() {
@@ -136,9 +177,26 @@ class _FileExplorerState extends State<FileExplorer> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<SettingsState>(settingsProvider, (previous, next) {
+      if (previous?.isLowEndMode != next.isLowEndMode) {
+        if (next.isLowEndMode) {
+          _stopWatching();
+        } else {
+          _startWatching();
+        }
+      }
+    });
+
     if (_loading) {
       return const Center(
-        child: CircularProgressIndicator(color: Color(0xFF2568E7), strokeWidth: 2),
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white54),
+          ),
+        ),
       );
     }
 
@@ -219,6 +277,7 @@ class _FileExplorerState extends State<FileExplorer> {
             }
           },
           onLongPress: () => _showContextMenu(context, node),
+          onSecondaryTapDown: (details) => _showDesktopContextMenu(context, node, details.globalPosition),
           hoverColor: const Color(0xFF2A2D2E),
           child: Container(
             color: isSelected ? const Color(0xFF37373D) : Colors.transparent,
@@ -268,6 +327,54 @@ class _FileExplorerState extends State<FileExplorer> {
   }
 
 
+
+  void _showDesktopContextMenu(BuildContext context, FileNode node, Offset position) async {
+    final result = await showMenu<String>(
+      context: context,
+      popUpAnimationStyle: AnimationStyle(
+        duration: Duration.zero,
+        reverseDuration: Duration.zero,
+      ),
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        position.dx + 1,
+        position.dy + 1,
+      ),
+      color: const Color(0xFF252526),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      items: [
+        PopupMenuItem(
+          value: 'rename',
+          height: 36,
+          child: Row(
+            children: [
+              HugeIcon(icon: HugeIcons.strokeRoundedEdit02, color: Colors.white70, size: 18),
+              const SizedBox(width: 12),
+              const Text('Rename', style: TextStyle(color: Colors.white70, fontSize: 13)),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'delete',
+          height: 36,
+          child: Row(
+            children: [
+              HugeIcon(icon: HugeIcons.strokeRoundedDelete02, color: Color(0xFFFF6B6B), size: 18),
+              const SizedBox(width: 12),
+              const Text('Delete', style: TextStyle(color: Color(0xFFFF6B6B), fontSize: 13)),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    if (result == 'rename') {
+      _handleRename(node);
+    } else if (result == 'delete') {
+      _handleDelete(node);
+    }
+  }
 
   void _showContextMenu(BuildContext context, FileNode node) {
     showModalBottomSheet(
