@@ -11,18 +11,133 @@
           "mainDocId": "intro",
           "docs": [
             {
+              "id": "dasar/fungsi",
+              "path": "/docs/dasar/fungsi",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "dasar/operator",
+              "path": "/docs/dasar/operator",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "dasar/percabangan",
+              "path": "/docs/dasar/percabangan",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "dasar/perulangan",
+              "path": "/docs/dasar/perulangan",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "dasar/tipe-data",
+              "path": "/docs/dasar/tipe-data",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "dasar/variabel",
+              "path": "/docs/dasar/variabel",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "ekosistem/manajemen-paket",
+              "path": "/docs/ekosistem/manajemen-paket",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "ekosistem/perintah-cli",
+              "path": "/docs/ekosistem/perintah-cli",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "fitur-lanjut/kecerdasan-buatan",
+              "path": "/docs/fitur-lanjut/kecerdasan-buatan",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "fitur-lanjut/modul-dan-import",
+              "path": "/docs/fitur-lanjut/modul-dan-import",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "fitur-lanjut/penanganan-error",
+              "path": "/docs/fitur-lanjut/penanganan-error",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "fitur-lanjut/tugas-dan-log",
+              "path": "/docs/fitur-lanjut/tugas-dan-log",
+              "sidebar": "tutorialSidebar"
+            },
+            {
               "id": "intro",
               "path": "/docs/intro",
               "sidebar": "tutorialSidebar"
             },
             {
-              "id": "percabangan",
-              "path": "/docs/percabangan",
+              "id": "pengembangan-web/database",
+              "path": "/docs/pengembangan-web/database",
               "sidebar": "tutorialSidebar"
             },
             {
-              "id": "variabel",
-              "path": "/docs/variabel",
+              "id": "pengembangan-web/template-html",
+              "path": "/docs/pengembangan-web/template-html",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "pengembangan-web/web-dan-jaringan",
+              "path": "/docs/pengembangan-web/web-dan-jaringan",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "pustaka-standar/inti-dan-tipe",
+              "path": "/docs/pustaka-standar/inti-dan-tipe",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "pustaka-standar/matematika-dan-teks",
+              "path": "/docs/pustaka-standar/matematika-dan-teks",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "pustaka-standar/pustaka-standar",
+              "path": "/docs/pustaka-standar/pustaka-standar",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "pustaka-standar/sistem-dan-berkas",
+              "path": "/docs/pustaka-standar/sistem-dan-berkas",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "pustaka-standar/waktu-dan-kripto",
+              "path": "/docs/pustaka-standar/waktu-dan-kripto",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "/category/dasar-pemrograman",
+              "path": "/docs/category/dasar-pemrograman",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "/category/pustaka-standar-stdlib",
+              "path": "/docs/category/pustaka-standar-stdlib",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "/category/pengembangan-web",
+              "path": "/docs/category/pengembangan-web",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "/category/fitur-lanjut",
+              "path": "/docs/category/fitur-lanjut",
+              "sidebar": "tutorialSidebar"
+            },
+            {
+              "id": "/category/ekosistem--tooling",
+              "path": "/docs/category/ekosistem--tooling",
               "sidebar": "tutorialSidebar"
             }
           ],

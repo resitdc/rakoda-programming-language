@@ -1,0 +1,9 @@
+{
+  "label": "Fitur Lanjut",
+  "position": 4,
+  "className": "icon-cat-lanjut",
+  "link": {
+    "type": "generated-index",
+    "description": "Tingkatkan skalabilitas aplikasi Anda dengan fitur kelas atas milik Rakoda."
+  }
+}

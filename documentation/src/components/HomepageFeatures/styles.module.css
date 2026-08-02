@@ -1,77 +1,101 @@
+/* ========================================
+   Features Section
+   ======================================== */
 .features {
-  padding: 4rem 0;
+  padding: 4rem 0 5rem;
   width: 100%;
 }
 
+/* ========================================
+   Feature Cards
+   ======================================== */
 .featureCard {
   background: var(--ifm-background-surface-color);
   border: 1px solid var(--ifm-color-emphasis-200);
-  border-radius: 16px;
-  padding: 2rem;
+  border-radius: 12px;
+  padding: 1.75rem;
   height: 100%;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 [data-theme='dark'] .featureCard {
-  background: rgba(255,255,255,0.03);
-  border-color: rgba(255,255,255,0.1);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  background: rgba(30, 41, 59, 0.5);
+  border-color: rgba(255, 255, 255, 0.06);
 }
 
 .featureCard:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+  border-color: var(--ifm-color-primary-lighter);
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.08);
 }
 
 [data-theme='dark'] .featureCard:hover {
-  box-shadow: 0 12px 24px rgba(0,0,0,0.4);
+  border-color: rgba(96, 165, 250, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
+/* ========================================
+   Icon Wrapper
+   ======================================== */
 .iconWrapper {
-  width: 64px;
-  height: 64px;
-  border-radius: 12px;
-  background: rgba(37, 104, 231, 0.1); /* Rakoda blue light */
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: rgba(37, 99, 235, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
   color: var(--ifm-color-primary);
 }
 
+[data-theme='dark'] .iconWrapper {
+  background: rgba(96, 165, 250, 0.1);
+}
+
+/* ========================================
+   Feature Text
+   ======================================== */
 .featureTitle {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.01em;
 }
 
 .featureDescription {
-  color: var(--ifm-color-emphasis-700);
-  line-height: 1.6;
+  color: var(--ifm-color-emphasis-600);
+  line-height: 1.65;
+  font-size: 0.9rem;
+  margin: 0;
 }
 
+/* ========================================
+   Large Feature Card (RPL Studio)
+   ======================================== */
 .largeFeatureCard {
   display: flex;
   background: var(--ifm-background-surface-color);
   border: 1px solid var(--ifm-color-emphasis-200);
-  border-radius: 24px;
+  border-radius: 16px;
   overflow: hidden;
-  margin-top: 2rem;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+  margin-top: 1.5rem;
+  transition: border-color 0.2s ease;
 }
 
 [data-theme='dark'] .largeFeatureCard {
-  background: rgba(255,255,255,0.03);
-  border-color: rgba(255,255,255,0.1);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  background: rgba(30, 41, 59, 0.5);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.largeFeatureCard:hover {
+  border-color: var(--ifm-color-primary-lighter);
 }
 
 .largeFeatureContent {
   flex: 1;
-  padding: 3rem;
+  padding: 2.5rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -84,11 +108,11 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  min-height: 300px;
+  min-height: 280px;
 }
 
 [data-theme='dark'] .largeFeatureImage {
-  background: rgba(0,0,0,0.3);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .largeFeatureImage img {
@@ -99,15 +123,18 @@
 }
 
 [data-theme='dark'] .largeFeatureImage img {
-  border-color: rgba(255,255,255,0.1);
+  border-color: rgba(255, 255, 255, 0.06);
 }
 
+/* ========================================
+   Responsive
+   ======================================== */
 @media screen and (max-width: 996px) {
   .largeFeatureCard {
     flex-direction: column;
   }
   .largeFeatureContent {
-    padding: 2rem;
+    padding: 1.75rem;
   }
   .largeFeatureImage img {
     border-left: none;

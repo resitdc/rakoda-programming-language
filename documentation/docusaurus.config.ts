@@ -9,6 +9,12 @@ const config: Config = {
   tagline: 'Official Rakoda Programming Language Documentation',
   favicon: 'img/rakoda-blue.svg',
 
+  stylesheets: [
+    'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap',
+    'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap',
+    'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0',
+  ],
+
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
     v4: true, // Improve compatibility with the upcoming Docusaurus v4
@@ -54,6 +60,23 @@ const config: Config = {
     ],
   ],
 
+  themes: [
+    [
+      require.resolve('@easyops-cn/docusaurus-search-local'),
+      {
+        hashed: true,
+        language: ["en"],
+        indexBlog: false,
+        indexDocs: true,
+        indexPages: true,
+      },
+    ],
+  ],
+
+  clientModules: [
+    require.resolve('./src/prism-rakoda.ts'),
+  ],
+
   themeConfig: {
     // Replace with your project's social card
     image: 'img/docusaurus-social-card.jpg',
@@ -87,16 +110,20 @@ const config: Config = {
       style: 'dark',
       links: [
         {
-          title: 'Docs',
+          title: 'Dokumentasi',
           items: [
             {
               label: 'Tutorial',
               to: '/docs/intro',
             },
+            {
+              label: 'Unduh',
+              to: '/download',
+            },
           ],
         },
         {
-          title: 'Community',
+          title: 'Komunitas',
           items: [
             {
               label: 'Discord',
@@ -105,9 +132,8 @@ const config: Config = {
           ],
         },
         {
-          title: 'More',
+          title: 'Lainnya',
           items: [
-
             {
               label: 'GitHub',
               href: 'https://github.com/resitdc/rakoda-programming-language',
@@ -115,7 +141,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} RAKODA.<br/>Open-source and released under the MIT License.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Rakoda. Dirilis di bawah Lisensi MIT.`,
     },
     prism: {
       theme: prismThemes.github,

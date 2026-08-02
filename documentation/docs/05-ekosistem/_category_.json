@@ -1,0 +1,9 @@
+{
+  "label": "Ekosistem & Tooling",
+  "position": 5,
+  "className": "icon-cat-ekosistem",
+  "link": {
+    "type": "generated-index",
+    "description": "Pelajari cara berinteraksi dengan CLI dan mengelola paket Rakoda."
+  }
+}
