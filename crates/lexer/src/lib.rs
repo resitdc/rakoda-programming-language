@@ -93,6 +93,10 @@ impl Lexer {
                     self.advance();
                     Token::Kali
                 }
+                '^' => {
+                    self.advance();
+                    Token::Pangkat
+                }
                 '/' => {
                     if self.peek_char() == Some('/') {
                         self.advance();

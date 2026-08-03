@@ -324,6 +324,15 @@ impl VM {
                         return Err(self.err("Operan harus angka untuk modulus"));
                     }
                 }
+                OpCode::Power => {
+                    let b = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    if let (Value::Angka(a_val), Value::Angka(b_val)) = (a, b) {
+                        self.stack.push(Value::Angka(a_val.powf(b_val)));
+                    } else {
+                        return Err(self.err("Operan harus angka untuk dipangkatkan"));
+                    }
+                }
                 OpCode::Equal => {
                     let b = self.stack.pop().unwrap();
                     let a = self.stack.pop().unwrap();

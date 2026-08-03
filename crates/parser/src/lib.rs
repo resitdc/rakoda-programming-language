@@ -10,6 +10,7 @@ enum Precedence {
     LessGreater,
     Sum,
     Product,
+    Power,
     Prefix,
     Call,
     Index,
@@ -25,6 +26,7 @@ fn token_precedence(token: &Token) -> Precedence {
         }
         Token::Tambah | Token::Kurang => Precedence::Sum,
         Token::Kali | Token::Bagi | Token::Mod => Precedence::Product,
+        Token::Pangkat => Precedence::Power,
         Token::KurungBuka => Precedence::Call,
         Token::KurungSikuBuka => Precedence::Index,
         Token::Titik => Precedence::Property,
@@ -789,6 +791,7 @@ impl Parser {
             Token::Kali => InfixOperator::Kali,
             Token::Bagi => InfixOperator::Bagi,
             Token::Mod => InfixOperator::Mod,
+            Token::Pangkat => InfixOperator::Pangkat,
             Token::LebihDari => InfixOperator::LebihDari,
             Token::KurangDari => InfixOperator::KurangDari,
             Token::Minimal => InfixOperator::Minimal,

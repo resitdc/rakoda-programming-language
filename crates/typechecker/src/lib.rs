@@ -699,7 +699,8 @@ impl TypeChecker {
                     InfixOperator::Kurang
                     | InfixOperator::Kali
                     | InfixOperator::Bagi
-                    | InfixOperator::Mod => RplType::Angka,
+                    | InfixOperator::Mod
+                    | InfixOperator::Pangkat => RplType::Angka,
                 }
             }
             Expression::Call {
@@ -844,6 +845,7 @@ fn operator_ke_string(op: &InfixOperator) -> &'static str {
         InfixOperator::TidakSamaDengan => "!=",
         InfixOperator::Dan => "dan",
         InfixOperator::Atau => "atau",
+        InfixOperator::Pangkat => "^",
     }
 }
 

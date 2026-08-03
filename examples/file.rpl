@@ -1,13 +1,20 @@
-// Test File System
-tampilkan("--- UJI FILE SYSTEM ---")
-buat tulisan = "Halo dari RPL! Bahasa pemrograman buatan Indonesia."
-buat hasil = file.tulis("tes.txt", tulisan)
-jika hasil == benar maka
-    tampilkan("Berhasil menulis file tes.txt")
-selesai
+tampilkan("Mulai tes file")
 
-jika file.ada("tes.txt") == benar maka
-    buat isi = file.baca("tes.txt")
-    tampilkan("Isi file tes.txt:")
-    tampilkan(isi)
-selesai
+// Membuat folder
+buat hasil_buat = file.buat_folder("folder_tes_rpl")
+tampilkan("Berhasil buat folder? " + hasil_buat)
+
+// Mendaftar file (tanpa hidden file)
+buat daftar_file = file.daftar(".")
+tampilkan("Daftar file:")
+tampilkan(daftar_file)
+
+// Mendaftar file (dengan hidden file)
+buat daftar_file_hidden = file.daftar(".", benar)
+tampilkan("Daftar file (dengan hidden):")
+tampilkan(daftar_file_hidden)
+
+// Membersihkan
+// file.hapus("folder_tes_rpl") hanya untuk file, untuk direktori harus menggunakan std::fs::remove_dir.
+// Karena file.hapus diimplementasikan menggunakan remove_file, mungkin akan gagal untuk folder.
+tampilkan("Selesai")

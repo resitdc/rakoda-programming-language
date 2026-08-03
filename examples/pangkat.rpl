@@ -1,0 +1,8 @@
+buat hasil1 = 2 ^ 3
+cetak(hasil1) // Harusnya 8
+
+buat hasil2 = 5 ^ 2
+cetak(hasil2) // Harusnya 25
+
+buat hasil3 = 4 ^ 0.5
+cetak(hasil3) // Harusnya 2

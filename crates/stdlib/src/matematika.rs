@@ -12,6 +12,8 @@ pub fn fungsi_matematika() -> DaftarFungsiRpl {
         ("pangkat", pangkat_impl),
         ("bulatkan", bulatkan_impl),
         ("acak", acak_impl),
+        ("absolute", mutlak_impl),
+        ("mutlak", mutlak_impl),
     ]
 }
 
@@ -93,4 +95,14 @@ fn acak_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
     }
     let hasil: f64 = rng.random_range(0.0..1.0);
     Ok(NilaiRpl::Angka(hasil))
+}
+
+fn mutlak_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
+    if args.is_empty() {
+        return Err("matematika.mutlak membutuhkan 1 argumen angka".to_string());
+    }
+    match &args[0] {
+        NilaiRpl::Angka(n) => Ok(NilaiRpl::Angka(n.abs())),
+        _ => Err("matematika.mutlak hanya menerima angka".to_string()),
+    }
 }

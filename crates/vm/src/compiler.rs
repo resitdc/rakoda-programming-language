@@ -381,6 +381,7 @@ impl<'a> Compiler<'a> {
                     InfixOperator::Kali => self.chunk.write_opcode(OpCode::Multiply, lokasi),
                     InfixOperator::Bagi => self.chunk.write_opcode(OpCode::Divide, lokasi),
                     InfixOperator::Mod => self.chunk.write_opcode(OpCode::Modulus, lokasi),
+                    InfixOperator::Pangkat => self.chunk.write_opcode(OpCode::Power, lokasi),
                     InfixOperator::LebihDari => self.chunk.write_opcode(OpCode::Greater, lokasi),
                     InfixOperator::KurangDari => self.chunk.write_opcode(OpCode::Less, lokasi),
                     InfixOperator::Minimal => self.chunk.write_opcode(OpCode::GreaterEqual, lokasi),
