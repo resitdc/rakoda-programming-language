@@ -3,7 +3,7 @@ use crate::jenis::NilaiRpl;
 use serde_json::Value;
 
 /// Konversi NilaiRpl → serde_json::Value (bantuan internal)
-fn ke_json(nilai: &NilaiRpl) -> Value {
+pub fn ke_json(nilai: &NilaiRpl) -> Value {
     match nilai {
         NilaiRpl::Angka(n) => {
             if let Some(num) = serde_json::Number::from_f64(*n) {
@@ -30,7 +30,7 @@ fn ke_json(nilai: &NilaiRpl) -> Value {
 }
 
 /// Konversi serde_json::Value → NilaiRpl (bantuan internal)
-fn dari_json(val: &Value) -> NilaiRpl {
+pub fn dari_json(val: &Value) -> NilaiRpl {
     match val {
         Value::Null => NilaiRpl::Kosong,
         Value::Bool(b) => NilaiRpl::Boolean(*b),
