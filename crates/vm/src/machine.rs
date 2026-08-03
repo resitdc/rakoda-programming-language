@@ -316,12 +316,21 @@ impl VM {
                     }
                 }
                 OpCode::Modulus => {
-                    let b = self.stack.pop().unwrap();
-                    let a = self.stack.pop().unwrap();
-                    if let (Value::Angka(a_val), Value::Angka(b_val)) = (a, b) {
-                        self.stack.push(Value::Angka(a_val % b_val));
+                    let kanan = self.stack.pop().unwrap();
+                    let kiri = self.stack.pop().unwrap();
+                    if let (Value::Angka(k), Value::Angka(kn)) = (kiri, kanan) {
+                        self.stack.push(Value::Angka(k % kn));
                     } else {
-                        return Err(self.err("Operan harus angka untuk modulus"));
+                        return Err(self.err("Operator '%' hanya untuk angka"));
+                    }
+                }
+                OpCode::BitwiseOr => {
+                    let kanan = self.stack.pop().unwrap();
+                    let kiri = self.stack.pop().unwrap();
+                    if let (Value::Angka(k), Value::Angka(kn)) = (kiri, kanan) {
+                        self.stack.push(Value::Angka((k as i32 | kn as i32) as f64));
+                    } else {
+                        return Err(self.err("Operator '|' hanya untuk angka"));
                     }
                 }
                 OpCode::Power => {
@@ -415,6 +424,20 @@ impl VM {
                     let offset = self.frames.last_mut().unwrap().read_short(&self.heap) as usize;
                     let peek = self.stack.last().unwrap_or(&Value::Kosong);
                     if !is_truthy(peek) {
+                        self.frames.last_mut().unwrap().ip = offset;
+                    }
+                }
+                OpCode::JumpIfTrue => {
+                    let offset = self.frames.last_mut().unwrap().read_short(&self.heap) as usize;
+                    let peek = self.stack.last().unwrap_or(&Value::Kosong);
+                    if is_truthy(peek) {
+                        self.frames.last_mut().unwrap().ip = offset;
+                    }
+                }
+                OpCode::JumpIfNotKosong => {
+                    let offset = self.frames.last_mut().unwrap().read_short(&self.heap) as usize;
+                    let peek = self.stack.last().unwrap_or(&Value::Kosong);
+                    if !matches!(peek, Value::Kosong) {
                         self.frames.last_mut().unwrap().ip = offset;
                     }
                 }

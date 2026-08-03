@@ -332,6 +332,30 @@ fn optimize_expression(expr: Expression) -> Expression {
                 lokasi,
             }
         }
+        Expression::Ternary {
+            kondisi,
+            konsekuensi,
+            alternatif,
+            lokasi,
+        } => {
+            let opt_kondisi = optimize_expression(*kondisi);
+            let opt_konsekuensi = optimize_expression(*konsekuensi);
+            let opt_alternatif = optimize_expression(*alternatif);
+            if let Expression::Boolean(k_val, _) = opt_kondisi {
+                if k_val {
+                    opt_konsekuensi
+                } else {
+                    opt_alternatif
+                }
+            } else {
+                Expression::Ternary {
+                    kondisi: Box::new(opt_kondisi),
+                    konsekuensi: Box::new(opt_konsekuensi),
+                    alternatif: Box::new(opt_alternatif),
+                    lokasi,
+                }
+            }
+        }
         // Base cases
         _ => expr,
     }

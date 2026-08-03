@@ -9,6 +9,7 @@ pub enum Token {
     Masukkan,   // masukkan
     Jika,       // jika
     JikaTidak,  // jika tidak
+    AtauJika,   // atau jika
     Fungsi,     // fungsi
     Kembalikan, // kembalikan
     Selama,     // selama
@@ -57,6 +58,9 @@ pub enum Token {
     KurungSikuTutup, // ]
     KurawalBuka,     // {
     KurawalTutup,    // }
+    TandaTanya,      // ?
+    TandaTanyaGanda, // ??
+    BitwiseAtau,     // |
 
     Identifier(String),
     String(String),
@@ -74,6 +78,7 @@ impl Token {
             Token::Masukkan => "kata 'masukkan'".to_string(),
             Token::Jika => "kata 'jika'".to_string(),
             Token::JikaTidak => "kata 'jika tidak'".to_string(),
+            Token::AtauJika => "kata 'atau jika'".to_string(),
             Token::Maka => "kata 'maka' atau '{'".to_string(),
             Token::Selama => "kata 'selama'".to_string(),
             Token::Setiap => "kata 'setiap'".to_string(),
@@ -103,6 +108,11 @@ impl Token {
             Token::KurungTutup => "kurung tutup ')'".to_string(),
             Token::KurawalBuka => "kurawal buka '{' atau 'maka'".to_string(),
             Token::KurawalTutup => "kurawal tutup '}' atau 'selesai'".to_string(),
+            Token::TandaTanya => "tanda tanya '?'".to_string(),
+            Token::TandaTanyaGanda => "tanda tanya ganda '??'".to_string(),
+            Token::BitwiseAtau => "bitwise atau '|'".to_string(),
+            Token::KurungSikuBuka => "'['".to_string(),
+            Token::KurungSikuTutup => "']'".to_string(),
             Token::TitikKoma => "titik koma ';'".to_string(),
             Token::Koma => "koma ','".to_string(),
             Token::Titik => "titik '.'".to_string(),

@@ -1,0 +1,53 @@
+// Tes JavaScript Operators di Rakoda
+
+tampilkan "--- Tes Ternary Operator ---"
+buat umur = 20
+buat status = umur > 18 ? "Dewasa" : "Remaja"
+tampilkan status // Dewasa
+
+buat umur2 = 15
+buat status2 = umur2 > 18 ? "Dewasa" : "Remaja"
+tampilkan status2 // Remaja
+
+tampilkan "--- Tes Logika Dan (&&) ---"
+buat a = benar && salah
+tampilkan a // salah
+
+buat fungsi_tidak_dipanggil = fungsi() {
+    tampilkan "ERROR: Ini tidak boleh dipanggil karena short-circuit!"
+    kembalikan benar
+}
+
+// Short-circuit tes &&
+buat b = salah && fungsi_tidak_dipanggil()
+tampilkan b // salah
+
+tampilkan "--- Tes Logika Atau (||) ---"
+buat c = salah || benar
+tampilkan c // benar
+
+// Short-circuit tes ||
+buat d = benar || fungsi_tidak_dipanggil()
+tampilkan d // benar
+
+tampilkan "--- Tes Nullish Coalescing (??) ---"
+buat tidak_ada = kosong
+buat e = tidak_ada ?? "Default Value"
+tampilkan e // Default Value
+
+buat ada_nilai = "Hello"
+buat f = ada_nilai ?? "Default Value"
+tampilkan f // Hello
+
+// Short-circuit tes ??
+buat g = ada_nilai ?? fungsi_tidak_dipanggil()
+tampilkan g // Hello
+
+tampilkan "--- Tes Bitwise Atau (|) ---"
+// 5 = 101, 2 = 010. 5 | 2 = 111 = 7
+buat h = 5 | 2
+tampilkan h // 7
+
+// Pecahan akan diubah ke integer
+buat i = 5.9 | 2.1
+tampilkan i // 7

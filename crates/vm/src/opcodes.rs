@@ -38,6 +38,9 @@ pub enum OpCode {
     Power,
     UlangiInit,
     UlangiNext, // operand: 2 bytes (jump offset if exhausted)
+    BitwiseOr,
+    JumpIfTrue,      // operand: 2 bytes
+    JumpIfNotKosong, // operand: 2 bytes
 }
 
 impl OpCode {
@@ -80,6 +83,9 @@ impl OpCode {
             34 => Some(OpCode::Power),
             35 => Some(OpCode::UlangiInit),
             36 => Some(OpCode::UlangiNext),
+            37 => Some(OpCode::BitwiseOr),
+            38 => Some(OpCode::JumpIfTrue),
+            39 => Some(OpCode::JumpIfNotKosong),
             _ => None,
         }
     }

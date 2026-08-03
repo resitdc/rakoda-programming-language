@@ -117,7 +117,45 @@ impl Lexer {
                     self.advance();
                     Token::Mod
                 }
-                '=' => {
+                '?' => {
+                    if self.peek_char() == Some('?') {
+                        self.advance();
+                        self.advance();
+                        Token::TandaTanyaGanda
+                    } else {
+                        self.advance();
+                        Token::TandaTanya
+                    }
+                }
+                '|' => {
+                    if self.peek_char() == Some('|') {
+                        self.advance();
+                        self.advance();
+                        Token::Atau
+                    } else {
+                        self.advance();
+                        Token::BitwiseAtau
+                    }
+                }
+                '&' => {
+                    if self.peek_char() == Some('&') {
+                        self.advance();
+                        self.advance();
+                        Token::Dan
+                    } else {
+                        let lok = Lokasi {
+                            baris: self.baris,
+                            kolom: self.kolom,
+                        };
+                        self.advance();
+                        return Err(errors::RplError::Sintaks {
+                            pesan: "Diharapkan '&&' untuk DAN.".to_string(),
+                            lokasi: lok,
+                            saran: Some("Gunakan '&&' atau kata 'dan'".to_string()),
+                        });
+                    }
+                }
+            '=' => {
                     self.advance();
                     if self.current_char() == Some('=') {
                         self.advance();
@@ -410,7 +448,30 @@ impl Lexer {
                 self.kolom = simpan_kolom;
                 self.offset = simpan_offset;
             }
-        } else if text == "lebih" {
+        }
+
+        if text == "atau" {
+            self.skip_whitespace();
+            let mut next_word = String::new();
+            while let Some(c) = self.current_char() {
+                if c.is_alphabetic() || c.is_ascii_digit() || c == '_' {
+                    next_word.push(c);
+                    self.advance();
+                } else {
+                    break;
+                }
+            }
+            if next_word == "jika" {
+                return Token::AtauJika;
+            } else {
+                self.posisi = simpan_posisi;
+                self.baris = simpan_baris;
+                self.kolom = simpan_kolom;
+                self.offset = simpan_offset;
+            }
+        }
+
+        if text == "lebih" {
             self.skip_whitespace();
             let mut next_word = String::new();
             while let Some(c) = self.current_char() {
