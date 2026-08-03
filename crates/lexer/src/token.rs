@@ -44,6 +44,7 @@ pub enum Token {
     Kali,   // *
     Bagi,   // /
     Mod,    // %
+    Pangkat, // ^
 
     Assign,          // =
     TitikKoma,       // ;
@@ -96,6 +97,7 @@ impl Token {
             Token::Kurang => "tanda kurang '-'".to_string(),
             Token::Kali => "tanda kali '*'".to_string(),
             Token::Bagi => "tanda bagi '/'".to_string(),
+            Token::Pangkat => "tanda pangkat '^'".to_string(),
 
             Token::KurungBuka => "kurung buka '('".to_string(),
             Token::KurungTutup => "kurung tutup ')'".to_string(),
