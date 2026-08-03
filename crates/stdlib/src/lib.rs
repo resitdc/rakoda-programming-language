@@ -13,6 +13,7 @@ pub mod waktu;
 pub mod dokumen;
 pub mod email;
 pub mod jwt;
+pub mod cache;
 
 pub use jenis::NilaiRpl;
 
