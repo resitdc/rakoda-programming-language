@@ -58,6 +58,9 @@ pub enum Token {
     KurungSikuTutup, // ]
     KurawalBuka,     // {
     KurawalTutup,    // }
+    TandaTanya,      // ?
+    TandaTanyaGanda, // ??
+    BitwiseAtau,     // |
 
     Identifier(String),
     String(String),
@@ -105,6 +108,11 @@ impl Token {
             Token::KurungTutup => "kurung tutup ')'".to_string(),
             Token::KurawalBuka => "kurawal buka '{' atau 'maka'".to_string(),
             Token::KurawalTutup => "kurawal tutup '}' atau 'selesai'".to_string(),
+            Token::TandaTanya => "tanda tanya '?'".to_string(),
+            Token::TandaTanyaGanda => "tanda tanya ganda '??'".to_string(),
+            Token::BitwiseAtau => "bitwise atau '|'".to_string(),
+            Token::KurungSikuBuka => "'['".to_string(),
+            Token::KurungSikuTutup => "']'".to_string(),
             Token::TitikKoma => "titik koma ';'".to_string(),
             Token::Koma => "koma ','".to_string(),
             Token::Titik => "titik '.'".to_string(),

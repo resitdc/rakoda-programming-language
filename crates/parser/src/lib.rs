@@ -5,7 +5,9 @@ use lexer::token::{SpannedToken, Token};
 #[derive(PartialEq, PartialOrd)]
 enum Precedence {
     Lowest,
+    Ternary,
     AndOr,
+    BitwiseOr,
     Equals,
     LessGreater,
     Sum,
@@ -19,7 +21,9 @@ enum Precedence {
 
 fn token_precedence(token: &Token) -> Precedence {
     match token {
-        Token::Dan | Token::Atau => Precedence::AndOr,
+        Token::TandaTanya => Precedence::Ternary,
+        Token::Dan | Token::Atau | Token::TandaTanyaGanda => Precedence::AndOr,
+        Token::BitwiseAtau => Precedence::BitwiseOr,
         Token::SamaDengan | Token::TidakSamaDengan | Token::Bukan => Precedence::Equals,
         Token::LebihDari | Token::KurangDari | Token::Minimal | Token::Maksimal => {
             Precedence::LessGreater
@@ -842,6 +846,26 @@ impl Parser {
             });
         }
 
+        if token.token == Token::TandaTanya {
+            let lokasi = self.current_lokasi();
+            self.advance();
+            let konsekuensi = self.parse_expression(Precedence::Lowest)?;
+            if !self.expect(Token::TitikDua) {
+                return Err(RplError::Sintaks {
+                    pesan: "Kehilangan tanda ':' dalam operator ternary.".to_string(),
+                    lokasi: self.current_lokasi(),
+                    saran: Some("Pastikan ada tanda ':' untuk menentukan hasil alternatif (kondisi ? benar : salah)".to_string()),
+                });
+            }
+            let alternatif = self.parse_expression(Precedence::Lowest)?;
+            return Ok(Expression::Ternary {
+                kondisi: Box::new(left),
+                konsekuensi: Box::new(konsekuensi),
+                alternatif: Box::new(alternatif),
+                lokasi,
+            });
+        }
+
         if token.token == Token::Titik {
             let lokasi = self.current_lokasi();
             self.advance(); // lewati '.'
@@ -903,6 +927,8 @@ impl Parser {
             Token::TidakSamaDengan | Token::Bukan => InfixOperator::TidakSamaDengan,
             Token::Dan => InfixOperator::Dan,
             Token::Atau => InfixOperator::Atau,
+            Token::BitwiseAtau => InfixOperator::BitwiseAtau,
+            Token::TandaTanyaGanda => InfixOperator::NullishCoalescing,
             _ => unreachable!(),
         };
 

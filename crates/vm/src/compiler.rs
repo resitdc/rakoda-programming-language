@@ -409,25 +409,50 @@ impl<'a> Compiler<'a> {
                 kanan,
                 lokasi,
             } => {
-                self.compile_expression(*kiri)?;
-                self.compile_expression(*kanan)?;
                 match operator {
-                    InfixOperator::Tambah => self.chunk.write_opcode(OpCode::Add, lokasi),
-                    InfixOperator::Kurang => self.chunk.write_opcode(OpCode::Subtract, lokasi),
-                    InfixOperator::Kali => self.chunk.write_opcode(OpCode::Multiply, lokasi),
-                    InfixOperator::Bagi => self.chunk.write_opcode(OpCode::Divide, lokasi),
-                    InfixOperator::Mod => self.chunk.write_opcode(OpCode::Modulus, lokasi),
-                    InfixOperator::Pangkat => self.chunk.write_opcode(OpCode::Power, lokasi),
-                    InfixOperator::LebihDari => self.chunk.write_opcode(OpCode::Greater, lokasi),
-                    InfixOperator::KurangDari => self.chunk.write_opcode(OpCode::Less, lokasi),
-                    InfixOperator::Minimal => self.chunk.write_opcode(OpCode::GreaterEqual, lokasi),
-                    InfixOperator::Maksimal => self.chunk.write_opcode(OpCode::LessEqual, lokasi),
-                    InfixOperator::SamaDengan => self.chunk.write_opcode(OpCode::Equal, lokasi),
-                    InfixOperator::TidakSamaDengan => {
-                        self.chunk.write_opcode(OpCode::NotEqual, lokasi)
+                    InfixOperator::Dan => {
+                        self.compile_expression(*kiri)?;
+                        let jump_end = self.emit_jump(OpCode::JumpIfFalse, lokasi);
+                        self.chunk.write_opcode(OpCode::Pop, lokasi);
+                        self.compile_expression(*kanan)?;
+                        self.patch_jump(jump_end);
                     }
-                    InfixOperator::Dan => self.chunk.write_opcode(OpCode::And, lokasi),
-                    InfixOperator::Atau => self.chunk.write_opcode(OpCode::Or, lokasi),
+                    InfixOperator::Atau => {
+                        self.compile_expression(*kiri)?;
+                        let jump_end = self.emit_jump(OpCode::JumpIfTrue, lokasi);
+                        self.chunk.write_opcode(OpCode::Pop, lokasi);
+                        self.compile_expression(*kanan)?;
+                        self.patch_jump(jump_end);
+                    }
+                    InfixOperator::NullishCoalescing => {
+                        self.compile_expression(*kiri)?;
+                        let jump_end = self.emit_jump(OpCode::JumpIfNotKosong, lokasi);
+                        self.chunk.write_opcode(OpCode::Pop, lokasi);
+                        self.compile_expression(*kanan)?;
+                        self.patch_jump(jump_end);
+                    }
+                    _ => {
+                        self.compile_expression(*kiri)?;
+                        self.compile_expression(*kanan)?;
+                        match operator {
+                            InfixOperator::Tambah => self.chunk.write_opcode(OpCode::Add, lokasi),
+                            InfixOperator::Kurang => self.chunk.write_opcode(OpCode::Subtract, lokasi),
+                            InfixOperator::Kali => self.chunk.write_opcode(OpCode::Multiply, lokasi),
+                            InfixOperator::Bagi => self.chunk.write_opcode(OpCode::Divide, lokasi),
+                            InfixOperator::Mod => self.chunk.write_opcode(OpCode::Modulus, lokasi),
+                            InfixOperator::Pangkat => self.chunk.write_opcode(OpCode::Power, lokasi),
+                            InfixOperator::LebihDari => self.chunk.write_opcode(OpCode::Greater, lokasi),
+                            InfixOperator::KurangDari => self.chunk.write_opcode(OpCode::Less, lokasi),
+                            InfixOperator::Minimal => self.chunk.write_opcode(OpCode::GreaterEqual, lokasi),
+                            InfixOperator::Maksimal => self.chunk.write_opcode(OpCode::LessEqual, lokasi),
+                            InfixOperator::SamaDengan => self.chunk.write_opcode(OpCode::Equal, lokasi),
+                            InfixOperator::TidakSamaDengan => {
+                                self.chunk.write_opcode(OpCode::NotEqual, lokasi)
+                            }
+                            InfixOperator::BitwiseAtau => self.chunk.write_opcode(OpCode::BitwiseOr, lokasi),
+                            _ => unreachable!(),
+                        }
+                    }
                 }
             }
             Expression::Prefix {
@@ -488,6 +513,26 @@ impl<'a> Compiler<'a> {
                 }
                 self.chunk.write_opcode(OpCode::MakeKamus, lokasi);
                 self.chunk.write_u16(count as u16, lokasi);
+            }
+            Expression::Ternary {
+                kondisi,
+                konsekuensi,
+                alternatif,
+                lokasi,
+            } => {
+                self.compile_expression(*kondisi)?;
+                let jump_if_false = self.emit_jump(OpCode::JumpIfFalse, lokasi);
+                self.chunk.write_opcode(OpCode::Pop, lokasi);
+                
+                self.compile_expression(*konsekuensi)?;
+                let jump_end = self.emit_jump(OpCode::Jump, lokasi);
+                
+                self.patch_jump(jump_if_false);
+                
+                self.chunk.write_opcode(OpCode::Pop, lokasi);
+                self.compile_expression(*alternatif)?;
+                
+                self.patch_jump(jump_end);
             }
             Expression::FungsiAnonim {
                 parameter,

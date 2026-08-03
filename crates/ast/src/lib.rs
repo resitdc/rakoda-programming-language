@@ -129,6 +129,12 @@ pub enum Expression {
         body: Vec<Statement>,
         lokasi: Lokasi,
     },
+    Ternary {
+        kondisi: Box<Expression>,
+        konsekuensi: Box<Expression>,
+        alternatif: Box<Expression>,
+        lokasi: Lokasi,
+    },
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -153,6 +159,8 @@ pub enum InfixOperator {
     TidakSamaDengan,
     Dan,
     Atau,
+    BitwiseAtau,
+    NullishCoalescing,
 }
 
 impl PartialEq for Program {
@@ -170,6 +178,12 @@ impl std::fmt::Display for InfixOperator {
             InfixOperator::Bagi => "/ (bagi)",
             InfixOperator::Mod => "% (modulus)",
             InfixOperator::Pangkat => "^ (pangkat)",
+            InfixOperator::Tambah => "+ (tambah)",
+            InfixOperator::Kurang => "- (kurang)",
+            InfixOperator::Kali => "* (kali)",
+            InfixOperator::Bagi => "/ (bagi)",
+            InfixOperator::Mod => "% (modulus)",
+            InfixOperator::Pangkat => "^ (pangkat)",
             InfixOperator::LebihDari => "> (lebih dari)",
             InfixOperator::KurangDari => "< (kurang dari)",
             InfixOperator::Minimal => ">= (minimal)",
@@ -178,6 +192,8 @@ impl std::fmt::Display for InfixOperator {
             InfixOperator::TidakSamaDengan => "!= (tidak sama dengan)",
             InfixOperator::Dan => "&& (dan)",
             InfixOperator::Atau => "|| (atau)",
+            InfixOperator::BitwiseAtau => "| (bitwise atau)",
+            InfixOperator::NullishCoalescing => "?? (nullish coalescing)",
         };
         write!(f, "{}", op)
     }
@@ -199,6 +215,7 @@ impl Expression {
             Expression::Kamus { lokasi, .. } => lokasi,
             Expression::Index { lokasi, .. } => lokasi,
             Expression::FungsiAnonim { lokasi, .. } => lokasi,
+            Expression::Ternary { lokasi, .. } => lokasi,
         }
     }
 }

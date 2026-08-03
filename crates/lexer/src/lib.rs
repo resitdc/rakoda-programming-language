@@ -117,7 +117,45 @@ impl Lexer {
                     self.advance();
                     Token::Mod
                 }
-                '=' => {
+                '?' => {
+                    if self.peek_char() == Some('?') {
+                        self.advance();
+                        self.advance();
+                        Token::TandaTanyaGanda
+                    } else {
+                        self.advance();
+                        Token::TandaTanya
+                    }
+                }
+                '|' => {
+                    if self.peek_char() == Some('|') {
+                        self.advance();
+                        self.advance();
+                        Token::Atau
+                    } else {
+                        self.advance();
+                        Token::BitwiseAtau
+                    }
+                }
+                '&' => {
+                    if self.peek_char() == Some('&') {
+                        self.advance();
+                        self.advance();
+                        Token::Dan
+                    } else {
+                        let lok = Lokasi {
+                            baris: self.baris,
+                            kolom: self.kolom,
+                        };
+                        self.advance();
+                        return Err(errors::RplError::Sintaks {
+                            pesan: "Diharapkan '&&' untuk DAN.".to_string(),
+                            lokasi: lok,
+                            saran: Some("Gunakan '&&' atau kata 'dan'".to_string()),
+                        });
+                    }
+                }
+            '=' => {
                     self.advance();
                     if self.current_char() == Some('=') {
                         self.advance();

@@ -81,14 +81,15 @@ impl RplType {
     pub fn operator_valid(&self, op: &InfixOperator) -> bool {
         matches!(
             (self, op),
-            (RplType::Angka, _)
+            (_, InfixOperator::NullishCoalescing)
+                | (_, InfixOperator::Dan)
+                | (_, InfixOperator::Atau)
+                | (RplType::Angka, _)
                 | (RplType::String, InfixOperator::Tambah)
                 | (RplType::String, InfixOperator::SamaDengan)
                 | (RplType::String, InfixOperator::TidakSamaDengan)
                 | (RplType::Boolean, InfixOperator::SamaDengan)
                 | (RplType::Boolean, InfixOperator::TidakSamaDengan)
-                | (RplType::Boolean, InfixOperator::Dan)
-                | (RplType::Boolean, InfixOperator::Atau)
         )
     }
 }
@@ -702,9 +703,15 @@ impl TypeChecker {
                 }
 
                 // Tipe kiri dan kanan harus kompatibel
-                // Pengecualian: operator + mendukung auto-coercion angka → teks
-                let auto_coercion = matches!(operator, InfixOperator::Tambah)
-                    && (tipe_kiri == RplType::String || tipe_kanan == RplType::String);
+                // Pengecualian:
+                // - operator + mendukung auto-coercion angka → teks
+                // - operator logika &&, ||, ?? mendukung berbagai tipe data (short-circuit)
+                let auto_coercion = (matches!(operator, InfixOperator::Tambah)
+                    && (tipe_kiri == RplType::String || tipe_kanan == RplType::String))
+                    || matches!(
+                        operator,
+                        InfixOperator::Dan | InfixOperator::Atau | InfixOperator::NullishCoalescing
+                    );
                 if !auto_coercion
                     && tipe_kiri != RplType::TidakDiketahui
                     && tipe_kanan != RplType::TidakDiketahui
@@ -728,12 +735,9 @@ impl TypeChecker {
                 // Tentukan tipe hasil
                 match operator {
                     InfixOperator::Dan | InfixOperator::Atau => RplType::Boolean,
-                    InfixOperator::SamaDengan
-                    | InfixOperator::TidakSamaDengan
-                    | InfixOperator::LebihDari
-                    | InfixOperator::KurangDari
-                    | InfixOperator::Minimal
-                    | InfixOperator::Maksimal => RplType::Boolean,
+                    InfixOperator::LebihDari | InfixOperator::KurangDari | InfixOperator::Minimal | InfixOperator::Maksimal | InfixOperator::SamaDengan | InfixOperator::TidakSamaDengan => RplType::Boolean,
+                    InfixOperator::NullishCoalescing => tipe_kiri,
+                    InfixOperator::BitwiseAtau => RplType::Angka,
                     InfixOperator::Tambah => {
                         if tipe_kiri == RplType::String || tipe_kanan == RplType::String {
                             RplType::String
@@ -741,11 +745,7 @@ impl TypeChecker {
                             RplType::Angka
                         }
                     }
-                    InfixOperator::Kurang
-                    | InfixOperator::Kali
-                    | InfixOperator::Bagi
-                    | InfixOperator::Mod
-                    | InfixOperator::Pangkat => RplType::Angka,
+                    _ => RplType::Angka,
                 }
             }
             Expression::Call {
@@ -864,6 +864,17 @@ impl TypeChecker {
                 // Impor tidak bisa di-check secara static tanpa filesystem
                 RplType::TidakDiketahui
             }
+            Expression::Ternary {
+                kondisi,
+                konsekuensi,
+                alternatif,
+                lokasi: _,
+            } => {
+                self.infer_expression(kondisi);
+                let tipe_konsekuensi = self.infer_expression(konsekuensi);
+                let _tipe_alternatif = self.infer_expression(alternatif);
+                tipe_konsekuensi
+            }
         }
     }
 }
@@ -877,6 +888,11 @@ impl Default for TypeChecker {
 /// Konversi InfixOperator ke string yang mudah dibaca.
 fn operator_ke_string(op: &InfixOperator) -> &'static str {
     match op {
+        InfixOperator::Pangkat => "^",
+        InfixOperator::Dan => "&&",
+        InfixOperator::Atau => "||",
+        InfixOperator::BitwiseAtau => "|",
+        InfixOperator::NullishCoalescing => "??",
         InfixOperator::Tambah => "+",
         InfixOperator::Kurang => "-",
         InfixOperator::Kali => "*",
@@ -888,9 +904,6 @@ fn operator_ke_string(op: &InfixOperator) -> &'static str {
         InfixOperator::Maksimal => "<=",
         InfixOperator::SamaDengan => "==",
         InfixOperator::TidakSamaDengan => "!=",
-        InfixOperator::Dan => "dan",
-        InfixOperator::Atau => "atau",
-        InfixOperator::Pangkat => "^",
     }
 }
 
