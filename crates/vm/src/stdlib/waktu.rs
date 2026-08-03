@@ -39,26 +39,32 @@ pub fn register(vm: &mut VM) {
     // "tunggu" — I/O specific (sleep), not in shared stdlib
     fn tunggu_wrapper(ctx: &mut dyn VmContext, args: Vec<Value>) -> Result<Value, String> {
         if args.len() < 1 || args.len() > 2 {
-            return Err("waktu.tunggu membutuhkan 1 atau 2 argumen: milidetik, dan fungsi (opsional)".to_string());
+            return Err(
+                "waktu.tunggu membutuhkan 1 atau 2 argumen: milidetik, dan fungsi (opsional)"
+                    .to_string(),
+            );
         }
-        
+
         let ms = match &args[0] {
             Value::Angka(ms) => *ms as u64,
             v => {
                 let ms_str = v.to_string(ctx.get_heap_mut());
-                ms_str.parse::<f64>()
-                    .map(|v| v as u64)
-                    .map_err(|e| format!("waktu.tunggu: gagal mengubah argumen pertama ke angka: {}", e))?
+                ms_str.parse::<f64>().map(|v| v as u64).map_err(|e| {
+                    format!(
+                        "waktu.tunggu: gagal mengubah argumen pertama ke angka: {}",
+                        e
+                    )
+                })?
             }
         };
-        
+
         std::thread::sleep(std::time::Duration::from_millis(ms));
-        
+
         if args.len() == 2 {
             let func = args[1].clone();
             ctx.execute_function(func, vec![])?;
         }
-        
+
         Ok(Value::Kosong)
     }
     let tunggu = FungsiBawaanVM {

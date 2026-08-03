@@ -155,7 +155,7 @@ impl Lexer {
                         });
                     }
                 }
-            '=' => {
+                '=' => {
                     self.advance();
                     if self.current_char() == Some('=') {
                         self.advance();
@@ -191,32 +191,7 @@ impl Lexer {
                         Token::KurangDari
                     }
                 }
-                '&' => {
-                    self.advance();
-                    if self.current_char() == Some('&') {
-                        self.advance();
-                        Token::Dan
-                    } else {
-                        return Err(RplError::Sintaks {
-                            pesan: "Diharapkan '&&' untuk DAN.".to_string(),
-                            lokasi: Lokasi::from(lokasi_awal),
-                            saran: None,
-                        });
-                    }
-                }
-                '|' => {
-                    self.advance();
-                    if self.current_char() == Some('|') {
-                        self.advance();
-                        Token::Atau
-                    } else {
-                        return Err(RplError::Sintaks {
-                            pesan: "Diharapkan '||' untuk ATAU.".to_string(),
-                            lokasi: Lokasi::from(lokasi_awal),
-                            saran: None,
-                        });
-                    }
-                }
+
                 ';' => {
                     self.advance();
                     Token::TitikKoma

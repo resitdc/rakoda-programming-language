@@ -40,11 +40,11 @@ pub enum Token {
     Atau,            // atau
     Bukan,           // bukan
 
-    Tambah, // +
-    Kurang, // -
-    Kali,   // *
-    Bagi,   // /
-    Mod,    // %
+    Tambah,  // +
+    Kurang,  // -
+    Kali,    // *
+    Bagi,    // /
+    Mod,     // %
     Pangkat, // ^
 
     Assign,          // =

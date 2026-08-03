@@ -18,13 +18,13 @@ pub mod tugas;
 pub mod waktu;
 pub mod web;
 
+pub mod cache;
 pub mod dokumen;
-pub mod regex;
 pub mod email;
 pub mod jwt;
-pub mod cache;
-pub mod ocr;
 pub mod ktp;
+pub mod ocr;
+pub mod regex;
 
 use crate::machine::VM;
 
