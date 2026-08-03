@@ -11,6 +11,7 @@ pub mod string;
 pub mod template;
 pub mod waktu;
 pub mod dokumen;
+pub mod email;
 
 pub use jenis::NilaiRpl;
 

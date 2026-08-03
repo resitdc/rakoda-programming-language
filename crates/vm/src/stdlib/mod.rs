@@ -20,6 +20,7 @@ pub mod web;
 
 pub mod dokumen;
 pub mod regex;
+pub mod email;
 
 use crate::machine::VM;
 
@@ -43,4 +44,5 @@ pub fn register_all(vm: &mut VM) {
     log::register(vm);
     ai::register(vm);
     dokumen::register(vm);
+    email::register(vm);
 }

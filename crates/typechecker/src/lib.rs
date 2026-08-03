@@ -259,6 +259,7 @@ impl TypeChecker {
             "tugas",
             "log",
             "dokumen",
+            "email",
             "ai",
             "core",
             "regex",

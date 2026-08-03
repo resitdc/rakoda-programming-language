@@ -1,0 +1,27 @@
+buat transporter = email.konfigurasi({
+    "host": "smtp.gmail.com",
+    "port": 465,
+    "secure": benar,
+    "auth": {
+        "user": "sample@gmail.com",
+        "pass": "7sa6dbsatdas6dtbas8d7said"
+    }
+})
+
+buat pesan = {
+    "dari": "sample@gmail.com",
+    "ke": "dwi.restu3@gmail.com",
+    "subjek": "Hai Restu",
+    "teks": "Ini adalah pesan percobaan dari Rakoda.",
+    "html": "<h1>Halo</h1><p>Ini adalah pesan percobaan kedua.</p>"
+}
+
+tampilkan("Mencoba mengirim email...")
+coba {
+    buat hasil = transporter.kirim(pesan)
+    tampilkan("Hasil pengiriman:")
+    tampilkan(hasil)
+} tangkap (e) {
+    tampilkan("Gagal (ini wajar jika localhost:2525 tidak aktif):")
+    tampilkan(e)
+}
