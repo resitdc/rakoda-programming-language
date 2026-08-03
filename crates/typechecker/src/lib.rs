@@ -264,6 +264,8 @@ impl TypeChecker {
             "jwt",
             "cache",
             "ai",
+            "gambar",
+            "ktp",
             "core",
             "regex",
             "uuid",

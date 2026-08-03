@@ -23,6 +23,8 @@ pub mod regex;
 pub mod email;
 pub mod jwt;
 pub mod cache;
+pub mod ocr;
+pub mod ktp;
 
 use crate::machine::VM;
 
@@ -49,4 +51,6 @@ pub fn register_all(vm: &mut VM) {
     email::register(vm);
     jwt::register(vm);
     cache::register(vm);
+    ocr::register(vm);
+    ktp::register(vm);
 }
