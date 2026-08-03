@@ -10,6 +10,7 @@ pub mod matematika;
 pub mod string;
 pub mod template;
 pub mod waktu;
+pub mod dokumen;
 
 pub use jenis::NilaiRpl;
 
@@ -28,3 +29,4 @@ pub use list::fungsi_list;
 pub use matematika::fungsi_matematika;
 pub use string::fungsi_string;
 pub use waktu::fungsi_waktu;
+pub use dokumen::fungsi_dokumen;

@@ -1,0 +1,18 @@
+tampilkan("--- Tes dokumen.baca ---")
+
+// Tes PDF
+buat teks_pdf = dokumen.baca("tests/fixtures/dummy.pdf")
+tampilkan("Isi PDF:")
+tampilkan(teks_pdf)
+
+// Tes DOCX
+buat teks_docx = dokumen.baca("tests/fixtures/dummy.docx")
+tampilkan("\nIsi DOCX:")
+tampilkan(teks_docx)
+
+// Tes Excel
+buat isi_excel = dokumen.baca("tests/fixtures/dummy.xlsx")
+tampilkan("\nIsi Excel:")
+tampilkan(isi_excel.Sheet1[0][0])
+
+tampilkan("\nSelesai")
