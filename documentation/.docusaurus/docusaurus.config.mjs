@@ -7,6 +7,11 @@ export default {
   "title": "Rakoda Documentation",
   "tagline": "Official Rakoda Programming Language Documentation",
   "favicon": "img/rakoda-blue.svg",
+  "stylesheets": [
+    "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap",
+    "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap",
+    "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
+  ],
   "future": {
     "v4": {
       "removeLegacyPostBuildHeadAttribute": true,
@@ -29,7 +34,7 @@ export default {
       "gitEagerVcs": true
     }
   },
-  "url": "https://rakoda.id",
+  "url": "https://rakoda.dev",
   "baseUrl": "/",
   "organizationName": "resitdc",
   "projectName": "rakoda-programming-language",
@@ -56,6 +61,23 @@ export default {
         }
       }
     ]
+  ],
+  "themes": [
+    [
+      "/Users/resitdc/Documents/projects/resitdc/indonesia-programming-language/documentation/node_modules/.pnpm/@easyops-cn+docusaurus-search-local@0.55.3_@docusaurus+faster@3.10.2_@docusaurus+types@_d5c98b5ce5353a374000638d693a6652/node_modules/@easyops-cn/docusaurus-search-local/dist/server/server/index.js",
+      {
+        "hashed": true,
+        "language": [
+          "en"
+        ],
+        "indexBlog": false,
+        "indexDocs": true,
+        "indexPages": true
+      }
+    ]
+  ],
+  "clientModules": [
+    "/Users/resitdc/Documents/projects/resitdc/indonesia-programming-language/documentation/src/prism-rakoda.ts"
   ],
   "themeConfig": {
     "image": "img/docusaurus-social-card.jpg",
@@ -95,16 +117,20 @@ export default {
       "style": "dark",
       "links": [
         {
-          "title": "Docs",
+          "title": "Dokumentasi",
           "items": [
             {
               "label": "Tutorial",
               "to": "/docs/intro"
+            },
+            {
+              "label": "Unduh",
+              "to": "/download"
             }
           ]
         },
         {
-          "title": "Community",
+          "title": "Komunitas",
           "items": [
             {
               "label": "Discord",
@@ -113,7 +139,7 @@ export default {
           ]
         },
         {
-          "title": "More",
+          "title": "Lainnya",
           "items": [
             {
               "label": "GitHub",
@@ -122,7 +148,7 @@ export default {
           ]
         }
       ],
-      "copyright": "Copyright © 2026 RAKODA.<br/>Open-source and released under the MIT License."
+      "copyright": "Copyright © 2026 Rakoda. Dirilis di bawah Lisensi MIT."
     },
     "prism": {
       "theme": {
@@ -358,11 +384,8 @@ export default {
   ],
   "customFields": {},
   "plugins": [],
-  "themes": [],
   "scripts": [],
   "headTags": [],
-  "stylesheets": [],
-  "clientModules": [],
   "titleDelimiter": "|",
   "noIndex": false,
   "markdown": {

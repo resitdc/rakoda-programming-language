@@ -8,46 +8,27 @@ import HomepageFeatures from '@site/src/components/HomepageFeatures';
 import Heading from '@theme/Heading';
 import styles from './index.module.css';
 
-let firstCode = `buat nama = "Restu"\n`;
-firstCode += "buat umur = 26\n\n";
-firstCode += "jika umur minimal 17 maka\n";
-firstCode += 'tampilkan `${nama} sudah punya KTP`\n';
-firstCode += "jika tidak\n";
-firstCode += 'tampilkan `${nama} belum punya KTP`\n';
-firstCode += "selesai";
-
-let secondCode = `buat nama = "Restu"\n\n`;
-secondCode += 'jika nama isinya "Restu"\n';
-secondCode += 'tampilkan "Kamu Ganteng"\n';
-secondCode += "jika tidak\n";
-secondCode += 'tampilkan "Kamu Jelek"\n';
-secondCode += "selesai";
-
+// Code examples for typing animation
 const codes = [
-  firstCode,
-  secondCode,
+  `buat nama = "Restu"\nbuat umur = 26\n\njika umur minimal 17 maka\ntampilkan \`\${nama} sudah punya KTP\`\njika tidak\ntampilkan \`\${nama} belum punya KTP\`\nselesai`,
+  `buat buah = ["Apel", "Jeruk", "Pisang"]\n\nsetiap item di buah maka\ntampilkan "Saya suka " + item\nselesai`,
 ];
 
+const KEYWORDS = ['buat', 'jika', 'maka', 'tidak', 'selesai', 'selama', 'setiap', 'di', 'minimal'];
+
 const highlightRPL = (text: string) => {
-  const kw = { color: '#569CD6' };
-  const fn = { color: '#4EC9B0' };
-  const st = { color: '#CE9178' };
-  const nm = { color: '#B5CEA8' };
-  const id = { color: '#D4D4D4' };
-
   if (!text) return null;
-
-  const regex = /(buat|jika|maka|tidak|selesai|tampilkan|\s+|"[^"]*"|`[^`]*`|[0-9]+)/;
+  const regex = new RegExp(`(${KEYWORDS.join('|')}|\\s+|"[^"]*"|\`[^\`]*\`|[0-9]+)`);
   const tokens = text.split(regex);
   return tokens.map((token, i) => {
     if (!token) return null;
-    if (["buat", "jika", "maka", "tidak", "selesai"].includes(token)) return <span key={i} style={kw}>{token}</span>;
-    if (token === "tampilkan") return <span key={i} style={fn}>{token}</span>;
-    if (/^[0-9]+$/.test(token)) return <span key={i} style={nm}>{token}</span>;
-    if (/^["`]/.test(token)) return <span key={i} style={st}>{token}</span>;
-    return <span key={i} style={id}>{token}</span>;
+    if (KEYWORDS.includes(token)) return <span key={i} style={{ color: '#60a5fa' }}>{token}</span>;
+    if (token === 'tampilkan') return <span key={i} style={{ color: '#34d399' }}>{token}</span>;
+    if (/^[0-9]+$/.test(token)) return <span key={i} style={{ color: '#a78bfa' }}>{token}</span>;
+    if (/^["`]/.test(token)) return <span key={i} style={{ color: '#fbbf24' }}>{token}</span>;
+    return <span key={i} style={{ color: '#e2e8f0' }}>{token}</span>;
   });
-}
+};
 
 const CustomCodeBlock = () => {
   const [copied, setCopied] = useState(false);
@@ -59,9 +40,7 @@ const CustomCodeBlock = () => {
 
   useEffect(() => {
     if (charIndex < currentCode.length) {
-      const timeout = setTimeout(() => {
-        setCharIndex(c => c + 1);
-      }, 40);
+      const timeout = setTimeout(() => setCharIndex(c => c + 1), 40);
       return () => clearTimeout(timeout);
     } else {
       const timeout = setTimeout(() => {
@@ -75,10 +54,6 @@ const CustomCodeBlock = () => {
   const currentText = currentCode.substring(0, charIndex);
   const lines = currentText.split('\n');
 
-  const lineStyle = { display: 'flex', fontFamily: 'var(--ifm-font-family-monospace)', fontSize: '0.9rem', lineHeight: '1.5', minHeight: '1.5em' };
-  const numStyle = { width: '2rem', textAlign: 'right' as const, color: '#858585', marginRight: '1rem', userSelect: 'none' as const };
-  const id = { color: '#D4D4D4' }; 
-
   const handleCopy = () => {
     navigator.clipboard.writeText(codes[codeIndex]);
     setCopied(true);
@@ -87,90 +62,87 @@ const CustomCodeBlock = () => {
 
   return (
     <div style={{ position: 'relative' }}>
-      <button 
+      <button
         onClick={handleCopy}
         className="clean-btn"
         title="Salin Kode"
         style={{
-          position: 'absolute',
-          top: '12px',
-          right: '12px',
-          background: 'rgba(255, 255, 255, 0.1)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          color: '#fff',
-          padding: '4px 8px',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontSize: '0.75rem',
-          opacity: 0.8,
-          transition: 'all 0.2s',
-          zIndex: 10
+          position: 'absolute', top: 10, right: 10, zIndex: 10,
+          background: 'rgba(255,255,255,0.06)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          color: 'rgba(255,255,255,0.5)', padding: '3px 10px',
+          borderRadius: 6, cursor: 'pointer', fontSize: '0.75rem',
+          fontFamily: 'var(--ifm-font-family-monospace)',
+          transition: 'all 0.15s ease',
         }}
-        onMouseOver={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'; }}
-        onMouseOut={(e) => { e.currentTarget.style.opacity = '0.8'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; }}
+        onMouseOver={(e) => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+        onMouseOut={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
       >
-        {copied ? 'Tersalin!' : 'Salin'}
+        {copied ? 'Tersalin' : 'Salin'}
       </button>
-      <div style={{ padding: '20px 16px', background: 'transparent', overflowX: 'auto', minHeight: '260px' }}>
+      <div style={{ padding: '16px 14px', minHeight: 220 }}>
         {lines.map((line, i) => (
-          <div key={i} style={lineStyle}>
-            <span style={numStyle}>{i + 1}</span>
-            <span style={id}>{highlightRPL(line)}</span>
+          <div key={i} style={{
+            display: 'flex',
+            fontFamily: 'JetBrains Mono, var(--ifm-font-family-monospace)',
+            fontSize: '0.85rem', lineHeight: '1.6', minHeight: '1.6em',
+          }}>
+            <span style={{
+              width: '1.75rem', textAlign: 'right', color: '#475569',
+              marginRight: '1rem', userSelect: 'none', fontSize: '0.8rem',
+            }}>{i + 1}</span>
+            <span>{highlightRPL(line)}</span>
             {i === lines.length - 1 && !isWaiting && (
-              <span style={{ borderRight: '2px solid #D4D4D4', marginLeft: '2px' }}></span>
+              <span style={{
+                borderRight: '2px solid #60a5fa', marginLeft: 1,
+                animation: 'blink 1s step-end infinite',
+              }} />
             )}
           </div>
         ))}
       </div>
+      <style>{`@keyframes blink { 50% { opacity: 0; } }`}</style>
     </div>
   );
-}
+};
 
 const HomepageHeader = () => {
-  const {siteConfig} = useDocusaurusContext();
+  const { siteConfig } = useDocusaurusContext();
   return (
     <header className={clsx('hero hero--primary', styles.heroBanner)}>
       <div className="container">
         <div className="row" style={{ alignItems: 'center' }}>
           <div className="col col--6" style={{ textAlign: 'left' }}>
-            <img 
-              src={useBaseUrl('/img/rakoda-white.svg')} 
-              alt="Rakoda Logo" 
+            <img
+              src={useBaseUrl('/img/rakoda-white.svg')}
+              alt="Rakoda Logo"
               className={styles.heroLogo}
             />
-            <Heading as="h1" className="hero__title">
+            <Heading as="h1" className="hero__title" style={{ fontSize: '2.5rem', letterSpacing: '-0.03em', fontWeight: 800 }}>
               {siteConfig.title}
             </Heading>
             <p className={styles.heroSubtitle}>
-              Bahasa pemrograman yang dirancang khusus dengan sintaks <b>Bahasa Indonesia</b>, 
-              membuat belajar logika pemrograman menjadi lebih mudah dan relevan!
+              Bahasa pemrograman yang dirancang khusus dengan sintaks <strong>Bahasa Indonesia</strong>,
+              membuat belajar logika pemrograman menjadi lebih mudah dan relevan.
             </p>
             <div className={styles.buttons} style={{ flexWrap: 'wrap' }}>
-              <Link
-                className="button button--secondary button--lg"
-                to="/docs/intro">
-                Mulai Belajar Sekarang
+              <Link className="button button--secondary button--lg" to="/docs/intro">
+                Mulai Belajar
               </Link>
               <Link
                 className="button button--outline button--secondary button--lg"
                 to="/download"
-                style={{ color: 'white', borderColor: 'white' }}>
+                style={{ color: 'white', borderColor: 'rgba(255,255,255,0.3)' }}>
                 Unduh
-              </Link>
-              <Link
-                className="button button--outline button--secondary button--lg"
-                to="https://github.com/resitdc/rakoda-programming-language"
-                style={{ color: 'white', borderColor: 'white' }}>
-                GitHub
               </Link>
             </div>
           </div>
           <div className="col col--6">
             <div className={styles.codeWindow}>
               <div className={styles.codeHeader}>
-                <span className={styles.macDot} style={{backgroundColor: '#ff5f56'}}></span>
-                <span className={styles.macDot} style={{backgroundColor: '#ffbd2e'}}></span>
-                <span className={styles.macDot} style={{backgroundColor: '#27c93f'}}></span>
+                <span className={styles.macDot} style={{ backgroundColor: '#ff5f56' }} />
+                <span className={styles.macDot} style={{ backgroundColor: '#ffbd2e' }} />
+                <span className={styles.macDot} style={{ backgroundColor: '#27c93f' }} />
                 <span className={styles.codeTitle}>belajar_ngoding.rpl</span>
               </div>
               <CustomCodeBlock />
@@ -180,10 +152,10 @@ const HomepageHeader = () => {
       </div>
     </header>
   );
-}
+};
 
 const Home = (): ReactNode => {
-  const {siteConfig} = useDocusaurusContext();
+  const { siteConfig } = useDocusaurusContext();
   return (
     <Layout
       title={`Beranda | ${siteConfig.title}`}

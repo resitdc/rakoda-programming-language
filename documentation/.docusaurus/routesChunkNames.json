@@ -56,30 +56,128 @@
     },
     "content": "content---markdown-page-4-c-6-c89"
   },
-  "/docs-bf3": {
+  "/search-822": {
+    "__comp": "__comp---theme-search-page-1-a-4-d6f",
+    "__context": {
+      "plugin": "plugin---search-138-688"
+    }
+  },
+  "/docs-877": {
     "__comp": "__comp---theme-docs-root-5-e-9-0b6",
     "__context": {
       "plugin": "plugin---docsaba-d7c"
     }
   },
-  "/docs-ac1": {
+  "/docs-09a": {
     "__comp": "__comp---theme-doc-version-roota-7-b-5de",
     "__props": "__props---docs-005-788"
   },
-  "/docs-558": {
+  "/docs-e25": {
     "__comp": "__comp---theme-doc-roota-94-67a"
+  },
+  "/docs/category/dasar-pemrograman-56a": {
+    "__comp": "__comp---theme-doc-category-generated-index-page-14-e-640",
+    "__props": "__props---docs-category-dasar-pemrograman-0-e-7-632"
+  },
+  "/docs/category/ekosistem--tooling-636": {
+    "__comp": "__comp---theme-doc-category-generated-index-page-14-e-640",
+    "__props": "__props---docs-category-ekosistem-tooling-44-c-79c"
+  },
+  "/docs/category/fitur-lanjut-1cc": {
+    "__comp": "__comp---theme-doc-category-generated-index-page-14-e-640",
+    "__props": "__props---docs-category-fitur-lanjut-62-f-807"
+  },
+  "/docs/category/pengembangan-web-cd8": {
+    "__comp": "__comp---theme-doc-category-generated-index-page-14-e-640",
+    "__props": "__props---docs-category-pengembangan-web-323-027"
+  },
+  "/docs/category/pustaka-standar-stdlib-8e0": {
+    "__comp": "__comp---theme-doc-category-generated-index-page-14-e-640",
+    "__props": "__props---docs-category-pustaka-standar-stdlibf-6-a-f39"
+  },
+  "/docs/dasar/fungsi-9a7": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-dasar-fungsi-69-e-38f"
+  },
+  "/docs/dasar/operator-221": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-dasar-operator-4-aa-0c1"
+  },
+  "/docs/dasar/percabangan-1b4": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-dasar-percabanganfcb-a52"
+  },
+  "/docs/dasar/perulangan-196": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-dasar-perulangan-447-ccb"
+  },
+  "/docs/dasar/tipe-data-ae4": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-dasar-tipe-data-5-ba-f81"
+  },
+  "/docs/dasar/variabel-8f5": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-dasar-variabeldf-9-0aa"
+  },
+  "/docs/ekosistem/manajemen-paket-ba2": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-ekosistem-manajemen-paket-56-c-fd2"
+  },
+  "/docs/ekosistem/perintah-cli-ac7": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-ekosistem-perintah-clib-1-e-72b"
+  },
+  "/docs/fitur-lanjut/kecerdasan-buatan-5b5": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-fitur-lanjut-kecerdasan-buatanea-8-c97"
+  },
+  "/docs/fitur-lanjut/modul-dan-import-dab": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-fitur-lanjut-modul-dan-import-603-f32"
+  },
+  "/docs/fitur-lanjut/penanganan-error-fba": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-fitur-lanjut-penanganan-error-006-9c9"
+  },
+  "/docs/fitur-lanjut/tugas-dan-log-522": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-fitur-lanjut-tugas-dan-logcda-b4b"
   },
   "/docs/intro-89a": {
     "__comp": "__comp---theme-doc-item-178-a40",
     "content": "content---docs-introf-84-2b4"
   },
-  "/docs/percabangan-d86": {
+  "/docs/pengembangan-web/database-47f": {
     "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-percabangan-26-a-c18"
+    "content": "content---docs-pengembangan-web-databasee-5-a-e61"
   },
-  "/docs/variabel-b08": {
+  "/docs/pengembangan-web/template-html-dc2": {
     "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-variabelc-64-83d"
+    "content": "content---docs-pengembangan-web-template-html-119-b63"
+  },
+  "/docs/pengembangan-web/web-dan-jaringan-3d1": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-pengembangan-web-web-dan-jaringanceb-fdc"
+  },
+  "/docs/pustaka-standar/inti-dan-tipe-dc2": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-pustaka-standar-inti-dan-tipe-952-0e5"
+  },
+  "/docs/pustaka-standar/matematika-dan-teks-efc": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-pustaka-standar-matematika-dan-teksbff-8e9"
+  },
+  "/docs/pustaka-standar/pustaka-standar-6c7": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-pustaka-standar-pustaka-standare-29-6b6"
+  },
+  "/docs/pustaka-standar/sistem-dan-berkas-be5": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-pustaka-standar-sistem-dan-berkas-8-b-6-a26"
+  },
+  "/docs/pustaka-standar/waktu-dan-kripto-ae2": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---docs-pustaka-standar-waktu-dan-kriptobda-b1b"
   },
   "/-e5f": {
     "__comp": "__comp---site-src-pages-index-tsx-1-df-d3e",

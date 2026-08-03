@@ -1,0 +1,9 @@
+{
+  "label": "Pustaka Standar (Stdlib)",
+  "position": 2,
+  "className": "icon-cat-stdlib",
+  "link": {
+    "type": "generated-index",
+    "description": "Jelajahi berbagai fungsi bawaan Rakoda untuk mempermudah pekerjaan harian Anda."
+  }
+}

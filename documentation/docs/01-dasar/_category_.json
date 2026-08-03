@@ -1,0 +1,9 @@
+{
+  "label": "Dasar Pemrograman",
+  "position": 1,
+  "className": "icon-cat-dasar",
+  "link": {
+    "type": "generated-index",
+    "description": "Pelajari konsep paling fundamental dalam bahasa Rakoda sebelum melangkah lebih jauh."
+  }
+}

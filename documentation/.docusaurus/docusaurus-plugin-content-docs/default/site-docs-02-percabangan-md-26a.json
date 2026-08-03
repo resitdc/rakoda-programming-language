@@ -17,7 +17,11 @@
   },
   "sidebar": "tutorialSidebar",
   "previous": {
-    "title": "Variabel",
-    "permalink": "/docs/variabel"
+    "title": "Operator Dasar",
+    "permalink": "/docs/01.5-operator"
+  },
+  "next": {
+    "title": "Perulangan (Looping)",
+    "permalink": "/docs/perulangan"
   }
 }
