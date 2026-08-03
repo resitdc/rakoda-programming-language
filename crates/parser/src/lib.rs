@@ -324,6 +324,7 @@ impl Parser {
             } else {
                 if current == &Token::Selesai
                     || current == &Token::JikaTidak
+                    || current == &Token::AtauJika
                     || current == &Token::Tangkap
                 {
                     break;
@@ -334,7 +335,9 @@ impl Parser {
 
         if is_kurawal {
             self.expect(Token::KurawalTutup);
-        } else if self.current().token != Token::JikaTidak && self.current().token != Token::Tangkap
+        } else if self.current().token != Token::JikaTidak 
+            && self.current().token != Token::AtauJika 
+            && self.current().token != Token::Tangkap
         {
             self.expect(Token::Selesai);
         }
@@ -355,7 +358,9 @@ impl Parser {
         };
         let konsekuensi = self.parse_block();
 
-        let alternatif = if self.current().token == Token::JikaTidak {
+        let alternatif = if self.current().token == Token::AtauJika {
+            Some(vec![self.parse_jika()])
+        } else if self.current().token == Token::JikaTidak {
             self.advance();
             if self.current().token == Token::Jika {
                 Some(vec![self.parse_jika()])

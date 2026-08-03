@@ -410,7 +410,30 @@ impl Lexer {
                 self.kolom = simpan_kolom;
                 self.offset = simpan_offset;
             }
-        } else if text == "lebih" {
+        }
+
+        if text == "atau" {
+            self.skip_whitespace();
+            let mut next_word = String::new();
+            while let Some(c) = self.current_char() {
+                if c.is_alphabetic() || c.is_ascii_digit() || c == '_' {
+                    next_word.push(c);
+                    self.advance();
+                } else {
+                    break;
+                }
+            }
+            if next_word == "jika" {
+                return Token::AtauJika;
+            } else {
+                self.posisi = simpan_posisi;
+                self.baris = simpan_baris;
+                self.kolom = simpan_kolom;
+                self.offset = simpan_offset;
+            }
+        }
+
+        if text == "lebih" {
             self.skip_whitespace();
             let mut next_word = String::new();
             while let Some(c) = self.current_char() {

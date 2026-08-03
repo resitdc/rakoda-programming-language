@@ -9,6 +9,7 @@ pub enum Token {
     Masukkan,   // masukkan
     Jika,       // jika
     JikaTidak,  // jika tidak
+    AtauJika,   // atau jika
     Fungsi,     // fungsi
     Kembalikan, // kembalikan
     Selama,     // selama
@@ -74,6 +75,7 @@ impl Token {
             Token::Masukkan => "kata 'masukkan'".to_string(),
             Token::Jika => "kata 'jika'".to_string(),
             Token::JikaTidak => "kata 'jika tidak'".to_string(),
+            Token::AtauJika => "kata 'atau jika'".to_string(),
             Token::Maka => "kata 'maka' atau '{'".to_string(),
             Token::Selama => "kata 'selama'".to_string(),
             Token::Setiap => "kata 'setiap'".to_string(),

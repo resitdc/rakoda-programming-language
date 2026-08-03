@@ -1,0 +1,11 @@
+buat umur = 15
+
+jika umur > 50 maka
+    tampilkan "kamu tua"
+atau jika umur > 20 maka
+    tampilkan "kamu dewasa"
+atau jika umur > 14 maka
+    tampilkan "kamu remaja"
+jika tidak
+    tampilkan "kamu masih kecil"
+selesai
