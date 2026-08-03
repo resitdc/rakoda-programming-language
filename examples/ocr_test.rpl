@@ -1,0 +1,5 @@
+tampilkan "Sedang mengekstrak teks dari gambar ktp.jpg..."
+buat hasil = gambar.baca("examples/ktp.jpg")
+
+tampilkan "Hasil OCR:"
+tampilkan hasil
