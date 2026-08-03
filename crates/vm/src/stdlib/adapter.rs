@@ -58,3 +58,19 @@ pub fn value_ke_nilai(val: &Value, heap: &Heap) -> NilaiRpl {
         _ => NilaiRpl::Kosong,
     }
 }
+
+pub fn resolve_path(ctx: &dyn crate::value::VmContext, path_str: &str) -> String {
+    let path = std::path::Path::new(path_str);
+    if path.is_absolute() {
+        return path_str.to_string();
+    }
+    let (_, file_opt) = ctx.current_function_info();
+    if let Some(file) = file_opt {
+        if let Some(parent) = std::path::Path::new(&file).parent() {
+            if parent.to_string_lossy() != "" {
+                return parent.join(path).to_string_lossy().to_string();
+            }
+        }
+    }
+    path_str.to_string()
+}
