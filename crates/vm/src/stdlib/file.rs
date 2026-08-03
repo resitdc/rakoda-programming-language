@@ -29,7 +29,7 @@ pub fn register(vm: &mut VM) {
                             } else {
                                 None
                             };
-                            
+
                             if let Some(p) = path_str {
                                 let new_path = adapter::resolve_path(ctx, &p);
                                 let new_idx = ctx.get_heap_mut().alloc(HeapData::String(new_path));

@@ -339,8 +339,8 @@ impl Parser {
 
         if is_kurawal {
             self.expect(Token::KurawalTutup);
-        } else if self.current().token != Token::JikaTidak 
-            && self.current().token != Token::AtauJika 
+        } else if self.current().token != Token::JikaTidak
+            && self.current().token != Token::AtauJika
             && self.current().token != Token::Tangkap
         {
             self.expect(Token::Selesai);

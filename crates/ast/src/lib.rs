@@ -178,12 +178,7 @@ impl std::fmt::Display for InfixOperator {
             InfixOperator::Bagi => "/ (bagi)",
             InfixOperator::Mod => "% (modulus)",
             InfixOperator::Pangkat => "^ (pangkat)",
-            InfixOperator::Tambah => "+ (tambah)",
-            InfixOperator::Kurang => "- (kurang)",
-            InfixOperator::Kali => "* (kali)",
-            InfixOperator::Bagi => "/ (bagi)",
-            InfixOperator::Mod => "% (modulus)",
-            InfixOperator::Pangkat => "^ (pangkat)",
+
             InfixOperator::LebihDari => "> (lebih dari)",
             InfixOperator::KurangDari => "< (kurang dari)",
             InfixOperator::Minimal => ">= (minimal)",

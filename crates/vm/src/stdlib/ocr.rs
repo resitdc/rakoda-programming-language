@@ -1,20 +1,24 @@
 use crate::machine::VM;
 use crate::value::{FungsiBawaanVM, Value};
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::path::Path;
-use ocrs::{OcrEngine, OcrEngineParams, ImageSource, DimOrder};
-use rten_imageio::read_image;
+use ocrs::{DimOrder, ImageSource, OcrEngine, OcrEngineParams};
 use rten::Model;
+use rten_imageio::read_image;
 use rten_tensor::prelude::*;
+use std::collections::HashMap;
+use std::path::Path;
+use std::sync::Arc;
 
 const DETECTION_MODEL: &[u8] = include_bytes!("models/text-detection.rten");
 const RECOGNITION_MODEL: &[u8] = include_bytes!("models/text-recognition.rten");
 
 pub(crate) fn inisialisasi_engine() -> Result<OcrEngine, String> {
     OcrEngine::new(OcrEngineParams {
-        detection_model: Some(Model::load_static_slice(DETECTION_MODEL).map_err(|e| e.to_string())?),
-        recognition_model: Some(Model::load_static_slice(RECOGNITION_MODEL).map_err(|e| e.to_string())?),
+        detection_model: Some(
+            Model::load_static_slice(DETECTION_MODEL).map_err(|e| e.to_string())?,
+        ),
+        recognition_model: Some(
+            Model::load_static_slice(RECOGNITION_MODEL).map_err(|e| e.to_string())?,
+        ),
         ..Default::default()
     })
     .map_err(|e| format!("Gagal inisialisasi mesin OCR: {}", e))
@@ -79,12 +83,16 @@ pub fn register(vm: &mut VM) {
                 result_string.push_str(&line.to_string());
             }
 
-            let ptr = ctx.get_heap_mut().alloc(crate::heap::HeapData::String(result_string));
+            let ptr = ctx
+                .get_heap_mut()
+                .alloc(crate::heap::HeapData::String(result_string));
             Ok(Value::String(ptr))
         }),
     };
 
-    let baca_idx = vm.heap.alloc(crate::heap::HeapData::FungsiBawaan(baca_func));
+    let baca_idx = vm
+        .heap
+        .alloc(crate::heap::HeapData::FungsiBawaan(baca_func));
     map.insert("baca".to_string(), Value::FungsiBawaan(baca_idx));
 
     let ptr = vm.heap.alloc(crate::heap::HeapData::Kamus(map));

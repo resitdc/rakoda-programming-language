@@ -754,8 +754,16 @@ impl VM {
                     let sampai_val = self.stack.pop().unwrap_or(Value::Kosong);
                     let dari_val = self.stack.pop().unwrap_or(Value::Kosong);
 
-                    let dari = if let Value::Angka(n) = dari_val { n } else { 0.0 };
-                    let sampai = if let Value::Angka(n) = sampai_val { n } else { 0.0 };
+                    let dari = if let Value::Angka(n) = dari_val {
+                        n
+                    } else {
+                        0.0
+                    };
+                    let sampai = if let Value::Angka(n) = sampai_val {
+                        n
+                    } else {
+                        0.0
+                    };
 
                     let step = if dari <= sampai { 1.0 } else { -1.0 };
 
@@ -768,14 +776,26 @@ impl VM {
                 }
                 OpCode::UlangiNext => {
                     let offset = self.frames.last_mut().unwrap().read_short(&self.heap) as usize;
-                    
+
                     let step_val = *self.stack.last().unwrap();
                     let sampai_val = self.stack[self.stack.len() - 2];
                     let current_val = self.stack[self.stack.len() - 3];
 
-                    let step = if let Value::Angka(n) = step_val { n } else { 0.0 };
-                    let sampai = if let Value::Angka(n) = sampai_val { n } else { 0.0 };
-                    let current = if let Value::Angka(n) = current_val { n } else { 0.0 };
+                    let step = if let Value::Angka(n) = step_val {
+                        n
+                    } else {
+                        0.0
+                    };
+                    let sampai = if let Value::Angka(n) = sampai_val {
+                        n
+                    } else {
+                        0.0
+                    };
+                    let current = if let Value::Angka(n) = current_val {
+                        n
+                    } else {
+                        0.0
+                    };
 
                     let has_next = if step > 0.0 {
                         current <= sampai

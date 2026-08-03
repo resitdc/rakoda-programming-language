@@ -558,10 +558,7 @@ impl TypeChecker {
 
                 if tipe_dari != RplType::Angka && tipe_dari != RplType::TidakDiketahui {
                     self.error(
-                        format!(
-                            "Awal perulangan harus berupa angka, bukan '{}'",
-                            tipe_dari
-                        ),
+                        format!("Awal perulangan harus berupa angka, bukan '{}'", tipe_dari),
                         *lokasi,
                         Some("Pastikan rentang awal adalah angka.".to_string()),
                     );
@@ -737,7 +734,12 @@ impl TypeChecker {
                 // Tentukan tipe hasil
                 match operator {
                     InfixOperator::Dan | InfixOperator::Atau => RplType::Boolean,
-                    InfixOperator::LebihDari | InfixOperator::KurangDari | InfixOperator::Minimal | InfixOperator::Maksimal | InfixOperator::SamaDengan | InfixOperator::TidakSamaDengan => RplType::Boolean,
+                    InfixOperator::LebihDari
+                    | InfixOperator::KurangDari
+                    | InfixOperator::Minimal
+                    | InfixOperator::Maksimal
+                    | InfixOperator::SamaDengan
+                    | InfixOperator::TidakSamaDengan => RplType::Boolean,
                     InfixOperator::NullishCoalescing => tipe_kiri,
                     InfixOperator::BitwiseAtau => RplType::Angka,
                     InfixOperator::Tambah => {

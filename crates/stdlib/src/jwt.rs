@@ -1,5 +1,5 @@
 use crate::{DaftarFungsiRpl, NilaiRpl};
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde_json::Value;
 
 pub fn fungsi_jwt() -> DaftarFungsiRpl {
@@ -49,7 +49,7 @@ fn verifikasi_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
     let mut validation = Validation::new(Algorithm::HS256);
     // Nonaktifkan wajib punya exp untuk kemudahan, kecuali disetel oleh user
     validation.required_spec_claims.clear();
-    validation.validate_exp = true; 
+    validation.validate_exp = true;
 
     let token_data = decode::<Value>(
         token,

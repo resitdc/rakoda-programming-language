@@ -1,19 +1,19 @@
+pub mod cache;
 pub mod core;
+pub mod dokumen;
+pub mod email;
 pub mod env;
 pub mod file;
 pub mod http;
 pub mod jenis;
 pub mod json;
+pub mod jwt;
 pub mod kripto;
 pub mod list;
 pub mod matematika;
 pub mod string;
 pub mod template;
 pub mod waktu;
-pub mod dokumen;
-pub mod email;
-pub mod jwt;
-pub mod cache;
 
 pub use jenis::NilaiRpl;
 
@@ -24,6 +24,7 @@ pub type DaftarFungsiRpl = Vec<(&'static str, FungsiRpl)>;
 
 /// Re-export semua fungsi dari masing-masing modul untuk kemudahan akses.
 pub use core::fungsi_core;
+pub use dokumen::fungsi_dokumen;
 pub use env::fungsi_env;
 pub use file::fungsi_file;
 pub use json::fungsi_json;
@@ -32,4 +33,3 @@ pub use list::fungsi_list;
 pub use matematika::fungsi_matematika;
 pub use string::fungsi_string;
 pub use waktu::fungsi_waktu;
-pub use dokumen::fungsi_dokumen;

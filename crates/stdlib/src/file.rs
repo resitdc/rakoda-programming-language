@@ -92,9 +92,12 @@ fn buat_folder_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
 
 fn daftar_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
     if args.is_empty() {
-        return Err("file.daftar membutuhkan 1 atau 2 argumen: path, tampilkan_hidden (opsional)".to_string());
+        return Err(
+            "file.daftar membutuhkan 1 atau 2 argumen: path, tampilkan_hidden (opsional)"
+                .to_string(),
+        );
     }
-    
+
     let path = match &args[0] {
         NilaiRpl::Teks(p) => p,
         _ => return Err("argumen pertama file.daftar harus teks (path)".to_string()),
@@ -116,11 +119,11 @@ fn daftar_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
                 if let Ok(entry) = entry {
                     let file_name = entry.file_name();
                     let name_str = file_name.to_string_lossy();
-                    
+
                     if !show_hidden && name_str.starts_with('.') {
                         continue;
                     }
-                    
+
                     result.push(NilaiRpl::Teks(name_str.to_string()));
                 }
             }

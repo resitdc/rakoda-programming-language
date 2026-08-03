@@ -12,7 +12,9 @@ pub fn register(vm: &mut VM) {
         func: std::sync::Arc::new(
             move |ctx: &mut dyn VmContext, args: Vec<Value>| -> Result<Value, String> {
                 if args.is_empty() {
-                    return Err("email.konfigurasi membutuhkan 1 argumen: kamus konfigurasi".to_string());
+                    return Err(
+                        "email.konfigurasi membutuhkan 1 argumen: kamus konfigurasi".to_string()
+                    );
                 }
 
                 // Ambil config Value (Kamus) dan simpan untuk di-closure
@@ -21,9 +23,12 @@ pub fn register(vm: &mut VM) {
                 let fungsi_kirim = FungsiBawaanVM {
                     nama: "kirim".to_string(),
                     func: std::sync::Arc::new(
-                        move |ctx2: &mut dyn VmContext, mut kirim_args: Vec<Value>| -> Result<Value, String> {
+                        move |ctx2: &mut dyn VmContext,
+                              kirim_args: Vec<Value>|
+                              -> Result<Value, String> {
                             if kirim_args.is_empty() {
-                                return Err("transporter.kirim membutuhkan 1 argumen: kamus pesan".to_string());
+                                return Err("transporter.kirim membutuhkan 1 argumen: kamus pesan"
+                                    .to_string());
                             }
 
                             // 1. Dapatkan config
@@ -40,7 +45,7 @@ pub fn register(vm: &mut VM) {
                                     let heap = ctx2.get_heap_mut();
                                     heap.get_kamus(k_idx).get("lampiran").copied()
                                 };
-                                
+
                                 if let Some(Value::Array(a_idx)) = lampiran_array_idx {
                                     let arr_len = {
                                         let heap = ctx2.get_heap_mut();
@@ -68,7 +73,10 @@ pub fn register(vm: &mut VM) {
                                                 };
                                                 {
                                                     let heap = ctx2.get_heap_mut();
-                                                    heap.get_kamus_mut(lamp_k_idx).insert("path".to_string(), Value::String(new_s_idx));
+                                                    heap.get_kamus_mut(lamp_k_idx).insert(
+                                                        "path".to_string(),
+                                                        Value::String(new_s_idx),
+                                                    );
                                                 }
                                             }
                                         }
@@ -77,11 +85,16 @@ pub fn register(vm: &mut VM) {
                             }
 
                             // 3. Konversi argumen pesan ke NilaiRpl
-                            let pesan_nilai = adapter::value_ke_nilai(&kirim_args[0], ctx2.get_heap_mut());
-                            let pesan_kamus = match pesan_nilai {
-                                stdlib::jenis::NilaiRpl::Kamus(k) => k,
-                                _ => return Err("transporter.kirim membutuhkan argumen berupa kamus pesan".to_string()),
-                            };
+                            let pesan_nilai =
+                                adapter::value_ke_nilai(&kirim_args[0], ctx2.get_heap_mut());
+                            let pesan_kamus =
+                                match pesan_nilai {
+                                    stdlib::jenis::NilaiRpl::Kamus(k) => k,
+                                    _ => return Err(
+                                        "transporter.kirim membutuhkan argumen berupa kamus pesan"
+                                            .to_string(),
+                                    ),
+                                };
 
                             // 4. Kirim via stdlib murni
                             match stdlib::email::kirim_impl(&config_kamus, &pesan_kamus) {
@@ -92,8 +105,10 @@ pub fn register(vm: &mut VM) {
                     ),
                 };
 
-                let kirim_idx = ctx.get_heap_mut().alloc(HeapData::FungsiBawaan(fungsi_kirim));
-                
+                let kirim_idx = ctx
+                    .get_heap_mut()
+                    .alloc(HeapData::FungsiBawaan(fungsi_kirim));
+
                 let mut trans_dict = HashMap::new();
                 trans_dict.insert("kirim".to_string(), Value::FungsiBawaan(kirim_idx));
                 let dict_idx = ctx.get_heap_mut().alloc(HeapData::Kamus(trans_dict));
