@@ -19,8 +19,7 @@ echo "🔨 Building RPL ${VERSION} DMG for macOS ${ARCH}..."
 
 # ---- Create Package Layout ----
 mkdir -p "${STAGING_DIR}/usr/local/bin"
-mkdir -p "${STAGING_DIR}/usr/local/share/rpl/examples"
-mkdir -p "${STAGING_DIR}/usr/local/share/rpl/docs"
+mkdir -p "${STAGING_DIR}/usr/local/share/rpl"
 
 # Copy binary
 cp "${ROOT_DIR}/target/release/rpl" "${STAGING_DIR}/usr/local/bin/rpl"
@@ -31,8 +30,6 @@ codesign --force --deep -s - "${STAGING_DIR}/usr/local/bin/rpl"
 xattr -cr "${STAGING_DIR}/usr/local/bin/rpl"
 
 # Copy resources
-cp "${ROOT_DIR}"/examples/*.rpl "${STAGING_DIR}/usr/local/share/rpl/examples/" 2>/dev/null || true
-cp -r "${ROOT_DIR}/documentation/"* "${STAGING_DIR}/usr/local/share/rpl/docs/" 2>/dev/null || true
 cp "${ROOT_DIR}/LICENSE" "${STAGING_DIR}/usr/local/share/rpl/"
 
 # ---- Build .pkg ----

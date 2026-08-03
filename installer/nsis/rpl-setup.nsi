@@ -54,12 +54,6 @@ Section "RPL Runtime" SEC_MAIN
     SetOutPath "$INSTDIR\bin"
     File "rpl.exe"
     
-    SetOutPath "$INSTDIR\examples"
-    File /r "examples\*.rpl"
-    
-    SetOutPath "$INSTDIR\docs"
-    File /r "documentation\*.*"
-    
     SetOutPath "$INSTDIR"
     File "LICENSE"
     
@@ -90,8 +84,6 @@ Section "Uninstall"
     
     ; --- Delete Files ---
     RMDir /r "$INSTDIR\bin"
-    RMDir /r "$INSTDIR\examples"
-    RMDir /r "$INSTDIR\docs"
     Delete "$INSTDIR\LICENSE"
     Delete "$INSTDIR\uninstall.exe"
     RMDir "$INSTDIR"
