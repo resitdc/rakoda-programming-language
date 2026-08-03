@@ -134,6 +134,24 @@ fn optimize_statement(stmt: Statement) -> Vec<Statement> {
                 lokasi,
             }]
         }
+        Statement::Ulangi {
+            dari,
+            sampai,
+            sebagai,
+            body,
+            lokasi,
+        } => {
+            let opt_dari = optimize_expression(dari);
+            let opt_sampai = optimize_expression(sampai);
+            let opt_body = body.into_iter().flat_map(optimize_statement).collect();
+            vec![Statement::Ulangi {
+                dari: opt_dari,
+                sampai: opt_sampai,
+                sebagai,
+                body: opt_body,
+                lokasi,
+            }]
+        }
         Statement::DeklarasiFungsi {
             nama,
             parameter,

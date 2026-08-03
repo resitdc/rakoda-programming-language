@@ -240,6 +240,42 @@ impl<'a> Compiler<'a> {
                 self.chunk.write_opcode(OpCode::Pop, lokasi);
                 self.chunk.write_opcode(OpCode::Pop, lokasi);
             }
+            Statement::Ulangi {
+                dari,
+                sampai,
+                sebagai,
+                body,
+                lokasi,
+            } => {
+                self.compile_expression(dari)?;
+                self.compile_expression(sampai)?;
+                self.chunk.write_opcode(OpCode::UlangiInit, lokasi);
+
+                let loop_start = self.chunk.code.len();
+                let jump_if_exhausted = self.emit_jump(OpCode::UlangiNext, lokasi);
+
+                if let Some(idx_name) = sebagai {
+                    let idx_name_id = self.heap.alloc(crate::heap::HeapData::String(idx_name));
+                    let const_idx_name = self.chunk.write_constant(Value::String(idx_name_id));
+                    self.chunk.write_opcode(OpCode::StoreVar, lokasi);
+                    self.chunk.write_u16(const_idx_name, lokasi);
+                } else {
+                    self.chunk.write_opcode(OpCode::Pop, lokasi);
+                }
+
+                for stmt in body {
+                    self.compile_statement(stmt)?;
+                }
+
+                let jump_back = self.emit_jump(OpCode::Jump, lokasi);
+                self.patch_jump_to(jump_back, loop_start);
+
+                self.patch_jump(jump_if_exhausted);
+
+                self.chunk.write_opcode(OpCode::Pop, lokasi); // Pop start state
+                self.chunk.write_opcode(OpCode::Pop, lokasi); // Pop end state
+                self.chunk.write_opcode(OpCode::Pop, lokasi); // Pop step state
+            }
             Statement::DeklarasiFungsi {
                 nama,
                 parameter,

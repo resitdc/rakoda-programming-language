@@ -36,6 +36,8 @@ pub enum OpCode {
     IterNext, // operand: 2 bytes (jump offset if exhausted). Pops nothing. Modifies Iterator at top of stack. Pushes key, then value, or jumps.
     SetIndex,
     Power,
+    UlangiInit,
+    UlangiNext, // operand: 2 bytes (jump offset if exhausted)
 }
 
 impl OpCode {
@@ -76,6 +78,8 @@ impl OpCode {
             32 => Some(OpCode::IterNext),
             33 => Some(OpCode::SetIndex),
             34 => Some(OpCode::Power),
+            35 => Some(OpCode::UlangiInit),
+            36 => Some(OpCode::UlangiNext),
             _ => None,
         }
     }
