@@ -154,6 +154,7 @@ impl Parser {
             Token::Jika => self.parse_jika(),
             Token::Selama => self.parse_selama(),
             Token::Setiap => self.parse_setiap(),
+            Token::Ulangi => self.parse_ulangi(),
             Token::Fungsi => self.parse_fungsi(),
             Token::Kembalikan => self.parse_kembalikan(),
             Token::Tampilkan => self.parse_tampilkan_statement(false),
@@ -466,6 +467,103 @@ impl Parser {
         }
     }
 
+    fn parse_ulangi(&mut self) -> Statement {
+        let lokasi = self.current_lokasi();
+        self.advance();
+
+        let mut dari: Option<Expression> = None;
+
+        if self.current().token == Token::Di {
+            self.advance();
+            dari = match self.parse_expression(Precedence::Lowest) {
+                Ok(e) => Some(e),
+                Err(e) => {
+                    self.errors.push(e);
+                    return Statement::Error(lokasi);
+                }
+            };
+
+            let mut is_sampai = false;
+            if let Token::Identifier(n) = &self.current().token {
+                if n == "sampai" || n == "hingga" {
+                    is_sampai = true;
+                }
+            }
+            if is_sampai {
+                self.advance();
+            } else {
+                self.push_error(
+                    "Diharapkan kata 'sampai' setelah rentang awal.".to_string(),
+                    self.current_lokasi(),
+                    Some("Contoh: ulangi dari 1 sampai 10".to_string()),
+                );
+                return Statement::Error(lokasi);
+            }
+        }
+
+        let sampai = match self.parse_expression(Precedence::Lowest) {
+            Ok(e) => e,
+            Err(e) => {
+                self.errors.push(e);
+                return Statement::Error(lokasi);
+            }
+        };
+
+        if dari.is_none() {
+            let mut is_kali = false;
+            if let Token::Identifier(n) = &self.current().token {
+                if n == "kali" {
+                    is_kali = true;
+                }
+            }
+            if is_kali {
+                self.advance();
+            } else {
+                self.push_error(
+                    "Diharapkan kata 'kali' setelah angka perulangan.".to_string(),
+                    self.current_lokasi(),
+                    Some("Contoh: ulangi 5 kali".to_string()),
+                );
+                return Statement::Error(lokasi);
+            }
+            dari = Some(Expression::Angka(1.0, lokasi.clone()));
+        }
+
+        let mut sebagai = None;
+        let mut is_sebagai = false;
+        if self.current().token == Token::Dengan {
+            is_sebagai = true;
+        } else if let Token::Identifier(n) = &self.current().token {
+            if n == "sebagai" {
+                is_sebagai = true;
+            }
+        }
+
+        if is_sebagai {
+            self.advance();
+            if let Token::Identifier(nama) = &self.current().token {
+                sebagai = Some(nama.clone());
+                self.advance();
+            } else {
+                self.push_error(
+                    "Diharapkan nama variabel setelah kata 'sebagai'.".to_string(),
+                    self.current_lokasi(),
+                    Some("Contoh: ulangi 5 kali sebagai i".to_string()),
+                );
+                return Statement::Error(lokasi);
+            }
+        }
+
+        let body = self.parse_block();
+
+        Statement::Ulangi {
+            dari: dari.unwrap(),
+            sampai,
+            sebagai,
+            body,
+            lokasi,
+        }
+    }
     fn parse_fungsi(&mut self) -> Statement {
         let lokasi = self.current_lokasi();
         self.advance();

@@ -727,6 +727,50 @@ impl VM {
                         self.frames.last_mut().unwrap().ip = offset;
                     }
                 }
+                OpCode::UlangiInit => {
+                    let sampai_val = self.stack.pop().unwrap_or(Value::Kosong);
+                    let dari_val = self.stack.pop().unwrap_or(Value::Kosong);
+
+                    let dari = if let Value::Angka(n) = dari_val { n } else { 0.0 };
+                    let sampai = if let Value::Angka(n) = sampai_val { n } else { 0.0 };
+
+                    let step = if dari <= sampai { 1.0 } else { -1.0 };
+
+                    // Push start state (current)
+                    self.stack.push(Value::Angka(dari));
+                    // Push end state (sampai)
+                    self.stack.push(Value::Angka(sampai));
+                    // Push step state
+                    self.stack.push(Value::Angka(step));
+                }
+                OpCode::UlangiNext => {
+                    let offset = self.frames.last_mut().unwrap().read_short(&self.heap) as usize;
+                    
+                    let step_val = *self.stack.last().unwrap();
+                    let sampai_val = self.stack[self.stack.len() - 2];
+                    let current_val = self.stack[self.stack.len() - 3];
+
+                    let step = if let Value::Angka(n) = step_val { n } else { 0.0 };
+                    let sampai = if let Value::Angka(n) = sampai_val { n } else { 0.0 };
+                    let current = if let Value::Angka(n) = current_val { n } else { 0.0 };
+
+                    let has_next = if step > 0.0 {
+                        current <= sampai
+                    } else {
+                        current >= sampai
+                    };
+
+                    if has_next {
+                        // Update current state for next iteration BEFORE pushing to stack for body
+                        let top_idx = self.stack.len() - 3;
+                        self.stack[top_idx] = Value::Angka(current + step);
+
+                        // Push the actual 'current' variable value for the body to consume (or Pop if unused)
+                        self.stack.push(Value::Angka(current));
+                    } else {
+                        self.frames.last_mut().unwrap().ip = offset;
+                    }
+                }
                 OpCode::Pop => {
                     self.stack.pop();
                 }

@@ -1,0 +1,29 @@
+cetak("--- Test Ulangi N kali ---")
+ulangi 3 kali
+    tampilkan("Halo")
+selesai
+
+cetak("\n--- Test Ulangi N kali sebagai i ---")
+ulangi 3 kali sebagai i
+    tampilkan("Iterasi ke: " + i)
+selesai
+
+cetak("\n--- Test Ulangi dari A sampai B ---")
+ulangi dari 1 sampai 5
+    tampilkan("Halo dari A ke B")
+selesai
+
+cetak("\n--- Test Ulangi dari A sampai B sebagai i ---")
+ulangi dari 1 sampai 5 sebagai i
+    tampilkan(i)
+selesai
+
+cetak("\n--- Test Ulangi dari A sampai B (Mundur) sebagai i ---")
+ulangi dari 5 sampai 1 sebagai i
+    tampilkan(i)
+selesai
+
+cetak("\n--- Test Ulangi dengan kata 'hingga' dan 'dengan' ---")
+ulangi dari 10 hingga 12 dengan i
+    tampilkan("Hingga: " + i)
+selesai

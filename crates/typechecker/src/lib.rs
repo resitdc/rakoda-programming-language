@@ -543,6 +543,48 @@ impl TypeChecker {
                 }
                 self.symbols.pop_scope();
             }
+            Statement::Ulangi {
+                dari,
+                sampai,
+                sebagai,
+                body,
+                lokasi,
+            } => {
+                let tipe_dari = self.infer_expression(dari);
+                let tipe_sampai = self.infer_expression(sampai);
+
+                if tipe_dari != RplType::Angka && tipe_dari != RplType::TidakDiketahui {
+                    self.error(
+                        format!(
+                            "Awal perulangan harus berupa angka, bukan '{}'",
+                            tipe_dari
+                        ),
+                        *lokasi,
+                        Some("Pastikan rentang awal adalah angka.".to_string()),
+                    );
+                }
+                if tipe_sampai != RplType::Angka && tipe_sampai != RplType::TidakDiketahui {
+                    self.error(
+                        format!(
+                            "Akhir perulangan harus berupa angka, bukan '{}'",
+                            tipe_sampai
+                        ),
+                        *lokasi,
+                        Some("Pastikan rentang akhir adalah angka.".to_string()),
+                    );
+                }
+
+                self.symbols.push_scope();
+
+                if let Some(nama_indeks) = sebagai {
+                    let _ = self.symbols.deklarasi(nama_indeks, RplType::Angka, *lokasi);
+                }
+
+                for s in body {
+                    self.check_statement(s);
+                }
+                self.symbols.pop_scope();
+            }
             Statement::CobaTangkap {
                 coba_body,
                 error_ident,
