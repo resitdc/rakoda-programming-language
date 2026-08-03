@@ -1,0 +1,39 @@
+tampilkan("--- Tes Modul JWT ---")
+
+buat rahasia = "rahasia_super_kuat"
+buat payload = {
+    "user_id": 42,
+    "role": "admin"
+}
+
+tampilkan("1. Membuat Token")
+buat token = jwt.buat(payload, rahasia)
+tampilkan("Token JWT:")
+tampilkan(token)
+
+tampilkan("\n2. Verifikasi Token")
+coba {
+    buat isi = jwt.verifikasi(token, rahasia)
+    tampilkan("Hasil verifikasi valid!")
+    tampilkan("User ID: ")
+    tampilkan(isi.user_id)
+    tampilkan("Role: ")
+    tampilkan(isi.role)
+} tangkap (e) {
+    tampilkan("Gagal verifikasi: ")
+    tampilkan(e)
+}
+
+tampilkan("\n3. Decode Token (tanpa verifikasi)")
+buat isi_kasar = jwt.decode(token)
+tampilkan("Isi kasar:")
+tampilkan(isi_kasar)
+
+tampilkan("\n4. Uji Verifikasi Gagal")
+coba {
+    buat palsu = jwt.verifikasi(token, "salah_rahasia")
+    tampilkan(palsu)
+} tangkap (e) {
+    tampilkan("Error yang diharapkan: ")
+    tampilkan(e)
+}

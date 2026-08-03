@@ -21,6 +21,7 @@ pub mod web;
 pub mod dokumen;
 pub mod regex;
 pub mod email;
+pub mod jwt;
 
 use crate::machine::VM;
 
@@ -45,4 +46,5 @@ pub fn register_all(vm: &mut VM) {
     ai::register(vm);
     dokumen::register(vm);
     email::register(vm);
+    jwt::register(vm);
 }

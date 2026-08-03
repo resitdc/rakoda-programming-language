@@ -260,6 +260,7 @@ impl TypeChecker {
             "log",
             "dokumen",
             "email",
+            "jwt",
             "ai",
             "core",
             "regex",
