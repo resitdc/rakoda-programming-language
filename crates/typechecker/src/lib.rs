@@ -265,6 +265,7 @@ impl TypeChecker {
             "cache",
             "ai",
             "gambar",
+            "ktp",
             "core",
             "regex",
             "uuid",

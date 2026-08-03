@@ -1,0 +1,5 @@
+tampilkan "Sedang mengekstrak teks dari gambar ktp.jpg..."
+buat hasil = ktp.baca("examples/ktp.jpg")
+
+tampilkan "Hasil Ekstraksi KTP:"
+tampilkan hasil

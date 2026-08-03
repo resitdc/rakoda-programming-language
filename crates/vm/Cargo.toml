@@ -17,6 +17,7 @@ flate2 = "1.1.9"
 brotli = "8.0.4"
 ocrs = "0.12.2"
 rten-imageio = "0.24.0"
+image = "0.25.10"
 rten-tensor = "0.24.0"
 rten = "0.24.0"
 uuid = { version = "1.23.4", features = ["v4"] }

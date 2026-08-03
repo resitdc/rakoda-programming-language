@@ -11,7 +11,7 @@ use rten_tensor::prelude::*;
 const DETECTION_MODEL: &[u8] = include_bytes!("models/text-detection.rten");
 const RECOGNITION_MODEL: &[u8] = include_bytes!("models/text-recognition.rten");
 
-fn inisialisasi_engine() -> Result<OcrEngine, String> {
+pub(crate) fn inisialisasi_engine() -> Result<OcrEngine, String> {
     OcrEngine::new(OcrEngineParams {
         detection_model: Some(Model::load_static_slice(DETECTION_MODEL).map_err(|e| e.to_string())?),
         recognition_model: Some(Model::load_static_slice(RECOGNITION_MODEL).map_err(|e| e.to_string())?),
