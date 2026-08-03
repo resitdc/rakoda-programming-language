@@ -54,4 +54,4 @@ Pada kode di atas:
 
 ## Kesimpulan
 
-Kemampuan mengambil keputusan ini adalah jantung dari semua program atau aplikasi! Dengan menguasai struktur `jika - maka - jika tidak - selesai`, Anda sudah bisa membuat aplikasi interaktif, validasi kata sandi (*password*), hingga kecerdasan buatan (*AI*) sederhana.
+Kemampuan mengambil keputusan ini adalah jantung dari semua program atau aplikasi! Dengan menguasai struktur `jika - maka - jika tidak - selesai`, kamu sudah bisa membuat aplikasi interaktif, validasi kata sandi (*password*), hingga kecerdasan buatan (*AI*) sederhana.

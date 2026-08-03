@@ -46,19 +46,3 @@ Aplikasi modern tidak pernah lepas dari internet. Rakoda memudahkan kamu mengamb
 buat respon = http.get("https://official-joke-api.appspot.com/random_joke")
 tampilkan respon
 ```
-
-## 4. Modul Web Server (`web`)
-
-Satu keunggulan luar biasa Rakoda adalah kemampuannya menjadi pelayan internet (Web Server). kamu bisa membuat website kamu sendiri yang menyala selama 24 jam
-
-```rakoda
-fungsi halamanUtama()
-    kembalikan "<h1>Halo dari Rakoda Server!</h1>"
-selesai
-
-web.get("/", halamanUtama)
-web.jalankan(3000)
-```
-Buka *browser* kamu dan kunjungi `http://localhost:3000` untuk melihat hasilnya!
-
-> Keren, bukan? Rakoda didesain agar kamu bisa langsung merasakan indahnya *Software Engineering* modern di jam pertama kamu belajar coding

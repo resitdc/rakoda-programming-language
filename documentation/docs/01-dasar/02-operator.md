@@ -22,7 +22,7 @@ buat jeruk = 5
 buat total = apel + jeruk
 
 tampilkan "Total buah: " + total
-// Catatan: Tanda + juga bisa digunakan untuk menggabungkan dua Teks (String).
+// Catatan: Tkamu + juga bisa digunakan untuk menggabungkan dua Teks (String).
 ```
 
 ## 2. Operator Perbandingan
@@ -51,7 +51,7 @@ tampilkan skor kurang dari 10      // Hasil: salah
 
 ## 3. Operator Logika (Kata Hubung)
 
-Ini adalah fitur yang paling unik di Rakoda. Alih-alih menggunakan simbol aneh seperti `&&` atau `||`, Anda cukup menulis kata bahasa Indonesia!
+Ini adalah fitur yang paling unik di Rakoda. Alih-alih menggunakan simbol aneh seperti `&&` atau `||`, kamu cukup menulis kata bahasa Indonesia!
 
 - **`dan` (AND)**: Akan bernilai `benar` jika **kedua syarat terpenuhi**.
 - **`atau` (OR)**: Akan bernilai `benar` jika **salah satu syarat terpenuhi**.
