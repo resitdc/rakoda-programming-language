@@ -30,14 +30,11 @@ section = "devel"
 priority = "optional"
 assets = [
     ["target/release/rpl", "usr/bin/", "755"],
-    ["examples/*.rpl", "usr/share/rpl/examples/", "644"],
-    ["documentation/**/*", "usr/share/rpl/docs/", "644"],
     ["LICENSE", "usr/share/doc/rpl/", "644"],
 ]
 
 [package.metadata.generate-rpm]
 assets = [
     { source = "target/release/rpl", dest = "/usr/bin/rpl", mode = "755" },
-    { source = "examples/*.rpl", dest = "/usr/share/rpl/examples/", mode = "644" },
     { source = "LICENSE", dest = "/usr/share/doc/rpl/LICENSE", mode = "644" },
 ]

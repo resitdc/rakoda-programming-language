@@ -110,9 +110,7 @@ jobs:
       - name: 📁 Prepare Installer Files
         shell: bash
         run: |
-          mkdir -p staging/examples staging/documentation
-          cp examples/*.rpl staging/examples/ 2>/dev/null || true
-          cp -r documentation/* staging/documentation/ 2>/dev/null || true
+          mkdir -p staging
           cp LICENSE staging/
 
       - name: 📋 Get Version from Tag
