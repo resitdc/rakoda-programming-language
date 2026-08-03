@@ -1,0 +1,9 @@
+tampilkan("Mulai")
+
+fungsi sapa() {
+    tampilkan("Halo dari masa depan!")
+}
+
+waktu.tunggu(2000)
+
+tampilkan("Selesai")
