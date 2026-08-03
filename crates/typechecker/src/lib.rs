@@ -261,6 +261,7 @@ impl TypeChecker {
             "dokumen",
             "email",
             "jwt",
+            "cache",
             "ai",
             "core",
             "regex",

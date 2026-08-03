@@ -15,6 +15,7 @@ pub fn fungsi_waktu() -> DaftarFungsiRpl {
         ("detik", detik_impl),
         ("format", format_impl),
         ("relatif", relatif_impl),
+        ("tidur", tidur_impl),
     ]
 }
 
@@ -95,5 +96,18 @@ fn relatif_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
             Ok(NilaiRpl::Teks(hasil))
         }
         _ => Err("waktu.relatif hanya menerima angka timestamp".to_string()),
+    }
+}
+
+fn tidur_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
+    if args.is_empty() {
+        return Err("waktu.tidur membutuhkan argumen ms".to_string());
+    }
+    match args[0] {
+        NilaiRpl::Angka(ms) => {
+            std::thread::sleep(std::time::Duration::from_millis(ms as u64));
+            Ok(NilaiRpl::Kosong)
+        }
+        _ => Err("waktu.tidur membutuhkan argumen angka".to_string()),
     }
 }

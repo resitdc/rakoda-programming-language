@@ -4054,6 +4054,7 @@ dependencies = [
  "genpdf",
  "http",
  "jsonwebtoken",
+ "lazy_static",
  "lettre",
  "md5",
  "pdf-extract",

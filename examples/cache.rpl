@@ -1,0 +1,46 @@
+tampilkan("--- Tes Modul Cache ---")
+
+tampilkan("1. Menyimpan data ke memori (durasi 1 detik)...")
+cache.simpan("kunci_api", "12345_rahasia", 1)
+
+tampilkan("2. Mengambil data...")
+buat d1 = cache.ambil("kunci_api")
+tampilkan("Isi cache sekarang: ")
+tampilkan(d1)
+
+tampilkan("3. Cek ketersediaan...")
+tampilkan("Apakah 'kunci_api' ada?")
+tampilkan(cache.cek("kunci_api"))
+tampilkan("Apakah 'kunci_palsu' ada?")
+tampilkan(cache.cek("kunci_palsu"))
+
+tampilkan("4. Menunggu 1.5 detik agar kadaluwarsa...")
+waktu.tidur(1500)
+
+tampilkan("5. Mengambil ulang data yang sudah kedaluwarsa...")
+buat d2 = cache.ambil("kunci_api")
+tampilkan("Isi cache setelah kadaluwarsa: ")
+tampilkan(d2)
+
+tampilkan("6. Cek ketersediaan lagi...")
+tampilkan("Apakah 'kunci_api' ada?")
+tampilkan(cache.cek("kunci_api"))
+
+tampilkan("7. Menyimpan data baru tanpa durasi (selamanya)...")
+cache.simpan("permanen", {"user": "admin", "id": 42})
+tampilkan("Isi cache 'permanen':")
+tampilkan(cache.ambil("permanen"))
+
+tampilkan("8. Menghapus data spesifik...")
+cache.hapus("permanen")
+tampilkan("Isi 'permanen' setelah dihapus: ")
+tampilkan(cache.ambil("permanen"))
+
+tampilkan("9. Membersihkan semua cache...")
+cache.simpan("a", 1)
+cache.simpan("b", 2)
+cache.bersihkan()
+tampilkan("Isi 'a': ")
+tampilkan(cache.ambil("a"))
+tampilkan("Isi 'b': ")
+tampilkan(cache.ambil("b"))
