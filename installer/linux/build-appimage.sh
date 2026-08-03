@@ -17,17 +17,13 @@ echo "🔨 Building RPL ${VERSION} AppImage..."
 # ---- Create AppDir Layout ----
 rm -rf "${APPDIR}"
 mkdir -p "${APPDIR}/usr/bin"
-mkdir -p "${APPDIR}/usr/share/rpl/examples"
-mkdir -p "${APPDIR}/usr/share/rpl/docs"
+mkdir -p "${APPDIR}/usr/share/rpl"
 mkdir -p "${APPDIR}/usr/share/icons/hicolor/256x256/apps"
 
 # Copy binary
 cp "${ROOT_DIR}/target/release/rpl" "${APPDIR}/usr/bin/rpl"
 chmod 755 "${APPDIR}/usr/bin/rpl"
-
-# Copy resources
-cp "${ROOT_DIR}"/examples/*.rpl "${APPDIR}/usr/share/rpl/examples/" 2>/dev/null || true
-cp -r "${ROOT_DIR}/documentation/"* "${APPDIR}/usr/share/rpl/docs/" 2>/dev/null || true
+cp "${ROOT_DIR}/LICENSE" "${APPDIR}/usr/share/rpl/"
 
 # Copy icon
 cp "${ROOT_DIR}/installer/icon/rpl-icon.png" "${APPDIR}/usr/share/icons/hicolor/256x256/apps/rpl.png" 2>/dev/null || true
