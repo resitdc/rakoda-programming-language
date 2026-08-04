@@ -38,7 +38,7 @@ pub fn register(vm: &mut VM) {
 
     // "tunggu" — I/O specific (sleep), not in shared stdlib
     fn tunggu_wrapper(ctx: &mut dyn VmContext, args: Vec<Value>) -> Result<Value, String> {
-        if args.len() < 1 || args.len() > 2 {
+        if args.is_empty() || args.len() > 2 {
             return Err(
                 "waktu.tunggu membutuhkan 1 atau 2 argumen: milidetik, dan fungsi (opsional)"
                     .to_string(),
@@ -61,7 +61,7 @@ pub fn register(vm: &mut VM) {
         std::thread::sleep(std::time::Duration::from_millis(ms));
 
         if args.len() == 2 {
-            let func = args[1].clone();
+            let func = args[1];
             ctx.execute_function(func, vec![])?;
         }
 

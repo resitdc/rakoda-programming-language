@@ -493,10 +493,10 @@ impl Parser {
             };
 
             let mut is_sampai = false;
-            if let Token::Identifier(n) = &self.current().token {
-                if n == "sampai" || n == "hingga" {
-                    is_sampai = true;
-                }
+            if let Token::Identifier(n) = &self.current().token
+                && (n == "sampai" || n == "hingga")
+            {
+                is_sampai = true;
             }
             if is_sampai {
                 self.advance();
@@ -520,10 +520,10 @@ impl Parser {
 
         if dari.is_none() {
             let mut is_kali = false;
-            if let Token::Identifier(n) = &self.current().token {
-                if n == "kali" {
-                    is_kali = true;
-                }
+            if let Token::Identifier(n) = &self.current().token
+                && n == "kali"
+            {
+                is_kali = true;
             }
             if is_kali {
                 self.advance();
@@ -535,17 +535,17 @@ impl Parser {
                 );
                 return Statement::Error(lokasi);
             }
-            dari = Some(Expression::Angka(1.0, lokasi.clone()));
+            dari = Some(Expression::Angka(1.0, lokasi));
         }
 
         let mut sebagai = None;
         let mut is_sebagai = false;
         if self.current().token == Token::Dengan {
             is_sebagai = true;
-        } else if let Token::Identifier(n) = &self.current().token {
-            if n == "sebagai" {
-                is_sebagai = true;
-            }
+        } else if let Token::Identifier(n) = &self.current().token
+            && n == "sebagai"
+        {
+            is_sebagai = true;
         }
 
         if is_sebagai {

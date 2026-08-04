@@ -65,12 +65,11 @@ pub fn resolve_path(ctx: &dyn crate::value::VmContext, path_str: &str) -> String
         return path_str.to_string();
     }
     let (_, file_opt) = ctx.current_function_info();
-    if let Some(file) = file_opt {
-        if let Some(parent) = std::path::Path::new(&file).parent() {
-            if parent.to_string_lossy() != "" {
-                return parent.join(path).to_string_lossy().to_string();
-            }
-        }
+    if let Some(file) = file_opt
+        && let Some(parent) = std::path::Path::new(&file).parent()
+        && parent.to_string_lossy() != ""
+    {
+        return parent.join(path).to_string_lossy().to_string();
     }
     path_str.to_string()
 }

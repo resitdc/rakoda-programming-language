@@ -103,7 +103,7 @@ pub fn register(vm: &mut crate::VM) {
                 let mut hasil_baris = Vec::new();
                 for line in lines.iter().flatten() {
                     let text = line.to_string();
-                    if text.trim().len() > 0 {
+                    if !text.trim().is_empty() {
                         hasil_baris.push(text);
                     }
                 }
@@ -134,21 +134,21 @@ pub fn register(vm: &mut crate::VM) {
                         provinsi = b_upper.replace("PROVINSI", "").trim().to_string();
                     } else if b_upper.contains("KOTA") || b_upper.contains("KABUPATEN") {
                         kota_kabupaten = b_upper.trim().to_string();
-                    } else if b_upper.contains("NIK") || normalisasi_angka(&b_upper).len() >= 16 {
-                        if nik.is_empty() {
-                            let n_angka = normalisasi_angka(&b_upper);
-                            if n_angka.len() >= 16 {
-                                nik = n_angka[0..16].to_string();
-                                if i + 1 < hasil_baris.len() && nama.is_empty() {
-                                    let nama_baris = bersih_teks(&hasil_baris[i + 1]);
-                                    let nama_bersih = nama_baris
-                                        .replace("NAMA", "")
-                                        .replace(":", "")
-                                        .trim()
-                                        .to_string();
-                                    if nama_bersih.len() > 0 && !nama_bersih.contains("TEMPAT") {
-                                        nama = nama_bersih;
-                                    }
+                    } else if (b_upper.contains("NIK") || normalisasi_angka(&b_upper).len() >= 16)
+                        && nik.is_empty()
+                    {
+                        let n_angka = normalisasi_angka(&b_upper);
+                        if n_angka.len() >= 16 {
+                            nik = n_angka[0..16].to_string();
+                            if i + 1 < hasil_baris.len() && nama.is_empty() {
+                                let nama_baris = bersih_teks(&hasil_baris[i + 1]);
+                                let nama_bersih = nama_baris
+                                    .replace("NAMA", "")
+                                    .replace(":", "")
+                                    .trim()
+                                    .to_string();
+                                if !nama_bersih.is_empty() && !nama_bersih.contains("TEMPAT") {
+                                    nama = nama_bersih;
                                 }
                             }
                         }
