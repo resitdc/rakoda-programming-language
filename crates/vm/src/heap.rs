@@ -1,6 +1,9 @@
 use crate::value::{FungsiBawaanVM, FungsiVM, Value};
-use r2d2_postgres::{postgres::NoTls, PostgresConnectionManager};
+#[cfg(feature = "enterprise")]
 use r2d2::Pool as R2d2Pool;
+#[cfg(feature = "enterprise")]
+use r2d2_postgres::{PostgresConnectionManager, postgres::NoTls};
+#[cfg(feature = "enterprise")]
 use r2d2_sqlite::SqliteConnectionManager;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -9,6 +12,7 @@ use std::sync::{Arc, Mutex};
 pub type SessionMap = Arc<Mutex<HashMap<String, (Option<std::time::Instant>, usize)>>>;
 
 /// Koneksi database aktif (untuk operasi borrow)
+#[cfg(feature = "enterprise")]
 pub enum DatabaseConnection<'a> {
     Sqlite(&'a mut rusqlite::Connection),
     Mysql(&'a mut mysql::PooledConn),
@@ -16,6 +20,7 @@ pub enum DatabaseConnection<'a> {
 }
 
 /// Pool koneksi database.
+#[cfg(feature = "enterprise")]
 #[derive(Clone)]
 pub enum DbPool {
     Sqlite(R2d2Pool<SqliteConnectionManager>),
@@ -23,6 +28,11 @@ pub enum DbPool {
     Postgres(R2d2Pool<PostgresConnectionManager<NoTls>>),
 }
 
+#[cfg(not(feature = "enterprise"))]
+#[derive(Clone)]
+pub struct DbPool;
+
+#[cfg(feature = "enterprise")]
 impl DbPool {
     /// Mendapatkan koneksi dari pool.
     pub fn with_conn<T>(

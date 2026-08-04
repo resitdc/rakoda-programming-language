@@ -82,7 +82,9 @@ pub fn register(vm: &mut VM) {
                     DbPool::Mysql(pool)
                 } else if url_str.starts_with("postgres://") {
                     let manager = r2d2_postgres::PostgresConnectionManager::new(
-                        url_str.parse().map_err(|e| format!("URL Postgres salah: {}", e))?,
+                        url_str
+                            .parse()
+                            .map_err(|e| format!("URL Postgres salah: {}", e))?,
                         r2d2_postgres::postgres::NoTls,
                     );
                     let pool = r2d2::Pool::builder()
@@ -95,11 +97,11 @@ pub fn register(vm: &mut VM) {
                 };
 
                 vm.get_heap_mut().db_pool = Some(pool.clone());
-                
+
                 let pool_idx = vm.get_heap_mut().alloc(HeapData::DbPool(pool));
-                
+
                 let mut dict = HashMap::new();
-                
+
                 let eksekusi_func = FungsiBawaanVM {
                     nama: "eksekusi".to_string(),
                     func: std::sync::Arc::new(move |vm: &mut dyn VmContext, args: Vec<Value>| {
@@ -110,9 +112,11 @@ pub fn register(vm: &mut VM) {
                         eksekusi_helper(vm, &pool, &args)
                     }),
                 };
-                let eksekusi_idx = vm.get_heap_mut().alloc(HeapData::FungsiBawaan(eksekusi_func));
+                let eksekusi_idx = vm
+                    .get_heap_mut()
+                    .alloc(HeapData::FungsiBawaan(eksekusi_func));
                 dict.insert("eksekusi".to_string(), Value::FungsiBawaan(eksekusi_idx));
-                
+
                 let kueri_func = FungsiBawaanVM {
                     nama: "kueri".to_string(),
                     func: std::sync::Arc::new(move |vm: &mut dyn VmContext, args: Vec<Value>| {
@@ -138,7 +142,7 @@ pub fn register(vm: &mut VM) {
                             Value::String(idx) => vm.get_heap_mut().get_string(*idx).clone(),
                             _ => return Err("Nama tabel harus teks".to_string()),
                         };
-                        
+
                         let query_state = DbQueryState {
                             tabel,
                             schema: None,
@@ -147,442 +151,583 @@ pub fn register(vm: &mut VM) {
                             offset_val: None,
                         };
                         let state_idx = vm.get_heap_mut().alloc(HeapData::QueryState(query_state));
-                        
-                        let mut qb_dict = std::collections::HashMap::new();
+
+                        let qb_dict = std::collections::HashMap::new();
                         let qb_dict_idx = vm.get_heap_mut().alloc(HeapData::Kamus(qb_dict.clone()));
 
                         let where_func = FungsiBawaanVM {
                             nama: "where".to_string(),
-                            func: std::sync::Arc::new(move |vm: &mut dyn VmContext, args: Vec<Value>| {
-                                if args.len() < 3 { return Err("where butuh 3 argumen".to_string()); }
-                                let kolom = match &args[0] {
-                                    Value::String(idx) => vm.get_heap_mut().get_string(*idx).clone(),
-                                    _ => return Err("Kolom harus teks".to_string()),
-                                };
-                                let operator = match &args[1] {
-                                    Value::String(idx) => vm.get_heap_mut().get_string(*idx).clone(),
-                                    _ => return Err("Operator harus teks".to_string()),
-                                };
-                                let nilai = args[2];
-                                
-                                if let HeapData::QueryState(state) = &mut vm.get_heap_mut().objects[state_idx].data {
-                                    state.kondisi.push((kolom, operator, nilai));
-                                }
-                                Ok(Value::Kamus(qb_dict_idx))
-                            }),
+                            func: std::sync::Arc::new(
+                                move |vm: &mut dyn VmContext, args: Vec<Value>| {
+                                    if args.len() < 3 {
+                                        return Err("where butuh 3 argumen".to_string());
+                                    }
+                                    let kolom = match &args[0] {
+                                        Value::String(idx) => {
+                                            vm.get_heap_mut().get_string(*idx).clone()
+                                        }
+                                        _ => return Err("Kolom harus teks".to_string()),
+                                    };
+                                    let operator = match &args[1] {
+                                        Value::String(idx) => {
+                                            vm.get_heap_mut().get_string(*idx).clone()
+                                        }
+                                        _ => return Err("Operator harus teks".to_string()),
+                                    };
+                                    let nilai = args[2];
+
+                                    if let HeapData::QueryState(state) =
+                                        &mut vm.get_heap_mut().objects[state_idx].data
+                                    {
+                                        state.kondisi.push((kolom, operator, nilai));
+                                    }
+                                    Ok(Value::Kamus(qb_dict_idx))
+                                },
+                            ),
                         };
                         let where_idx = vm.get_heap_mut().alloc(HeapData::FungsiBawaan(where_func));
 
                         let select_func = FungsiBawaanVM {
                             nama: "select".to_string(),
-                            func: std::sync::Arc::new(move |vm: &mut dyn VmContext, _args: Vec<Value>| {
-                                let sql = {
-                                    let state = match &vm.get_heap_mut().objects[state_idx].data {
-                                        HeapData::QueryState(s) => s.clone(),
-                                        _ => return Err("Query state tidak valid".to_string()),
-                                    };
-                                                                        let table_name = match state.schema {
-                                        Some(s) => format!("{}.{}", s, state.tabel),
-                                        None => state.tabel,
-                                    };
-                                    let mut query = format!("SELECT * FROM {}", table_name);
-                                    if !state.kondisi.is_empty() {
-                                        query.push_str(" WHERE ");
-                                        let mut conds = Vec::new();
-                                        for (k, o, v) in state.kondisi {
-                                            let val_str = match v {
-                                                Value::Angka(n) => n.to_string(),
-                                                Value::String(idx) => {
-                                                    let s = vm.get_heap_mut().get_string(idx);
-                                                    format!("'{}'", s.replace('\'', "''"))
-                                                }
-                                                Value::Boolean(b) => if b { "1".to_string() } else { "0".to_string() },
-                                                Value::Kosong => "NULL".to_string(),
-                                                _ => "''".to_string(),
-                                            };
-                                            conds.push(format!("{} {} {}", k, o, val_str));
+                            func: std::sync::Arc::new(
+                                move |vm: &mut dyn VmContext, _args: Vec<Value>| {
+                                    let sql = {
+                                        let state = match &vm.get_heap_mut().objects[state_idx].data
+                                        {
+                                            HeapData::QueryState(s) => s.clone(),
+                                            _ => return Err("Query state tidak valid".to_string()),
+                                        };
+                                        let table_name = match state.schema {
+                                            Some(s) => format!("{}.{}", s, state.tabel),
+                                            None => state.tabel,
+                                        };
+                                        let mut query = format!("SELECT * FROM {}", table_name);
+                                        if !state.kondisi.is_empty() {
+                                            query.push_str(" WHERE ");
+                                            let mut conds = Vec::new();
+                                            for (k, o, v) in state.kondisi {
+                                                let val_str = match v {
+                                                    Value::Angka(n) => n.to_string(),
+                                                    Value::String(idx) => {
+                                                        let s = vm.get_heap_mut().get_string(idx);
+                                                        format!("'{}'", s.replace('\'', "''"))
+                                                    }
+                                                    Value::Boolean(b) => {
+                                                        if b {
+                                                            "1".to_string()
+                                                        } else {
+                                                            "0".to_string()
+                                                        }
+                                                    }
+                                                    Value::Kosong => "NULL".to_string(),
+                                                    _ => "''".to_string(),
+                                                };
+                                                conds.push(format!("{} {} {}", k, o, val_str));
+                                            }
+                                            query.push_str(&conds.join(" AND "));
                                         }
-                                        query.push_str(&conds.join(" AND "));
-                                    }
-                                    if let Some(l) = state.limit_val {
-                                        query.push_str(&format!(" LIMIT {}", l));
-                                    }
-                                    if let Some(o) = state.offset_val {
-                                        query.push_str(&format!(" OFFSET {}", o));
-                                    }
-                                    query
-                                };
-                                let pool = match &vm.get_heap_mut().objects[pool_idx].data {
-                                    HeapData::DbPool(p) => p.clone(),
-                                    _ => return Err("Koneksi tidak valid".to_string()),
-                                };
-                                let sql_idx = vm.get_heap_mut().alloc(HeapData::String(sql));
-                                kueri_helper(vm, &pool, &[Value::String(sql_idx)])
-                            }),
+                                        if let Some(l) = state.limit_val {
+                                            query.push_str(&format!(" LIMIT {}", l));
+                                        }
+                                        if let Some(o) = state.offset_val {
+                                            query.push_str(&format!(" OFFSET {}", o));
+                                        }
+                                        query
+                                    };
+                                    let pool = match &vm.get_heap_mut().objects[pool_idx].data {
+                                        HeapData::DbPool(p) => p.clone(),
+                                        _ => return Err("Koneksi tidak valid".to_string()),
+                                    };
+                                    let sql_idx = vm.get_heap_mut().alloc(HeapData::String(sql));
+                                    kueri_helper(vm, &pool, &[Value::String(sql_idx)])
+                                },
+                            ),
                         };
-                        let select_idx = vm.get_heap_mut().alloc(HeapData::FungsiBawaan(select_func));
+                        let select_idx =
+                            vm.get_heap_mut().alloc(HeapData::FungsiBawaan(select_func));
 
                         let insert_func = FungsiBawaanVM {
                             nama: "insert".to_string(),
-                            func: std::sync::Arc::new(move |vm: &mut dyn VmContext, args: Vec<Value>| {
-                                if args.is_empty() { return Err("insert butuh argumen kamus atau array kamus".to_string()); }
-                                
-                                let mut is_multi = false;
-                                let mut dicts = Vec::new();
-                                
-                                match &args[0] {
-                                    Value::Kamus(idx) => {
-                                        dicts.push(vm.get_heap_mut().get_kamus(*idx).clone());
+                            func: std::sync::Arc::new(
+                                move |vm: &mut dyn VmContext, args: Vec<Value>| {
+                                    if args.is_empty() {
+                                        return Err("insert butuh argumen kamus atau array kamus"
+                                            .to_string());
                                     }
-                                    Value::Array(idx) => {
-                                        is_multi = true;
-                                        let arr = vm.get_heap_mut().get_array(*idx).clone();
-                                        for v in arr {
-                                            if let Value::Kamus(d_idx) = v {
-                                                dicts.push(vm.get_heap_mut().get_kamus(d_idx).clone());
-                                            } else {
-                                                return Err("Array harus berisi kamus".to_string());
+
+                                    let mut dicts = Vec::new();
+
+                                    match &args[0] {
+                                        Value::Kamus(idx) => {
+                                            dicts.push(vm.get_heap_mut().get_kamus(*idx).clone());
+                                        }
+                                        Value::Array(idx) => {
+                                            let arr = vm.get_heap_mut().get_array(*idx).clone();
+                                            for v in arr {
+                                                if let Value::Kamus(d_idx) = v {
+                                                    dicts.push(
+                                                        vm.get_heap_mut().get_kamus(d_idx).clone(),
+                                                    );
+                                                } else {
+                                                    return Err(
+                                                        "Array harus berisi kamus".to_string()
+                                                    );
+                                                }
                                             }
                                         }
-                                    }
-                                    _ => return Err("insert butuh kamus atau array kamus".to_string()),
-                                };
-                                
-                                if dicts.is_empty() {
-                                    return Ok(Value::Angka(0.0));
-                                }
-
-                                let sql = {
-                                    let state = match &vm.get_heap_mut().objects[state_idx].data {
-                                        HeapData::QueryState(s) => s.clone(),
-                                        _ => return Err("Query state tidak valid".to_string()),
-                                    };
-                                    let table_name = match state.schema {
-                                        Some(s) => format!("{}.{}", s, state.tabel),
-                                        None => state.tabel,
-                                    };
-                                    
-                                    // Use columns from the first object
-                                    let mut cols = Vec::new();
-                                    for k in dicts[0].keys() {
-                                        cols.push(k.clone());
-                                    }
-                                    
-                                    let mut all_vals = Vec::new();
-                                    
-                                    for d in dicts {
-                                        let mut vals = Vec::new();
-                                        for c in &cols {
-                                            let v = d.get(c).unwrap_or(&Value::Kosong);
-                                            let val_str = match v {
-                                                Value::Angka(n) => n.to_string(),
-                                                Value::String(idx) => {
-                                                    let s = vm.get_heap_mut().get_string(*idx);
-                                                    format!("'{}'", s.replace('\'', "''"))
-                                                }
-                                                Value::Boolean(b) => if *b { "1".to_string() } else { "0".to_string() },
-                                                Value::Kosong => "NULL".to_string(),
-                                                _ => "''".to_string(),
-                                            };
-                                            vals.push(val_str);
+                                        _ => {
+                                            return Err(
+                                                "insert butuh kamus atau array kamus".to_string()
+                                            );
                                         }
-                                        all_vals.push(format!("({})", vals.join(", ")));
+                                    };
+
+                                    if dicts.is_empty() {
+                                        return Ok(Value::Angka(0.0));
                                     }
-                                    format!("INSERT INTO {} ({}) VALUES {}", table_name, cols.join(", "), all_vals.join(", "))
-                                };
-                                let pool = match &vm.get_heap_mut().objects[pool_idx].data {
-                                    HeapData::DbPool(p) => p.clone(),
-                                    _ => return Err("Koneksi tidak valid".to_string()),
-                                };
-                                let sql_idx = vm.get_heap_mut().alloc(HeapData::String(sql));
-                                eksekusi_helper(vm, &pool, &[Value::String(sql_idx)])
-                            }),
+
+                                    let sql = {
+                                        let state = match &vm.get_heap_mut().objects[state_idx].data
+                                        {
+                                            HeapData::QueryState(s) => s.clone(),
+                                            _ => return Err("Query state tidak valid".to_string()),
+                                        };
+                                        let table_name = match state.schema {
+                                            Some(s) => format!("{}.{}", s, state.tabel),
+                                            None => state.tabel,
+                                        };
+
+                                        // Use columns from the first object
+                                        let mut cols = Vec::new();
+                                        for k in dicts[0].keys() {
+                                            cols.push(k.clone());
+                                        }
+
+                                        let mut all_vals = Vec::new();
+
+                                        for d in dicts {
+                                            let mut vals = Vec::new();
+                                            for c in &cols {
+                                                let v = d.get(c).unwrap_or(&Value::Kosong);
+                                                let val_str = match v {
+                                                    Value::Angka(n) => n.to_string(),
+                                                    Value::String(idx) => {
+                                                        let s = vm.get_heap_mut().get_string(*idx);
+                                                        format!("'{}'", s.replace('\'', "''"))
+                                                    }
+                                                    Value::Boolean(b) => {
+                                                        if *b {
+                                                            "1".to_string()
+                                                        } else {
+                                                            "0".to_string()
+                                                        }
+                                                    }
+                                                    Value::Kosong => "NULL".to_string(),
+                                                    _ => "''".to_string(),
+                                                };
+                                                vals.push(val_str);
+                                            }
+                                            all_vals.push(format!("({})", vals.join(", ")));
+                                        }
+                                        format!(
+                                            "INSERT INTO {} ({}) VALUES {}",
+                                            table_name,
+                                            cols.join(", "),
+                                            all_vals.join(", ")
+                                        )
+                                    };
+                                    let pool = match &vm.get_heap_mut().objects[pool_idx].data {
+                                        HeapData::DbPool(p) => p.clone(),
+                                        _ => return Err("Koneksi tidak valid".to_string()),
+                                    };
+                                    let sql_idx = vm.get_heap_mut().alloc(HeapData::String(sql));
+                                    eksekusi_helper(vm, &pool, &[Value::String(sql_idx)])
+                                },
+                            ),
                         };
-                        let insert_idx = vm.get_heap_mut().alloc(HeapData::FungsiBawaan(insert_func));
-                        
+                        let insert_idx =
+                            vm.get_heap_mut().alloc(HeapData::FungsiBawaan(insert_func));
+
                         let delete_func = FungsiBawaanVM {
                             nama: "delete".to_string(),
-                            func: std::sync::Arc::new(move |vm: &mut dyn VmContext, _args: Vec<Value>| {
-                                let sql = {
-                                    let state = match &vm.get_heap_mut().objects[state_idx].data {
-                                        HeapData::QueryState(s) => s.clone(),
-                                        _ => return Err("Query state tidak valid".to_string()),
-                                    };
-                                                                        let table_name = match state.schema {
-                                        Some(s) => format!("{}.{}", s, state.tabel),
-                                        None => state.tabel,
-                                    };
-                                    let mut query = format!("DELETE FROM {}", table_name);
-                                    if !state.kondisi.is_empty() {
-                                        query.push_str(" WHERE ");
-                                        let mut conds = Vec::new();
-                                        for (k, o, v) in state.kondisi {
-                                            let val_str = match v {
-                                                Value::Angka(n) => n.to_string(),
-                                                Value::String(idx) => {
-                                                    let s = vm.get_heap_mut().get_string(idx);
-                                                    format!("'{}'", s.replace('\'', "''"))
-                                                }
-                                                Value::Boolean(b) => if b { "1".to_string() } else { "0".to_string() },
-                                                Value::Kosong => "NULL".to_string(),
-                                                _ => "''".to_string(),
-                                            };
-                                            conds.push(format!("{} {} {}", k, o, val_str));
+                            func: std::sync::Arc::new(
+                                move |vm: &mut dyn VmContext, _args: Vec<Value>| {
+                                    let sql = {
+                                        let state = match &vm.get_heap_mut().objects[state_idx].data
+                                        {
+                                            HeapData::QueryState(s) => s.clone(),
+                                            _ => return Err("Query state tidak valid".to_string()),
+                                        };
+                                        let table_name = match state.schema {
+                                            Some(s) => format!("{}.{}", s, state.tabel),
+                                            None => state.tabel,
+                                        };
+                                        let mut query = format!("DELETE FROM {}", table_name);
+                                        if !state.kondisi.is_empty() {
+                                            query.push_str(" WHERE ");
+                                            let mut conds = Vec::new();
+                                            for (k, o, v) in state.kondisi {
+                                                let val_str = match v {
+                                                    Value::Angka(n) => n.to_string(),
+                                                    Value::String(idx) => {
+                                                        let s = vm.get_heap_mut().get_string(idx);
+                                                        format!("'{}'", s.replace('\'', "''"))
+                                                    }
+                                                    Value::Boolean(b) => {
+                                                        if b {
+                                                            "1".to_string()
+                                                        } else {
+                                                            "0".to_string()
+                                                        }
+                                                    }
+                                                    Value::Kosong => "NULL".to_string(),
+                                                    _ => "''".to_string(),
+                                                };
+                                                conds.push(format!("{} {} {}", k, o, val_str));
+                                            }
+                                            query.push_str(&conds.join(" AND "));
                                         }
-                                        query.push_str(&conds.join(" AND "));
-                                    }
-                                    query
-                                };
-                                let pool = match &vm.get_heap_mut().objects[pool_idx].data {
-                                    HeapData::DbPool(p) => p.clone(),
-                                    _ => return Err("Koneksi tidak valid".to_string()),
-                                };
-                                let sql_idx = vm.get_heap_mut().alloc(HeapData::String(sql));
-                                eksekusi_helper(vm, &pool, &[Value::String(sql_idx)])
-                            }),
+                                        query
+                                    };
+                                    let pool = match &vm.get_heap_mut().objects[pool_idx].data {
+                                        HeapData::DbPool(p) => p.clone(),
+                                        _ => return Err("Koneksi tidak valid".to_string()),
+                                    };
+                                    let sql_idx = vm.get_heap_mut().alloc(HeapData::String(sql));
+                                    eksekusi_helper(vm, &pool, &[Value::String(sql_idx)])
+                                },
+                            ),
                         };
-                        let delete_idx = vm.get_heap_mut().alloc(HeapData::FungsiBawaan(delete_func));
-                        
+                        let delete_idx =
+                            vm.get_heap_mut().alloc(HeapData::FungsiBawaan(delete_func));
+
                         let update_func = FungsiBawaanVM {
                             nama: "update".to_string(),
-                            func: std::sync::Arc::new(move |vm: &mut dyn VmContext, args: Vec<Value>| {
-                                if args.is_empty() { return Err("update butuh argumen kamus".to_string()); }
-                                let dict_idx = match args[0] {
-                                    Value::Kamus(idx) => idx,
-                                    _ => return Err("update butuh kamus".to_string()),
-                                };
-                                let sql = {
-                                    let data = vm.get_heap_mut().get_kamus(dict_idx).clone();
-                                    let state = match &vm.get_heap_mut().objects[state_idx].data {
-                                        HeapData::QueryState(s) => s.clone(),
-                                        _ => return Err("Query state tidak valid".to_string()),
-                                    };
-                                    let mut sets = Vec::new();
-                                    for (k, v) in data {
-                                        let val_str = match v {
-                                            Value::Angka(n) => n.to_string(),
-                                            Value::String(idx) => {
-                                                let s = vm.get_heap_mut().get_string(idx);
-                                                format!("'{}'", s.replace('\'', "''"))
-                                            }
-                                            Value::Boolean(b) => if b { "1".to_string() } else { "0".to_string() },
-                                            Value::Kosong => "NULL".to_string(),
-                                            _ => "''".to_string(),
-                                        };
-                                        sets.push(format!("{} = {}", k, val_str));
+                            func: std::sync::Arc::new(
+                                move |vm: &mut dyn VmContext, args: Vec<Value>| {
+                                    if args.is_empty() {
+                                        return Err("update butuh argumen kamus".to_string());
                                     }
-                                                                        let table_name = match state.schema {
-                                        Some(s) => format!("{}.{}", s, state.tabel),
-                                        None => state.tabel,
+                                    let dict_idx = match args[0] {
+                                        Value::Kamus(idx) => idx,
+                                        _ => return Err("update butuh kamus".to_string()),
                                     };
-                                    let mut query = format!("UPDATE {} SET {}", table_name, sets.join(", "));
-                                    if !state.kondisi.is_empty() {
-                                        query.push_str(" WHERE ");
-                                        let mut conds = Vec::new();
-                                        for (k, o, v) in state.kondisi {
+                                    let sql = {
+                                        let data = vm.get_heap_mut().get_kamus(dict_idx).clone();
+                                        let state = match &vm.get_heap_mut().objects[state_idx].data
+                                        {
+                                            HeapData::QueryState(s) => s.clone(),
+                                            _ => return Err("Query state tidak valid".to_string()),
+                                        };
+                                        let mut sets = Vec::new();
+                                        for (k, v) in data {
                                             let val_str = match v {
                                                 Value::Angka(n) => n.to_string(),
                                                 Value::String(idx) => {
                                                     let s = vm.get_heap_mut().get_string(idx);
                                                     format!("'{}'", s.replace('\'', "''"))
                                                 }
-                                                Value::Boolean(b) => if b { "1".to_string() } else { "0".to_string() },
+                                                Value::Boolean(b) => {
+                                                    if b {
+                                                        "1".to_string()
+                                                    } else {
+                                                        "0".to_string()
+                                                    }
+                                                }
                                                 Value::Kosong => "NULL".to_string(),
                                                 _ => "''".to_string(),
                                             };
-                                            conds.push(format!("{} {} {}", k, o, val_str));
+                                            sets.push(format!("{} = {}", k, val_str));
                                         }
-                                        query.push_str(&conds.join(" AND "));
-                                    }
-                                    query
-                                };
-                                let pool = match &vm.get_heap_mut().objects[pool_idx].data {
-                                    HeapData::DbPool(p) => p.clone(),
-                                    _ => return Err("Koneksi tidak valid".to_string()),
-                                };
-                                let sql_idx = vm.get_heap_mut().alloc(HeapData::String(sql));
-                                eksekusi_helper(vm, &pool, &[Value::String(sql_idx)])
-                            }),
+                                        let table_name = match state.schema {
+                                            Some(s) => format!("{}.{}", s, state.tabel),
+                                            None => state.tabel,
+                                        };
+                                        let mut query = format!(
+                                            "UPDATE {} SET {}",
+                                            table_name,
+                                            sets.join(", ")
+                                        );
+                                        if !state.kondisi.is_empty() {
+                                            query.push_str(" WHERE ");
+                                            let mut conds = Vec::new();
+                                            for (k, o, v) in state.kondisi {
+                                                let val_str = match v {
+                                                    Value::Angka(n) => n.to_string(),
+                                                    Value::String(idx) => {
+                                                        let s = vm.get_heap_mut().get_string(idx);
+                                                        format!("'{}'", s.replace('\'', "''"))
+                                                    }
+                                                    Value::Boolean(b) => {
+                                                        if b {
+                                                            "1".to_string()
+                                                        } else {
+                                                            "0".to_string()
+                                                        }
+                                                    }
+                                                    Value::Kosong => "NULL".to_string(),
+                                                    _ => "''".to_string(),
+                                                };
+                                                conds.push(format!("{} {} {}", k, o, val_str));
+                                            }
+                                            query.push_str(&conds.join(" AND "));
+                                        }
+                                        query
+                                    };
+                                    let pool = match &vm.get_heap_mut().objects[pool_idx].data {
+                                        HeapData::DbPool(p) => p.clone(),
+                                        _ => return Err("Koneksi tidak valid".to_string()),
+                                    };
+                                    let sql_idx = vm.get_heap_mut().alloc(HeapData::String(sql));
+                                    eksekusi_helper(vm, &pool, &[Value::String(sql_idx)])
+                                },
+                            ),
                         };
-                        let update_idx = vm.get_heap_mut().alloc(HeapData::FungsiBawaan(update_func));
-
+                        let update_idx =
+                            vm.get_heap_mut().alloc(HeapData::FungsiBawaan(update_func));
 
                         let with_schema_func = FungsiBawaanVM {
                             nama: "withSchema".to_string(),
-                            func: std::sync::Arc::new(move |vm: &mut dyn VmContext, args: Vec<Value>| {
-                                if args.is_empty() { return Err("withSchema butuh nama schema".to_string()); }
-                                let schema = match &args[0] {
-                                    Value::String(idx) => vm.get_heap_mut().get_string(*idx).clone(),
-                                    _ => return Err("Schema harus teks".to_string()),
-                                };
-                                if let HeapData::QueryState(state) = &mut vm.get_heap_mut().objects[state_idx].data {
-                                    state.schema = Some(schema);
-                                }
-                                Ok(Value::Kamus(qb_dict_idx))
-                            }),
+                            func: std::sync::Arc::new(
+                                move |vm: &mut dyn VmContext, args: Vec<Value>| {
+                                    if args.is_empty() {
+                                        return Err("withSchema butuh nama schema".to_string());
+                                    }
+                                    let schema = match &args[0] {
+                                        Value::String(idx) => {
+                                            vm.get_heap_mut().get_string(*idx).clone()
+                                        }
+                                        _ => return Err("Schema harus teks".to_string()),
+                                    };
+                                    if let HeapData::QueryState(state) =
+                                        &mut vm.get_heap_mut().objects[state_idx].data
+                                    {
+                                        state.schema = Some(schema);
+                                    }
+                                    Ok(Value::Kamus(qb_dict_idx))
+                                },
+                            ),
                         };
-                        let with_schema_idx = vm.get_heap_mut().alloc(HeapData::FungsiBawaan(with_schema_func));
+                        let with_schema_idx = vm
+                            .get_heap_mut()
+                            .alloc(HeapData::FungsiBawaan(with_schema_func));
 
                         let limit_func = FungsiBawaanVM {
                             nama: "limit".to_string(),
-                            func: std::sync::Arc::new(move |vm: &mut dyn VmContext, args: Vec<Value>| {
-                                if args.is_empty() { return Err("limit butuh angka".to_string()); }
-                                let limit_val = match args[0] {
-                                    Value::Angka(n) => n as usize,
-                                    _ => return Err("Limit harus angka".to_string()),
-                                };
-                                if let HeapData::QueryState(state) = &mut vm.get_heap_mut().objects[state_idx].data {
-                                    state.limit_val = Some(limit_val);
-                                }
-                                Ok(Value::Kamus(qb_dict_idx))
-                            }),
+                            func: std::sync::Arc::new(
+                                move |vm: &mut dyn VmContext, args: Vec<Value>| {
+                                    if args.is_empty() {
+                                        return Err("limit butuh angka".to_string());
+                                    }
+                                    let limit_val = match args[0] {
+                                        Value::Angka(n) => n as usize,
+                                        _ => return Err("Limit harus angka".to_string()),
+                                    };
+                                    if let HeapData::QueryState(state) =
+                                        &mut vm.get_heap_mut().objects[state_idx].data
+                                    {
+                                        state.limit_val = Some(limit_val);
+                                    }
+                                    Ok(Value::Kamus(qb_dict_idx))
+                                },
+                            ),
                         };
                         let limit_idx = vm.get_heap_mut().alloc(HeapData::FungsiBawaan(limit_func));
 
                         let offset_func = FungsiBawaanVM {
                             nama: "offset".to_string(),
-                            func: std::sync::Arc::new(move |vm: &mut dyn VmContext, args: Vec<Value>| {
-                                if args.is_empty() { return Err("offset butuh angka".to_string()); }
-                                let offset_val = match args[0] {
-                                    Value::Angka(n) => n as usize,
-                                    _ => return Err("Offset harus angka".to_string()),
-                                };
-                                if let HeapData::QueryState(state) = &mut vm.get_heap_mut().objects[state_idx].data {
-                                    state.offset_val = Some(offset_val);
-                                }
-                                Ok(Value::Kamus(qb_dict_idx))
-                            }),
+                            func: std::sync::Arc::new(
+                                move |vm: &mut dyn VmContext, args: Vec<Value>| {
+                                    if args.is_empty() {
+                                        return Err("offset butuh angka".to_string());
+                                    }
+                                    let offset_val = match args[0] {
+                                        Value::Angka(n) => n as usize,
+                                        _ => return Err("Offset harus angka".to_string()),
+                                    };
+                                    if let HeapData::QueryState(state) =
+                                        &mut vm.get_heap_mut().objects[state_idx].data
+                                    {
+                                        state.offset_val = Some(offset_val);
+                                    }
+                                    Ok(Value::Kamus(qb_dict_idx))
+                                },
+                            ),
                         };
-                        let offset_idx = vm.get_heap_mut().alloc(HeapData::FungsiBawaan(offset_func));
+                        let offset_idx =
+                            vm.get_heap_mut().alloc(HeapData::FungsiBawaan(offset_func));
 
                         let first_func = FungsiBawaanVM {
                             nama: "first".to_string(),
-                            func: std::sync::Arc::new(move |vm: &mut dyn VmContext, _args: Vec<Value>| {
-                                if let HeapData::QueryState(state) = &mut vm.get_heap_mut().objects[state_idx].data {
-                                    state.limit_val = Some(1);
-                                }
-                                // Execute select
-                                let select_val = {
-                                    if let HeapData::Kamus(d) = &vm.get_heap_mut().objects[qb_dict_idx].data {
-                                        d.get("select").cloned().unwrap()
-                                    } else {
-                                        return Err("Gagal mengambil fungsi select".to_string());
+                            func: std::sync::Arc::new(
+                                move |vm: &mut dyn VmContext, _args: Vec<Value>| {
+                                    if let HeapData::QueryState(state) =
+                                        &mut vm.get_heap_mut().objects[state_idx].data
+                                    {
+                                        state.limit_val = Some(1);
                                     }
-                                };
-                                let res = vm.execute_function(select_val, vec![])?;
-                                if let Value::Array(arr_idx) = res {
-                                    let arr = vm.get_heap_mut().get_array(arr_idx).clone();
-                                    if arr.is_empty() {
-                                        Ok(Value::Kosong)
+                                    // Execute select
+                                    let select_val = {
+                                        if let HeapData::Kamus(d) =
+                                            &vm.get_heap_mut().objects[qb_dict_idx].data
+                                        {
+                                            d.get("select").cloned().unwrap()
+                                        } else {
+                                            return Err("Gagal mengambil fungsi select".to_string());
+                                        }
+                                    };
+                                    let res = vm.execute_function(select_val, vec![])?;
+                                    if let Value::Array(arr_idx) = res {
+                                        let arr = vm.get_heap_mut().get_array(arr_idx).clone();
+                                        if arr.is_empty() {
+                                            Ok(Value::Kosong)
+                                        } else {
+                                            Ok(arr[0])
+                                        }
                                     } else {
-                                        Ok(arr[0].clone())
+                                        Ok(res)
                                     }
-                                } else {
-                                    Ok(res)
-                                }
-                            }),
+                                },
+                            ),
                         };
                         let first_idx = vm.get_heap_mut().alloc(HeapData::FungsiBawaan(first_func));
 
                         let upsert_func = FungsiBawaanVM {
                             nama: "upsert".to_string(),
-                            func: std::sync::Arc::new(move |vm: &mut dyn VmContext, args: Vec<Value>| {
-                                if args.len() < 2 { return Err("upsert butuh data dan array conflict columns".to_string()); }
-                                let dict_idx = match args[0] {
-                                    Value::Kamus(idx) => idx,
-                                    _ => return Err("argumen pertama upsert butuh kamus".to_string()),
-                                };
-                                let conflict_cols = match args[1] {
-                                    Value::Array(idx) => {
-                                        let arr = vm.get_heap_mut().get_array(idx).clone();
-                                        let mut cols = Vec::new();
-                                        for v in arr {
-                                            if let Value::String(s_idx) = v {
-                                                cols.push(vm.get_heap_mut().get_string(s_idx).clone());
-                                            }
-                                        }
-                                        cols
+                            func: std::sync::Arc::new(
+                                move |vm: &mut dyn VmContext, args: Vec<Value>| {
+                                    if args.len() < 2 {
+                                        return Err("upsert butuh data dan array conflict columns"
+                                            .to_string());
                                     }
-                                    _ => return Err("argumen kedua upsert butuh array of string".to_string()),
-                                };
-
-                                let pool = match &vm.get_heap_mut().objects[pool_idx].data {
-                                    HeapData::DbPool(p) => p.clone(),
-                                    _ => return Err("Koneksi tidak valid".to_string()),
-                                };
-                                let provider = pool.provider_name().to_string();
-
-                                let sql = {
-                                    let data = vm.get_heap_mut().get_kamus(dict_idx).clone();
-                                    let state = match &vm.get_heap_mut().objects[state_idx].data {
-                                        HeapData::QueryState(s) => s.clone(),
-                                        _ => return Err("Query state tidak valid".to_string()),
+                                    let dict_idx = match args[0] {
+                                        Value::Kamus(idx) => idx,
+                                        _ => {
+                                            return Err(
+                                                "argumen pertama upsert butuh kamus".to_string()
+                                            );
+                                        }
                                     };
-                                    let table_name = match state.schema {
-                                        Some(s) => format!("{}.{}", s, state.tabel),
-                                        None => state.tabel,
-                                    };
-                                    
-                                    let mut cols = Vec::new();
-                                    let mut vals = Vec::new();
-                                    let mut set_clauses = Vec::new();
-
-                                    for (k, v) in data {
-                                        cols.push(k.clone());
-                                        let val_str = match v {
-                                            Value::Angka(n) => n.to_string(),
-                                            Value::String(idx) => {
-                                                let s = vm.get_heap_mut().get_string(idx);
-                                                format!("'{}'", s.replace('\'', "''"))
+                                    let conflict_cols = match args[1] {
+                                        Value::Array(idx) => {
+                                            let arr = vm.get_heap_mut().get_array(idx).clone();
+                                            let mut cols = Vec::new();
+                                            for v in arr {
+                                                if let Value::String(s_idx) = v {
+                                                    cols.push(
+                                                        vm.get_heap_mut().get_string(s_idx).clone(),
+                                                    );
+                                                }
                                             }
-                                            Value::Boolean(b) => if b { "1".to_string() } else { "0".to_string() },
-                                            Value::Kosong => "NULL".to_string(),
-                                            _ => "''".to_string(),
+                                            cols
+                                        }
+                                        _ => {
+                                            return Err(
+                                                "argumen kedua upsert butuh array of string"
+                                                    .to_string(),
+                                            );
+                                        }
+                                    };
+
+                                    let pool = match &vm.get_heap_mut().objects[pool_idx].data {
+                                        HeapData::DbPool(p) => p.clone(),
+                                        _ => return Err("Koneksi tidak valid".to_string()),
+                                    };
+                                    let provider = pool.provider_name().to_string();
+
+                                    let sql = {
+                                        let data = vm.get_heap_mut().get_kamus(dict_idx).clone();
+                                        let state = match &vm.get_heap_mut().objects[state_idx].data
+                                        {
+                                            HeapData::QueryState(s) => s.clone(),
+                                            _ => return Err("Query state tidak valid".to_string()),
                                         };
-                                        vals.push(val_str.clone());
-                                        
-                                        // Build ON DUPLICATE KEY UPDATE / ON CONFLICT DO UPDATE SET
-                                        if provider == "mysql" {
-                                            set_clauses.push(format!("{} = VALUES({})", k, k));
-                                        } else {
-                                            set_clauses.push(format!("{} = EXCLUDED.{}", k, k));
-                                        }
-                                    }
-                                    
-                                    if provider == "mysql" {
-                                        format!("INSERT INTO {} ({}) VALUES ({}) ON DUPLICATE KEY UPDATE {}", 
-                                            table_name, cols.join(", "), vals.join(", "), set_clauses.join(", "))
-                                    } else {
-                                        format!("INSERT INTO {} ({}) VALUES ({}) ON CONFLICT ({}) DO UPDATE SET {}", 
-                                            table_name, cols.join(", "), vals.join(", "), conflict_cols.join(", "), set_clauses.join(", "))
-                                    }
-                                };
-                                let sql_idx = vm.get_heap_mut().alloc(HeapData::String(sql));
-                                eksekusi_helper(vm, &pool, &[Value::String(sql_idx)])
-                            }),
-                        };
-                        let upsert_idx = vm.get_heap_mut().alloc(HeapData::FungsiBawaan(upsert_func));
+                                        let table_name = match state.schema {
+                                            Some(s) => format!("{}.{}", s, state.tabel),
+                                            None => state.tabel,
+                                        };
 
-                        if let HeapData::Kamus(d) = &mut vm.get_heap_mut().objects[qb_dict_idx].data {
+                                        let mut cols = Vec::new();
+                                        let mut vals = Vec::new();
+                                        let mut set_clauses = Vec::new();
+
+                                        for (k, v) in data {
+                                            cols.push(k.clone());
+                                            let val_str = match v {
+                                                Value::Angka(n) => n.to_string(),
+                                                Value::String(idx) => {
+                                                    let s = vm.get_heap_mut().get_string(idx);
+                                                    format!("'{}'", s.replace('\'', "''"))
+                                                }
+                                                Value::Boolean(b) => {
+                                                    if b {
+                                                        "1".to_string()
+                                                    } else {
+                                                        "0".to_string()
+                                                    }
+                                                }
+                                                Value::Kosong => "NULL".to_string(),
+                                                _ => "''".to_string(),
+                                            };
+                                            vals.push(val_str.clone());
+
+                                            // Build ON DUPLICATE KEY UPDATE / ON CONFLICT DO UPDATE SET
+                                            if provider == "mysql" {
+                                                set_clauses.push(format!("{} = VALUES({})", k, k));
+                                            } else {
+                                                set_clauses.push(format!("{} = EXCLUDED.{}", k, k));
+                                            }
+                                        }
+
+                                        if provider == "mysql" {
+                                            format!(
+                                                "INSERT INTO {} ({}) VALUES ({}) ON DUPLICATE KEY UPDATE {}",
+                                                table_name,
+                                                cols.join(", "),
+                                                vals.join(", "),
+                                                set_clauses.join(", ")
+                                            )
+                                        } else {
+                                            format!(
+                                                "INSERT INTO {} ({}) VALUES ({}) ON CONFLICT ({}) DO UPDATE SET {}",
+                                                table_name,
+                                                cols.join(", "),
+                                                vals.join(", "),
+                                                conflict_cols.join(", "),
+                                                set_clauses.join(", ")
+                                            )
+                                        }
+                                    };
+                                    let sql_idx = vm.get_heap_mut().alloc(HeapData::String(sql));
+                                    eksekusi_helper(vm, &pool, &[Value::String(sql_idx)])
+                                },
+                            ),
+                        };
+                        let upsert_idx =
+                            vm.get_heap_mut().alloc(HeapData::FungsiBawaan(upsert_func));
+
+                        if let HeapData::Kamus(d) = &mut vm.get_heap_mut().objects[qb_dict_idx].data
+                        {
                             d.insert("where".to_string(), Value::FungsiBawaan(where_idx));
                             d.insert("select".to_string(), Value::FungsiBawaan(select_idx));
                             d.insert("insert".to_string(), Value::FungsiBawaan(insert_idx));
                             d.insert("update".to_string(), Value::FungsiBawaan(update_idx));
                             d.insert("delete".to_string(), Value::FungsiBawaan(delete_idx));
-                            d.insert("withSchema".to_string(), Value::FungsiBawaan(with_schema_idx));
+                            d.insert(
+                                "withSchema".to_string(),
+                                Value::FungsiBawaan(with_schema_idx),
+                            );
                             d.insert("limit".to_string(), Value::FungsiBawaan(limit_idx));
                             d.insert("offset".to_string(), Value::FungsiBawaan(offset_idx));
                             d.insert("first".to_string(), Value::FungsiBawaan(first_idx));
                             d.insert("upsert".to_string(), Value::FungsiBawaan(upsert_idx));
                         }
 
-
                         Ok(Value::Kamus(qb_dict_idx))
                     }),
                 };
                 let table_idx = vm.get_heap_mut().alloc(HeapData::FungsiBawaan(table_func));
                 dict.insert("table".to_string(), Value::FungsiBawaan(table_idx));
-
 
                 let dict_idx = vm.get_heap_mut().alloc(HeapData::Kamus(dict));
                 Ok(Value::Kamus(dict_idx))
@@ -639,41 +784,50 @@ pub fn register(vm: &mut VM) {
     let model_func = FungsiBawaanVM {
         nama: "Model".to_string(),
         func: std::sync::Arc::new(move |vm: &mut dyn VmContext, args: Vec<Value>| {
-            if args.is_empty() { return Err("db.Model membutuhkan kamus konfigurasi".to_string()); }
+            if args.is_empty() {
+                return Err("db.Model membutuhkan kamus konfigurasi".to_string());
+            }
             let config_idx = match args[0] {
                 Value::Kamus(idx) => idx,
                 _ => return Err("db.Model membutuhkan kamus konfigurasi".to_string()),
             };
-            
+
             let mut model_dict = std::collections::HashMap::new();
-            
+
             let query_func = FungsiBawaanVM {
                 nama: "query".to_string(),
                 func: std::sync::Arc::new(move |vm: &mut dyn VmContext, _args: Vec<Value>| {
                     let config_inner = vm.get_heap_mut().get_kamus(config_idx).clone();
-                    let table_name_val = config_inner.get("tableName").cloned().ok_or_else(|| "tableName tidak ditemukan di config".to_string())?;
-                    let conn_val = config_inner.get("connection").cloned().ok_or_else(|| "connection tidak ditemukan di config".to_string())?;
-                    
+                    let table_name_val = config_inner
+                        .get("tableName")
+                        .cloned()
+                        .ok_or_else(|| "tableName tidak ditemukan di config".to_string())?;
+                    let conn_val = config_inner
+                        .get("connection")
+                        .cloned()
+                        .ok_or_else(|| "connection tidak ditemukan di config".to_string())?;
+
                     let method_val = match conn_val {
                         Value::Kamus(idx) => {
                             let dict = vm.get_heap_mut().get_kamus(idx).clone();
-                            dict.get("table").cloned().ok_or_else(|| "Koneksi tidak memiliki metode table".to_string())?
+                            dict.get("table")
+                                .cloned()
+                                .ok_or_else(|| "Koneksi tidak memiliki metode table".to_string())?
                         }
                         _ => return Err("connection harus berupa kamus koneksi".to_string()),
                     };
                     vm.execute_function(method_val, vec![table_name_val])
-                })
+                }),
             };
             let query_idx = vm.get_heap_mut().alloc(HeapData::FungsiBawaan(query_func));
             model_dict.insert("query".to_string(), Value::FungsiBawaan(query_idx));
-            
+
             let model_idx = vm.get_heap_mut().alloc(HeapData::Kamus(model_dict));
             Ok(Value::Kamus(model_idx))
-        })
+        }),
     };
     let model_idx = vm.heap.alloc(HeapData::FungsiBawaan(model_func));
     module_dict.insert("Model".to_string(), Value::FungsiBawaan(model_idx));
-
 
     let tabel_func = FungsiBawaanVM {
         nama: "tabel".to_string(),
@@ -739,11 +893,11 @@ pub fn register(vm: &mut VM) {
                         return Err("Panggil db.tabel() terlebih dahulu".to_string());
                     }
 
-                                                        let table_name = match state.schema {
-                                        Some(s) => format!("{}.{}", s, state.tabel),
-                                        None => state.tabel,
-                                    };
-                                    let mut query = format!("SELECT * FROM {}", table_name);
+                    let table_name = match state.schema {
+                        Some(s) => format!("{}.{}", s, state.tabel),
+                        None => state.tabel,
+                    };
+                    let mut query = format!("SELECT * FROM {}", table_name);
 
                     if !state.kondisi.is_empty() {
                         query.push_str(" WHERE ");
@@ -910,11 +1064,11 @@ pub fn register(vm: &mut VM) {
                         sets.push(format!("{} = {}", k, val_str));
                     }
 
-                                                        let table_name = match state.schema {
-                                        Some(s) => format!("{}.{}", s, state.tabel),
-                                        None => state.tabel,
-                                    };
-                                    let mut query = format!("UPDATE {} SET {}", table_name, sets.join(", "));
+                    let table_name = match state.schema {
+                        Some(s) => format!("{}.{}", s, state.tabel),
+                        None => state.tabel,
+                    };
+                    let mut query = format!("UPDATE {} SET {}", table_name, sets.join(", "));
 
                     if !state.kondisi.is_empty() {
                         query.push_str(" WHERE ");
@@ -969,11 +1123,11 @@ pub fn register(vm: &mut VM) {
                         return Err("Panggil db.tabel() terlebih dahulu".to_string());
                     }
 
-                                                        let table_name = match state.schema {
-                                        Some(s) => format!("{}.{}", s, state.tabel),
-                                        None => state.tabel,
-                                    };
-                                    let mut query = format!("DELETE FROM {}", table_name);
+                    let table_name = match state.schema {
+                        Some(s) => format!("{}.{}", s, state.tabel),
+                        None => state.tabel,
+                    };
+                    let mut query = format!("DELETE FROM {}", table_name);
 
                     if !state.kondisi.is_empty() {
                         query.push_str(" WHERE ");
@@ -1040,8 +1194,11 @@ pub fn register(vm: &mut VM) {
         .insert("db".to_string(), Value::Modul(modul_idx));
 }
 
-
-pub fn eksekusi_helper(vm: &mut dyn VmContext, pool: &DbPool, args: &[Value]) -> Result<Value, String> {
+pub fn eksekusi_helper(
+    vm: &mut dyn VmContext,
+    pool: &DbPool,
+    args: &[Value],
+) -> Result<Value, String> {
     if args.is_empty() {
         return Err("eksekusi membutuhkan minimal 1 argumen: SQL".to_string());
     }
@@ -1059,12 +1216,10 @@ pub fn eksekusi_helper(vm: &mut dyn VmContext, pool: &DbPool, args: &[Value]) ->
             arr.iter()
                 .map(|val| match val {
                     Value::Angka(n) => rusqlite::types::Value::Real(*n),
-                    Value::String(idx) => rusqlite::types::Value::Text(
-                        vm.get_heap_mut().get_string(*idx).clone(),
-                    ),
-                    Value::Boolean(b) => {
-                        rusqlite::types::Value::Integer(if *b { 1 } else { 0 })
+                    Value::String(idx) => {
+                        rusqlite::types::Value::Text(vm.get_heap_mut().get_string(*idx).clone())
                     }
+                    Value::Boolean(b) => rusqlite::types::Value::Integer(if *b { 1 } else { 0 }),
                     Value::Kosong => rusqlite::types::Value::Null,
                     _ => rusqlite::types::Value::Text(val.to_string(vm.get_heap_mut())),
                 })
@@ -1107,33 +1262,31 @@ pub fn eksekusi_helper(vm: &mut dyn VmContext, pool: &DbPool, args: &[Value]) ->
     let start = std::time::Instant::now();
     let provider = pool.provider_name().to_string();
 
-    let affected = pool.with_conn(|conn| {
-        match conn {
-            DatabaseConnection::Sqlite(c) => {
-                let affected = c
-                    .execute(&sql, rusqlite::params_from_iter(sqlite_params))
-                    .map_err(|e| format!("SQLite Error: {}", e))?;
-                Ok(affected as f64)
+    let affected = pool.with_conn(|conn| match conn {
+        DatabaseConnection::Sqlite(c) => {
+            let affected = c
+                .execute(&sql, rusqlite::params_from_iter(sqlite_params))
+                .map_err(|e| format!("SQLite Error: {}", e))?;
+            Ok(affected as f64)
+        }
+        DatabaseConnection::Mysql(c) => {
+            use mysql::prelude::Queryable;
+            let mut final_sql = sql.clone();
+            for val_str in &string_params {
+                final_sql = final_sql.replacen('?', val_str, 1);
             }
-            DatabaseConnection::Mysql(c) => {
-                use mysql::prelude::Queryable;
-                let mut final_sql = sql.clone();
-                for val_str in &string_params {
-                    final_sql = final_sql.replacen('?', val_str, 1);
-                }
-                c.query_drop(&final_sql)
-                    .map_err(|e| format!("MySQL Error: {}", e))?;
-                Ok(c.affected_rows() as f64)
+            c.query_drop(&final_sql)
+                .map_err(|e| format!("MySQL Error: {}", e))?;
+            Ok(c.affected_rows() as f64)
+        }
+        DatabaseConnection::Postgres(c) => {
+            let mut final_sql = sql.clone();
+            for val_str in &string_params {
+                final_sql = final_sql.replacen('?', val_str, 1);
             }
-            DatabaseConnection::Postgres(c) => {
-                let mut final_sql = sql.clone();
-                for val_str in &string_params {
-                    final_sql = final_sql.replacen('?', val_str, 1);
-                }
-                c.execute(&final_sql, &[])
-                    .map_err(|e| format!("Postgres Error: {}", e))?;
-                Ok(0.0)
-            }
+            c.execute(&final_sql, &[])
+                .map_err(|e| format!("Postgres Error: {}", e))?;
+            Ok(0.0)
         }
     })?;
 
@@ -1166,7 +1319,11 @@ enum DbValue {
     Text(String),
 }
 
-pub fn kueri_helper(vm: &mut dyn VmContext, pool: &DbPool, args: &[Value]) -> Result<Value, String> {
+pub fn kueri_helper(
+    vm: &mut dyn VmContext,
+    pool: &DbPool,
+    args: &[Value],
+) -> Result<Value, String> {
     if args.is_empty() {
         return Err("kueri membutuhkan minimal 1 argumen: SQL".to_string());
     }
@@ -1184,12 +1341,10 @@ pub fn kueri_helper(vm: &mut dyn VmContext, pool: &DbPool, args: &[Value]) -> Re
             arr.iter()
                 .map(|val| match val {
                     Value::Angka(n) => rusqlite::types::Value::Real(*n),
-                    Value::String(idx) => rusqlite::types::Value::Text(
-                        vm.get_heap_mut().get_string(*idx).clone(),
-                    ),
-                    Value::Boolean(b) => {
-                        rusqlite::types::Value::Integer(if *b { 1 } else { 0 })
+                    Value::String(idx) => {
+                        rusqlite::types::Value::Text(vm.get_heap_mut().get_string(*idx).clone())
                     }
+                    Value::Boolean(b) => rusqlite::types::Value::Integer(if *b { 1 } else { 0 }),
                     Value::Kosong => rusqlite::types::Value::Null,
                     _ => rusqlite::types::Value::Text(val.to_string(vm.get_heap_mut())),
                 })
@@ -1238,15 +1393,12 @@ pub fn kueri_helper(vm: &mut dyn VmContext, pool: &DbPool, args: &[Value]) -> Re
                 let mut stmt = c
                     .prepare(&sql)
                     .map_err(|e| format!("SQLite Error: {}", e))?;
-                let cols: Vec<String> =
-                    stmt.column_names().iter().map(|s| s.to_string()).collect();
+                let cols: Vec<String> = stmt.column_names().iter().map(|s| s.to_string()).collect();
                 let mut rows = stmt
                     .query(rusqlite::params_from_iter(sqlite_params))
                     .map_err(|e| format!("SQLite Error: {}", e))?;
                 let mut results = Vec::new();
-                while let Some(row) =
-                    rows.next().map_err(|e| format!("SQLite Error: {}", e))?
-                {
+                while let Some(row) = rows.next().map_err(|e| format!("SQLite Error: {}", e))? {
                     let mut dict_vals = std::collections::HashMap::new();
                     for (i, col_name) in cols.iter().enumerate() {
                         let val: rusqlite::types::Value =

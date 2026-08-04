@@ -83,17 +83,17 @@ fn bulatkan_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
 }
 
 fn acak_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
-    let mut rng = rand::rng();
+    let mut rng = rand::thread_rng();
     if args.len() == 2
         && let (NilaiRpl::Angka(min), NilaiRpl::Angka(max)) = (&args[0], &args[1])
     {
         if max <= min {
             return Err("matematika.acak: max harus lebih besar dari min".to_string());
         }
-        let hasil: f64 = rng.random_range(*min..*max);
+        let hasil: f64 = rng.gen_range(*min..*max);
         return Ok(NilaiRpl::Angka(hasil));
     }
-    let hasil: f64 = rng.random_range(0.0..1.0);
+    let hasil: f64 = rng.gen_range(0.0..1.0);
     Ok(NilaiRpl::Angka(hasil))
 }
 
