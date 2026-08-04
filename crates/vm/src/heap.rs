@@ -86,6 +86,7 @@ pub enum HeapData {
     FungsiBawaan(FungsiBawaanVM),
     Modul(HashMap<String, Value>),
     DbPool(DbPool),
+    QueryState(DbQueryState),
     Free(usize), // Next free index
 }
 
@@ -306,6 +307,9 @@ impl Heap {
                         if let Value::DbPool(i) = val {
                             c.push(*i);
                         }
+                        if let Value::QueryState(i) = val {
+                            c.push(*i);
+                        }
                     }
                     c
                 }
@@ -352,6 +356,36 @@ impl Heap {
                             c.push(*i);
                         }
                         if let Value::Modul(i) = val {
+                            c.push(*i);
+                        }
+                    }
+                    c
+                }
+                HeapData::QueryState(q) => {
+                    let mut c = Vec::new();
+                    for (_, _, val) in &q.kondisi {
+                        if let Value::Array(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Kamus(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::String(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Fungsi(i, _) = val {
+                            c.push(*i);
+                        }
+                        if let Value::FungsiBawaan(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Modul(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::DbPool(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::QueryState(i) = val {
                             c.push(*i);
                         }
                     }

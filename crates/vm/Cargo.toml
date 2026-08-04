@@ -43,3 +43,6 @@ turbo-html2pdf-core = "0.2.14"
 rust_xlsxwriter = "0.96.0"
 tower-http = { version = "0.7.0", features = ["fs"] }
 r2d2_postgres = "0.18.1"
+tiberius = "0.12.3"
+tokio-util = { version = "0.7.19", features = ["compat"] }
+url = "2.5.8"

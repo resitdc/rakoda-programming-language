@@ -53,6 +53,7 @@ pub enum Value {
     FungsiBawaan(usize),
     Modul(usize),
     DbPool(usize),
+    QueryState(usize),
 }
 
 impl Value {
@@ -84,6 +85,7 @@ impl Value {
             }
             Value::Kosong => "kosong".to_string(),
             Value::DbPool(_) => "<koneksi database>".to_string(),
+            Value::QueryState(_) => "<query builder>".to_string(),
         }
     }
 }
@@ -128,5 +130,6 @@ pub fn deep_copy_value(val: &Value, source: &Heap, dest: &mut Heap) -> Value {
         }
         Value::Modul(idx) => Value::Modul(*idx),
         Value::DbPool(idx) => Value::DbPool(*idx),
+        Value::QueryState(idx) => Value::QueryState(*idx),
     }
 }
