@@ -126,7 +126,9 @@ impl VM {
                 | Value::String(i)
                 | Value::Fungsi(i, _)
                 | Value::FungsiBawaan(i)
-                | Value::Modul(i) => {
+                | Value::Modul(i)
+                | Value::DbPool(i)
+                | Value::QueryState(i) => {
                     self.heap.mark(i);
                 }
                 _ => {}

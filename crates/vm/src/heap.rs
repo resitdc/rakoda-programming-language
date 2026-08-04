@@ -1,6 +1,5 @@
 use crate::value::{FungsiBawaanVM, FungsiVM, Value};
-use mysql::Conn as MysqlConnection;
-use postgres::Client as PostgresClient;
+use r2d2_postgres::{postgres::NoTls, PostgresConnectionManager};
 use r2d2::Pool as R2d2Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use std::collections::HashMap;
@@ -12,22 +11,20 @@ pub type SessionMap = Arc<Mutex<HashMap<String, (Option<std::time::Instant>, usi
 /// Koneksi database aktif (untuk operasi borrow)
 pub enum DatabaseConnection<'a> {
     Sqlite(&'a mut rusqlite::Connection),
-    Mysql(&'a mut MysqlConnection),
-    Postgres(&'a mut PostgresClient),
+    Mysql(&'a mut mysql::PooledConn),
+    Postgres(&'a mut r2d2_postgres::postgres::Client),
 }
 
-/// Pool koneksi database. SQLite menggunakan r2d2 connection pool untuk
-/// concurrent access, MySQL/Postgres masih single-connection via Arc<Mutex<...>>.
+/// Pool koneksi database.
 #[derive(Clone)]
 pub enum DbPool {
     Sqlite(R2d2Pool<SqliteConnectionManager>),
-    Mysql(Arc<Mutex<MysqlConnection>>),
-    Postgres(Arc<Mutex<PostgresClient>>),
+    Mysql(mysql::Pool),
+    Postgres(R2d2Pool<PostgresConnectionManager<NoTls>>),
 }
 
 impl DbPool {
-    /// Mendapatkan koneksi dari pool (SQLite) atau lock (MySQL/Postgres).
-    /// Closure `f` menerima `DatabaseConnection` dan mengembalikan Result<T, String>.
+    /// Mendapatkan koneksi dari pool.
     pub fn with_conn<T>(
         &self,
         f: impl FnOnce(DatabaseConnection<'_>) -> Result<T, String>,
@@ -36,20 +33,20 @@ impl DbPool {
             DbPool::Sqlite(pool) => {
                 let mut conn = pool
                     .get()
-                    .map_err(|e| format!("Gagal mengambil koneksi dari pool: {}", e))?;
+                    .map_err(|e| format!("Gagal mengambil koneksi SQLite dari pool: {}", e))?;
                 f(DatabaseConnection::Sqlite(&mut conn))
             }
-            DbPool::Mysql(conn_mutex) => {
-                let mut guard = conn_mutex
-                    .lock()
-                    .map_err(|e| format!("Gagal lock MySQL: {}", e))?;
-                f(DatabaseConnection::Mysql(&mut guard))
+            DbPool::Mysql(pool) => {
+                let mut conn = pool
+                    .get_conn()
+                    .map_err(|e| format!("Gagal mengambil koneksi MySQL dari pool: {}", e))?;
+                f(DatabaseConnection::Mysql(&mut conn))
             }
-            DbPool::Postgres(conn_mutex) => {
-                let mut guard = conn_mutex
-                    .lock()
-                    .map_err(|e| format!("Gagal lock Postgres: {}", e))?;
-                f(DatabaseConnection::Postgres(&mut guard))
+            DbPool::Postgres(pool) => {
+                let mut conn = pool
+                    .get()
+                    .map_err(|e| format!("Gagal mengambil koneksi Postgres dari pool: {}", e))?;
+                f(DatabaseConnection::Postgres(&mut conn))
             }
         }
     }
@@ -88,6 +85,8 @@ pub enum HeapData {
     Fungsi(FungsiVM),
     FungsiBawaan(FungsiBawaanVM),
     Modul(HashMap<String, Value>),
+    DbPool(DbPool),
+    QueryState(DbQueryState),
     Free(usize), // Next free index
 }
 
@@ -120,7 +119,10 @@ impl Default for WebState {
 #[derive(Clone, Default)]
 pub struct DbQueryState {
     pub tabel: String,
+    pub schema: Option<String>,
     pub kondisi: Vec<(String, String, Value)>, // kolom, operator, nilai
+    pub limit_val: Option<usize>,
+    pub offset_val: Option<usize>,
 }
 
 #[derive(Clone, Default)]
@@ -305,6 +307,12 @@ impl Heap {
                         if let Value::Modul(i) = val {
                             c.push(*i);
                         }
+                        if let Value::DbPool(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::QueryState(i) = val {
+                            c.push(*i);
+                        }
                     }
                     c
                 }
@@ -351,6 +359,36 @@ impl Heap {
                             c.push(*i);
                         }
                         if let Value::Modul(i) = val {
+                            c.push(*i);
+                        }
+                    }
+                    c
+                }
+                HeapData::QueryState(q) => {
+                    let mut c = Vec::new();
+                    for (_, _, val) in &q.kondisi {
+                        if let Value::Array(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Kamus(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::String(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Fungsi(i, _) = val {
+                            c.push(*i);
+                        }
+                        if let Value::FungsiBawaan(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Modul(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::DbPool(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::QueryState(i) = val {
                             c.push(*i);
                         }
                     }

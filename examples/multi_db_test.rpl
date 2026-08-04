@@ -1,0 +1,24 @@
+buat db1 = db.hubungkan({ provider: "sqlite", nama: "db1.db" })
+buat db2 = db.hubungkan({ provider: "sqlite", nama: "db2.db" })
+
+tampilkan "Koneksi multi-database sukses dibuat!"
+tampilkan db1
+tampilkan db2
+
+db1.eksekusi("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)")
+db2.eksekusi("CREATE TABLE IF NOT EXISTS products (id INTEGER PRIMARY KEY, name TEXT)")
+
+db1.eksekusi("DELETE FROM users")
+db2.eksekusi("DELETE FROM products")
+
+db1.eksekusi("INSERT INTO users (name) VALUES ('Andi')")
+db2.eksekusi("INSERT INTO products (name) VALUES ('Laptop')")
+
+buat users = db1.kueri("SELECT * FROM users")
+buat products = db2.kueri("SELECT * FROM products")
+
+tampilkan "Data dari DB 1 (Users):"
+tampilkan users
+
+tampilkan "Data dari DB 2 (Products):"
+tampilkan products
