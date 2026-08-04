@@ -15,6 +15,8 @@ pub mod file;
 #[cfg(feature = "enterprise")]
 pub mod http;
 pub mod json;
+pub mod dokumen;
+pub mod html;
 pub mod kripto;
 pub mod list;
 pub mod log;
@@ -31,8 +33,6 @@ pub mod web;
 #[cfg(feature = "enterprise")]
 pub mod cache;
 #[cfg(feature = "enterprise")]
-pub mod dokumen;
-#[cfg(feature = "enterprise")]
 pub mod email;
 #[cfg(feature = "enterprise")]
 pub mod jwt;
@@ -45,6 +45,8 @@ pub mod regex;
 use crate::machine::VM;
 
 pub fn register_all(vm: &mut VM) {
+    dokumen::register(vm);
+    html::register(vm);
     core::register(vm);
     waktu::register(vm);
     matematika::register(vm);

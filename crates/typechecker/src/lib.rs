@@ -260,6 +260,7 @@ impl TypeChecker {
             "tugas",
             "log",
             "dokumen",
+            "html",
             "email",
             "jwt",
             "cache",

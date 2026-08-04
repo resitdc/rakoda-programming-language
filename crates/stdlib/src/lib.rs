@@ -11,6 +11,7 @@ pub mod env;
 pub mod file;
 #[cfg(feature = "enterprise")]
 pub mod http;
+pub mod html;
 pub mod jenis;
 pub mod json;
 #[cfg(feature = "enterprise")]

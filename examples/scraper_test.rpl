@@ -1,0 +1,11 @@
+buat url = "https://posme.id"
+buat respon = http.get(url)
+
+buat html_teks = respon.data
+
+buat doc = html.parse(html_teks)
+
+buat h1 = doc.querySelector("h1")
+jika h1 != kosong maka
+    tampilkan("Judul Ditemukan: " + h1.teks())
+selesai
