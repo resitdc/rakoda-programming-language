@@ -1,0 +1,18 @@
+buat data = {
+    nama: "Resit",
+    umur: 25,
+    skills: ["Rust", "JavaScript", "Rakoda"],
+    is_active: benar
+}
+
+tampilkan "==== Bawaan (json.buat) ===="
+tampilkan json.buat(data)
+
+tampilkan "\\n==== Dengan 2 space (json.stringify) ===="
+tampilkan json.stringify(data, 2)
+
+tampilkan "\\n==== Dengan 4 space (json.teks) ===="
+tampilkan json.teks(data, 4)
+
+tampilkan "\\n==== Menggunakan karakter indent (tab) ===="
+tampilkan json.stringify(data, "\\t")

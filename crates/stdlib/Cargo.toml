@@ -9,6 +9,7 @@ repository.workspace = true
 
 [dependencies]
 serde_json = { workspace = true }
+serde = { workspace = true }
 sha2 = "0.10"
 md5 = "0.7"
 rand = "0.9.2"
