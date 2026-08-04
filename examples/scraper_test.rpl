@@ -9,3 +9,14 @@ buat h1 = doc.querySelector("h1")
 jika h1 != kosong maka
     tampilkan("Judul Ditemukan: " + h1.teks())
 selesai
+
+buat p_list = doc.querySelectorAll("p")
+buat len = list.panjang(p_list)
+tampilkan("Ditemukan " + len + " paragraf")
+
+buat i = 0
+selama i < len maka
+    buat p_el = p_list[i]
+    tampilkan("P[" + i + "]: " + p_el.teks())
+    i = i + 1
+selesai

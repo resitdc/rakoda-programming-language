@@ -8,15 +8,15 @@ pub mod core;
 pub mod db;
 #[cfg(feature = "enterprise")]
 pub mod dev_dashboard;
+pub mod dokumen;
 #[cfg(feature = "enterprise")]
 pub mod env;
 #[cfg(feature = "enterprise")]
 pub mod file;
+pub mod html;
 #[cfg(feature = "enterprise")]
 pub mod http;
 pub mod json;
-pub mod dokumen;
-pub mod html;
 pub mod kripto;
 pub mod list;
 pub mod log;

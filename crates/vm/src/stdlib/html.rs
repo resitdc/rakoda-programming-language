@@ -3,9 +3,9 @@ use crate::value::{FungsiBawaanVM, Value, VmContext};
 use std::collections::HashMap;
 
 #[cfg(feature = "enterprise")]
-use std::sync::Arc;
+use scraper::{ElementRef, Html, Selector};
 #[cfg(feature = "enterprise")]
-use scraper::{Html, Selector, ElementRef};
+use std::sync::Arc;
 
 #[cfg(feature = "enterprise")]
 pub struct SafeHtml(pub scraper::Html);
@@ -39,7 +39,7 @@ pub fn register(machine: &mut crate::VM) {
                 Ok(buat_elemen_kamus(vm, document, root_id))
             }),
         };
-        
+
         let parse_idx = machine.heap.alloc(HeapData::FungsiBawaan(parse_func));
         html_module.insert("parse".to_string(), Value::FungsiBawaan(parse_idx));
     }
@@ -61,7 +61,11 @@ pub fn register(machine: &mut crate::VM) {
 }
 
 #[cfg(feature = "enterprise")]
-fn buat_elemen_kamus(vm: &mut dyn VmContext, document: Arc<SafeHtml>, node_id: ego_tree::NodeId) -> Value {
+fn buat_elemen_kamus(
+    vm: &mut dyn VmContext,
+    document: Arc<SafeHtml>,
+    node_id: ego_tree::NodeId,
+) -> Value {
     let mut kamus = HashMap::new();
 
     // querySelector
@@ -79,7 +83,8 @@ fn buat_elemen_kamus(vm: &mut dyn VmContext, document: Arc<SafeHtml>, node_id: e
                 return Err("Selector harus berupa string".to_string());
             };
 
-            let selector = Selector::parse(&sel_str).map_err(|e| format!("Selector tidak valid: {:?}", e))?;
+            let selector =
+                Selector::parse(&sel_str).map_err(|e| format!("Selector tidak valid: {:?}", e))?;
             let node = doc_qs.0.tree.get(node_id_qs).unwrap();
 
             let found = if let Some(el_ref) = ElementRef::wrap(node) {
@@ -115,9 +120,10 @@ fn buat_elemen_kamus(vm: &mut dyn VmContext, document: Arc<SafeHtml>, node_id: e
                 return Err("Selector harus berupa string".to_string());
             };
 
-            let selector = Selector::parse(&sel_str).map_err(|e| format!("Selector tidak valid: {:?}", e))?;
+            let selector =
+                Selector::parse(&sel_str).map_err(|e| format!("Selector tidak valid: {:?}", e))?;
             let node = doc_qsa.0.tree.get(node_id_qsa).unwrap();
-            
+
             let mut arr = Vec::new();
 
             if let Some(el_ref) = ElementRef::wrap(node) {
@@ -189,11 +195,13 @@ fn buat_elemen_kamus(vm: &mut dyn VmContext, document: Arc<SafeHtml>, node_id: e
             };
 
             let node = doc_attr.0.tree.get(node_id_attr).unwrap();
-            if let Some(el_ref) = ElementRef::wrap(node) {
-                if let Some(val) = el_ref.value().attr(&nama_attr) {
-                    let s_idx = vm_ctx.get_heap_mut().alloc(HeapData::String(val.to_string()));
-                    return Ok(Value::String(s_idx));
-                }
+            if let Some(el_ref) = ElementRef::wrap(node)
+                && let Some(val) = el_ref.value().attr(&nama_attr)
+            {
+                let s_idx = vm_ctx
+                    .get_heap_mut()
+                    .alloc(HeapData::String(val.to_string()));
+                return Ok(Value::String(s_idx));
             }
             Ok(Value::Kosong)
         }),
