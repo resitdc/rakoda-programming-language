@@ -115,17 +115,15 @@ fn daftar_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
     match std::fs::read_dir(path) {
         Ok(entries) => {
             let mut result = Vec::new();
-            for entry in entries {
-                if let Ok(entry) = entry {
-                    let file_name = entry.file_name();
-                    let name_str = file_name.to_string_lossy();
+            for entry in entries.flatten() {
+                let file_name = entry.file_name();
+                let name_str = file_name.to_string_lossy();
 
-                    if !show_hidden && name_str.starts_with('.') {
-                        continue;
-                    }
-
-                    result.push(NilaiRpl::Teks(name_str.to_string()));
+                if !show_hidden && name_str.starts_with('.') {
+                    continue;
                 }
+
+                result.push(NilaiRpl::Teks(name_str.to_string()));
             }
             Ok(NilaiRpl::Daftar(result))
         }
