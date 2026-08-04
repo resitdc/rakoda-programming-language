@@ -9,6 +9,7 @@ pub mod email;
 pub mod env;
 #[cfg(feature = "enterprise")]
 pub mod file;
+pub mod html;
 #[cfg(feature = "enterprise")]
 pub mod http;
 pub mod jenis;
