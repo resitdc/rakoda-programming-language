@@ -58,17 +58,40 @@ pub fn dari_json(val: &Value) -> NilaiRpl {
 
 /// Fungsi-fungsi JSON murni (tidak tergantung engine).
 pub fn fungsi_json() -> DaftarFungsiRpl {
-    vec![("buat", buat_impl), ("parse", parse_impl)]
+    vec![
+        ("buat", buat_impl), 
+        ("stringify", buat_impl),
+        ("teks", buat_impl),
+        ("parse", parse_impl)
+    ]
 }
 
 fn buat_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
     if args.is_empty() {
-        return Err("json.buat membutuhkan 1 argumen: nilai".to_string());
+        return Err("Fungsi ini membutuhkan minimal 1 argumen: nilai".to_string());
     }
     let json_val = ke_json(&args[0]);
-    match serde_json::to_string(&json_val) {
-        Ok(s) => Ok(NilaiRpl::Teks(s)),
-        Err(e) => Err(format!("json.buat gagal: {}", e)),
+    
+    if args.len() >= 2 {
+        let indent_bytes = match &args[1] {
+            NilaiRpl::Angka(n) => " ".repeat(*n as usize).into_bytes(),
+            NilaiRpl::Teks(s) => s.as_bytes().to_vec(),
+            _ => vec![b' ', b' '],
+        };
+        
+        let mut buf = Vec::new();
+        let formatter = serde_json::ser::PrettyFormatter::with_indent(&indent_bytes);
+        let mut ser = serde_json::Serializer::with_formatter(&mut buf, formatter);
+        
+        match serde::Serialize::serialize(&json_val, &mut ser) {
+            Ok(_) => Ok(NilaiRpl::Teks(String::from_utf8(buf).unwrap_or_default())),
+            Err(e) => Err(format!("Gagal format json: {}", e)),
+        }
+    } else {
+        match serde_json::to_string(&json_val) {
+            Ok(s) => Ok(NilaiRpl::Teks(s)),
+            Err(e) => Err(format!("Gagal parse json: {}", e)),
+        }
     }
 }
 

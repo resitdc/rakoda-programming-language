@@ -1,0 +1,41 @@
+buat conn = db.hubungkan({ provider: "sqlite", nama: "orm_test.db" })
+
+conn.query("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)")
+conn.query("DELETE FROM users")
+
+tampilkan "-> Single and Multiple Inserts:"
+conn.table("users").insert({ name: "Alice", age: 25 })
+// Multiple insert using an array of dictionaries
+conn.table("users").insert([
+    { name: "Bob", age: 30 },
+    { name: "Charlie", age: 35 },
+    { name: "David", age: 40 },
+    { name: "Eve", age: 45 }
+])
+tampilkan conn.table("users").select()
+
+tampilkan "\\n-> Pagination (limit & offset):"
+buat paginated = conn.table("users").limit(2).offset(1).select()
+tampilkan paginated
+
+tampilkan "\\n-> First():"
+buat first_user = conn.table("users").where("age", ">", 25).first()
+tampilkan first_user
+
+tampilkan "\\n-> Upsert (insert or update):"
+// Note: SQLite uses ON CONFLICT DO UPDATE SET natively.
+// Kita perlu pastikan id ada untuk trigger conflict, atau conflict column lainnya.
+// Jika nama UNIQUE, bisa konflik. Karena schema ini tidak ada UNIQUE name, kita coba pakai schema id.
+conn.table("users").upsert({ id: 2, name: "Bob Modified", age: 31 }, ["id"])
+conn.table("users").upsert({ id: 6, name: "Frank", age: 50 }, ["id"])
+tampilkan conn.table("users").select()
+
+tampilkan "\\n==== OBJECTION.JS STYLE ORM ===="
+buat User = db.Model({
+    tableName: "users",
+    connection: conn
+})
+
+tampilkan "final"
+buat final_users = User.query().where("age", ">", 30).limit(2).select()
+tampilkan final_users
