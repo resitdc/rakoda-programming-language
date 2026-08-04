@@ -201,7 +201,7 @@ dependencies = [
 
 [[package]]
 name = "ast"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "errors",
 ]
@@ -1435,7 +1435,7 @@ dependencies = [
 
 [[package]]
 name = "errors"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "thiserror 2.0.19",
 ]
@@ -2476,7 +2476,7 @@ dependencies = [
 
 [[package]]
 name = "lexer"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "errors",
 ]
@@ -3304,7 +3304,7 @@ dependencies = [
 
 [[package]]
 name = "parser"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "ast",
  "errors",
@@ -4161,7 +4161,7 @@ dependencies = [
 
 [[package]]
 name = "rpl"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -4328,7 +4328,7 @@ dependencies = [
 
 [[package]]
 name = "runtime"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "anyhow",
  "ast",
@@ -4540,7 +4540,7 @@ dependencies = [
 
 [[package]]
 name = "scratch_pdf"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "serde_json",
  "turbo-html2pdf-core",
@@ -4929,7 +4929,7 @@ dependencies = [
 
 [[package]]
 name = "stdlib"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "calamine",
  "chrono",
@@ -5880,7 +5880,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vm"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "ast",
  "axum",
@@ -5988,7 +5988,7 @@ dependencies = [
 
 [[package]]
 name = "wasm"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "ast",
  "console_error_panic_hook",
@@ -6056,7 +6056,7 @@ dependencies = [
 
 [[package]]
 name = "web"
-version = "5.0.0"
+version = "6.0.0"
 dependencies = [
  "anyhow",
  "ast",
