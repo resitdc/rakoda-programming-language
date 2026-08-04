@@ -8,11 +8,13 @@ pub mod core;
 pub mod db;
 #[cfg(feature = "enterprise")]
 pub mod dev_dashboard;
+#[cfg(feature = "enterprise")]
 pub mod dokumen;
 #[cfg(feature = "enterprise")]
 pub mod env;
 #[cfg(feature = "enterprise")]
 pub mod file;
+#[cfg(feature = "enterprise")]
 pub mod html;
 #[cfg(feature = "enterprise")]
 pub mod http;
@@ -45,8 +47,6 @@ pub mod regex;
 use crate::machine::VM;
 
 pub fn register_all(vm: &mut VM) {
-    dokumen::register(vm);
-    html::register(vm);
     core::register(vm);
     waktu::register(vm);
     matematika::register(vm);
@@ -82,6 +82,8 @@ pub fn register_all(vm: &mut VM) {
     jwt::register(vm);
     #[cfg(feature = "enterprise")]
     cache::register(vm);
+    #[cfg(feature = "enterprise")]
+    html::register(vm);
     #[cfg(feature = "enterprise")]
     ocr::register(vm);
     #[cfg(feature = "enterprise")]
