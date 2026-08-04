@@ -1,12 +1,19 @@
+#[cfg(feature = "enterprise")]
 pub mod cache;
 pub mod core;
+#[cfg(feature = "enterprise")]
 pub mod dokumen;
+#[cfg(feature = "enterprise")]
 pub mod email;
+#[cfg(feature = "enterprise")]
 pub mod env;
+#[cfg(feature = "enterprise")]
 pub mod file;
+#[cfg(feature = "enterprise")]
 pub mod http;
 pub mod jenis;
 pub mod json;
+#[cfg(feature = "enterprise")]
 pub mod jwt;
 pub mod kripto;
 pub mod list;
@@ -24,8 +31,11 @@ pub type DaftarFungsiRpl = Vec<(&'static str, FungsiRpl)>;
 
 /// Re-export semua fungsi dari masing-masing modul untuk kemudahan akses.
 pub use core::fungsi_core;
+#[cfg(feature = "enterprise")]
 pub use dokumen::fungsi_dokumen;
+#[cfg(feature = "enterprise")]
 pub use env::fungsi_env;
+#[cfg(feature = "enterprise")]
 pub use file::fungsi_file;
 pub use json::fungsi_json;
 pub use kripto::fungsi_kripto;

@@ -41,6 +41,7 @@ fn log_impl(
         combined_msg
     );
 
+    #[cfg(feature = "enterprise")]
     super::dev_dashboard::record_log(super::dev_dashboard::LogTelemetry {
         timestamp: time_str,
         level: level.to_string(),

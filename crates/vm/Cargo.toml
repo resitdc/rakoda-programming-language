@@ -3,46 +3,87 @@ name = "vm"
 version.workspace = true
 edition.workspace = true
 
+[features]
+default = ["enterprise"]
+enterprise = [
+    "stdlib/enterprise",
+    "dep:ureq",
+    "dep:dotenvy",
+    "dep:flate2",
+    "dep:brotli",
+    "dep:ocrs",
+    "dep:rten-imageio",
+    "dep:image",
+    "dep:rten-tensor",
+    "dep:rten",
+    "dep:rusqlite",
+    "dep:r2d2",
+    "dep:r2d2_sqlite",
+    "dep:mysql",
+    "dep:postgres",
+    "dep:r2d2_postgres",
+    "dep:tiberius",
+    "dep:multipart",
+    "dep:tokio",
+    "dep:axum",
+    "dep:tower-http",
+    "dep:tokio-util",
+    "dep:bytes",
+    "dep:futures-util",
+    "dep:docx-rs",
+    "dep:printpdf",
+    "dep:turbo-html2pdf-core",
+    "dep:rust_xlsxwriter",
+    "dep:url"
+]
+
 [dependencies]
 ast = { path = "../ast" }
-stdlib = { path = "../stdlib" }
+stdlib = { path = "../stdlib", default-features = false }
 serde_json = "1.0"
-ureq = "3.3.0"
-dotenvy = "0.15.7"
-chrono = "0.4"
 serde = { workspace = true, features = ["derive"] }
 rand = "0.8"
 errors = { path = "../errors" }
-flate2 = "1.1.9"
-brotli = "8.0.4"
-ocrs = "0.12.2"
-rten-imageio = "0.24.0"
-image = "0.25.10"
-rten-tensor = "0.24.0"
-rten = "0.24.0"
-uuid = { version = "1.23.4", features = ["v4"] }
 lexer = { path = "../lexer" }
 parser = { path = "../parser" }
-
-rusqlite = { version = "0.40.1", features = ["bundled"] }
-r2d2 = "0.8.4"
-r2d2_sqlite = "0.35.0"
-mysql = "28.0.0"
-postgres = "0.19.14"
+chrono = "0.4"
 md-5 = "0.10.6"
 sha2 = "0.10.8"
-multipart = { version = "0.18", default-features = false, features = ["server"] }
-tokio = { version = "1.41.1", features = ["full"] }
-axum = { version = "0.7.9", features = ["ws"] }
-bytes = "1.9.0"
-futures-util = "0.3.31"
 regex = "1.13.1"
-docx-rs = "0.4.22"
-printpdf = "0.3.4"
-turbo-html2pdf-core = "0.2.14"
-rust_xlsxwriter = "0.96.0"
-tower-http = { version = "0.7.0", features = ["fs"] }
-r2d2_postgres = "0.18.1"
-tiberius = "0.12.3"
-tokio-util = { version = "0.7.19", features = ["compat"] }
-url = "2.5.8"
+uuid = { version = "1.23.4", features = ["v4", "js"] }
+
+# Enterprise Dependencies
+ureq = { version = "3.3.0", optional = true }
+dotenvy = { version = "0.15.7", optional = true }
+flate2 = { version = "1.1.9", optional = true }
+brotli = { version = "8.0.4", optional = true }
+ocrs = { version = "0.12.2", optional = true }
+rten-imageio = { version = "0.24.0", optional = true }
+image = { version = "0.25.10", optional = true }
+rten-tensor = { version = "0.24.0", optional = true }
+rten = { version = "0.24.0", optional = true }
+
+rusqlite = { version = "0.40.1", features = ["bundled"], optional = true }
+r2d2 = { version = "0.8.4", optional = true }
+r2d2_sqlite = { version = "0.35.0", optional = true }
+mysql = { version = "28.0.0", optional = true }
+postgres = { version = "0.19.14", optional = true }
+r2d2_postgres = { version = "0.18.1", optional = true }
+tiberius = { version = "0.12.3", optional = true }
+
+multipart = { version = "0.18", default-features = false, features = ["server"], optional = true }
+tokio = { version = "1.41.1", features = ["full"], optional = true }
+axum = { version = "0.7.9", features = ["ws"], optional = true }
+tower-http = { version = "0.7.0", features = ["fs"], optional = true }
+tokio-util = { version = "0.7.19", features = ["compat"], optional = true }
+bytes = { version = "1.9.0", optional = true }
+futures-util = { version = "0.3.31", optional = true }
+url = { version = "2.5.8", optional = true }
+
+docx-rs = { version = "0.4.22", optional = true }
+printpdf = { version = "0.3.4", optional = true }
+turbo-html2pdf-core = { version = "0.2.14", optional = true }
+rust_xlsxwriter = { version = "0.96.0", optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
