@@ -119,7 +119,10 @@ impl Default for WebState {
 #[derive(Clone, Default)]
 pub struct DbQueryState {
     pub tabel: String,
+    pub schema: Option<String>,
     pub kondisi: Vec<(String, String, Value)>, // kolom, operator, nilai
+    pub limit_val: Option<usize>,
+    pub offset_val: Option<usize>,
 }
 
 #[derive(Clone, Default)]
