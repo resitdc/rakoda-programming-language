@@ -42,3 +42,4 @@ printpdf = "0.3.4"
 turbo-html2pdf-core = "0.2.14"
 rust_xlsxwriter = "0.96.0"
 tower-http = { version = "0.7.0", features = ["fs"] }
+r2d2_postgres = "0.18.1"

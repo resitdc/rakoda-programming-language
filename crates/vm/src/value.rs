@@ -52,6 +52,7 @@ pub enum Value {
     Fungsi(usize, usize),
     FungsiBawaan(usize),
     Modul(usize),
+    DbPool(usize),
 }
 
 impl Value {
@@ -82,6 +83,7 @@ impl Value {
                 format!("{{{}}}", items.join(", "))
             }
             Value::Kosong => "kosong".to_string(),
+            Value::DbPool(_) => "<koneksi database>".to_string(),
         }
     }
 }
@@ -125,5 +127,6 @@ pub fn deep_copy_value(val: &Value, source: &Heap, dest: &mut Heap) -> Value {
             Value::FungsiBawaan(new_idx)
         }
         Value::Modul(idx) => Value::Modul(*idx),
+        Value::DbPool(idx) => Value::DbPool(*idx),
     }
 }
