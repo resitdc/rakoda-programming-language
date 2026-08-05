@@ -261,6 +261,7 @@ impl TypeChecker {
             "log",
             "dokumen",
             "html",
+            "ffi",
             "email",
             "jwt",
             "cache",

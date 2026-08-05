@@ -11,6 +11,8 @@ pub mod dev_dashboard;
 #[cfg(feature = "enterprise")]
 pub mod dokumen;
 #[cfg(feature = "enterprise")]
+pub mod ffi;
+#[cfg(feature = "enterprise")]
 pub mod env;
 #[cfg(feature = "enterprise")]
 pub mod file;
@@ -84,6 +86,8 @@ pub fn register_all(vm: &mut VM) {
     cache::register(vm);
     #[cfg(feature = "enterprise")]
     html::register(vm);
+    #[cfg(feature = "enterprise")]
+    ffi::register(vm);
     #[cfg(feature = "enterprise")]
     ocr::register(vm);
     #[cfg(feature = "enterprise")]

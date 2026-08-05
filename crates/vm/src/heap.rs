@@ -97,6 +97,8 @@ pub enum HeapData {
     Modul(HashMap<String, Value>),
     DbPool(DbPool),
     QueryState(DbQueryState),
+    #[cfg(feature = "enterprise")]
+    FfiLibrary(std::sync::Arc<libloading::Library>),
     Free(usize), // Next free index
 }
 

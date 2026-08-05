@@ -1,0 +1,15 @@
+// FFI test in Rakoda
+
+cetak("Memuat library FFI...")
+buat lib = ffi.muat_lib("examples/test_lib.dylib")
+cetak("Library dimuat!")
+
+// Panggil fungsi tambah(int, int) -> int
+buat tambah = ffi.definisi(lib, "tambah", ["int", "int"], "int")
+buat hasil = tambah(5, 7)
+cetak("Hasil dari C tambah(5, 7) = " + hasil)
+
+// Panggil fungsi sapa(string) -> void
+buat sapa = ffi.definisi(lib, "sapa", ["string"], "void")
+sapa("Rakoda")
+cetak("Selesai memanggil C!")
