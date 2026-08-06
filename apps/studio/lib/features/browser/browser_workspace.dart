@@ -270,8 +270,13 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
           ),
         );
         return result ?? '';
-      })
-      ..loadHtmlString(_getDefaultHtml());
+      });
+
+    if (widget.initialUrl != null && widget.initialUrl!.isNotEmpty) {
+      _controller.loadRequest(Uri.parse(widget.initialUrl!));
+    } else {
+      _controller.loadHtmlString(_getDefaultHtml());
+    }
   }
 
   Future<void> _extractDevToolsData() async {
@@ -535,7 +540,9 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
     }
 
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      if (url.contains('.') && !url.contains(' ')) {
+      if (url.startsWith('localhost') || url.startsWith('127.0.0.1') || url.startsWith('0.0.0.0')) {
+        url = 'http://$url';
+      } else if (url.contains('.') && !url.contains(' ')) {
         url = 'https://$url';
       } else {
         url = 'https://www.google.com/search?q=${Uri.encodeComponent(url)}';
@@ -776,7 +783,9 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
       if (!_isWindowsWebviewInitialized) return;
       await _windowsController.executeScript(code);
     } else {
-      await _runJavascript(code);
+      try {
+        await _controller.runJavaScript(code);
+      } catch (_) {}
     }
   }
 
@@ -809,7 +818,11 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
       await _windowsController.executeScript(wrappedCode);
       return completer.future;
     } else {
-      return await _evaluateJavascript(code);
+      try {
+        return await _controller.runJavaScriptReturningResult(code);
+      } catch (_) {
+        return null;
+      }
     }
   }
 
@@ -817,7 +830,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
     if (Platform.isWindows) {
       if (_isWindowsWebviewInitialized) _windowsController.goBack();
     } else {
-      _goBack();
+      _controller.goBack();
     }
   }
 
@@ -825,7 +838,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
     if (Platform.isWindows) {
       if (_isWindowsWebviewInitialized) _windowsController.goForward();
     } else {
-      _goForward();
+      _controller.goForward();
     }
   }
 
@@ -833,7 +846,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
     if (Platform.isWindows) {
       if (_isWindowsWebviewInitialized) _windowsController.reload();
     } else {
-      _reload();
+      _controller.reload();
     }
   }
 
