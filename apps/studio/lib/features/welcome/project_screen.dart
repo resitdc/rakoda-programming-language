@@ -8,6 +8,8 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../models/project.dart';
 import '../../services/project_service.dart';
+import '../../services/local_http_server_service.dart';
+
 import '../editor/editor_tab.dart';
 import '../editor/code_editor.dart';
 import '../explorer/file_explorer.dart';
@@ -44,6 +46,7 @@ class ProjectScreen extends ConsumerStatefulWidget {
 }
 
 class _ProjectScreenState extends ConsumerState<ProjectScreen> {
+  final LocalHttpServerService _httpServerService = LocalHttpServerService();
   late List<EditorTab> _openTabs;
   int _activeTabIndex = 0;
   ActivityType? _activeActivity = ActivityType.explorer;
@@ -283,8 +286,11 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     }
   }
 
+
   @override
   void dispose() {
+    _httpServerService.stop();
+
     _pty?.kill();
     _iosTerminalInputController.dispose();
     _iosTerminalScrollController.dispose();
@@ -1025,9 +1031,9 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                     ),
                           // Index 1: Browser Workspace
                           ref.watch(settingsProvider).isLowEndMode &&
-                                  _activeActivity != ActivityType.browser
+                                  _activeWorkspace != WorkspaceType.browser
                               ? const SizedBox() // Bebaskan memori webview saat tidak aktif
-                              : const BrowserWorkspace(),
+                              : BrowserWorkspace(key: ValueKey(_browserInitialUrl ?? 'default'), initialUrl: _browserInitialUrl),
                           // Index 2: Database Workspace
                           DatabaseWorkspace(key: _dbWorkspaceKey, projectPath: widget.project.path),
                           // Index 3: HTTP Workspace
@@ -1163,101 +1169,121 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                     ? _saveActiveTab
                     : null,
               ),
-            ],
-            _TitleBarButton(
-              icon: Icons.play_arrow,
-              tooltip: 'Run',
-              color: const Color(0xFF4EC9B0),
-              onPressed: () async {
-                if (_openTabs.isEmpty) return;
-                setState(() {
-                  _isTerminalMinimized = false;
-                });
-                final tab = _openTabs[_activeTabIndex];
-                final fileName = tab.fileName;
-                final ext = fileName.contains('.') ? fileName.split('.').last.toLowerCase() : '';
-                final content = tab.content;
+              Builder(
+                builder: (context) {
+                  if (_openTabs.isEmpty) return const SizedBox();
+                  final tab = _openTabs[_activeTabIndex];
+                  final fileName = tab.fileName;
+                  final isPureHtml = fileName.endsWith('.html') && !fileName.endsWith('.rpl.html');
+                  
+                  final isServerRunning = isPureHtml && _httpServerService.isRunning;
 
-                final cmdString = '\r\n>_ run $fileName\r\n';
-                _terminal.write(cmdString);
-                
-                String resultString = '';
-                
-                if (ext == 'php' || ext == 'js') {
-                  final language = ext == 'js' ? 'node' : 'php';
-                  final availableRuntimes = await CodeExecutorService.getInstalledRuntimePaths(language);
-                  
-                  if (availableRuntimes.isEmpty) {
-                    resultString = 'Error: Runtime ${language.toUpperCase()} belum terpasang. Silakan unduh melalui Pengelola Runtime.\r\n';
-                  } else {
-                    String selectedExe = availableRuntimes.first;
-                    
-                    if (availableRuntimes.length > 1 && mounted) {
-                      final selected = await showDialog<String>(
-                        context: context,
-                        builder: (ctx) {
-                          return AlertDialog(
-                            backgroundColor: const Color(0xFF252526),
-                            title: Text('Pilih Versi ${language.toUpperCase()}', style: const TextStyle(color: Colors.white, fontSize: 16)),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: availableRuntimes.map((path) {
-                                final parts = path.split('/');
-                                final folderName = parts[parts.length - 2];
-                                return ListTile(
-                                  title: Text(folderName, style: const TextStyle(color: Colors.white)),
-                                  trailing: const Icon(Icons.play_arrow, color: Color(0xFF4EC9B0), size: 16),
-                                  onTap: () => Navigator.pop(ctx, path),
-                                );
-                              }).toList(),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(ctx),
-                                child: const Text('Batal', style: TextStyle(color: Colors.white54)),
-                              )
-                            ],
-                          );
+                  return _TitleBarButton(
+                    icon: isServerRunning ? Icons.stop : Icons.play_arrow,
+                    tooltip: isServerRunning ? 'Stop Server' : 'Run',
+                    color: isServerRunning ? Colors.redAccent : const Color(0xFF4EC9B0),
+                    onPressed: () async {
+                      if (isPureHtml) {
+                        if (_httpServerService.isRunning) {
+                          await _httpServerService.stop();
+                          _terminal.write('\r\n>_ Server HTML dihentikan.\r\n');
+                          setState(() {});
+                        } else {
+                          await _httpServerService.start(widget.project.path, defaultPort: 8000);
+                          final port = _httpServerService.port;
+                          _terminal.write('\r\n>_ HTTP Server berjalan di http://localhost:$port\r\n');
+                          
+                          setState(() {
+                            _browserInitialUrl = 'http://localhost:$port/$fileName';
+                            _activeWorkspace = WorkspaceType.browser;
+                            _activeActivity = ActivityType.browser;
+                          });
                         }
-                      );
-                      if (selected != null) {
-                        selectedExe = selected;
-                      } else {
-                        resultString = 'Eksekusi dibatalkan.\r\n';
+                        return;
                       }
-                    }
-                    
-                    if (resultString.isEmpty) {
-                      final result = await CodeExecutorService.executeWithRuntime(selectedExe, content, language);
-                      resultString = result.replaceAll('\n', '\r\n') + '\r\n';
-                    }
-                  }
-                } else {
-                  // Fallback to internal Rust VM for RPL or others
-                  final prevDir = Directory.current.path;
-                  final fileDir = File(tab.filePath).parent.path;
-                  try {
-                    Directory.current = fileDir;
-                  } catch (_) {}
-                  
-                  final result = await runCode(code: content);
-                  
-                  try {
-                    Directory.current = prevDir;
-                  } catch (_) {}
-                  
-                  resultString = result.replaceAll('\n', '\r\n') + '\r\n';
-                }
-                
-                if (!mounted) return;
-                
-                _terminal.write(resultString);
-                
-                if (_classroomService.isHost && _classroomService.isLiveCodeSharingEnabled) {
-                  _classroomService.broadcastTerminalOutput(cmdString + resultString);
-                }
-              },
-            ),
+
+                      if (_openTabs.isEmpty) return;
+                      setState(() {
+                        _isTerminalMinimized = false;
+                      });
+                      
+                      final ext = fileName.contains('.') ? fileName.split('.').last.toLowerCase() : '';
+                      final content = tab.content;
+
+                      final cmdString = '\r\n>_ run $fileName\r\n';
+                      _terminal.write(cmdString);
+                      
+                      String resultString = '';
+                      
+                      if (ext == 'php' || ext == 'js') {
+                        final language = ext == 'js' ? 'node' : 'php';
+                        final availableRuntimes = await CodeExecutorService.getInstalledRuntimePaths(language);
+                        
+                        if (availableRuntimes.isEmpty) {
+                          resultString = 'Error: Runtime ${language.toUpperCase()} belum terpasang. Silakan unduh melalui Pengelola Runtime.\r\n';
+                        } else {
+                          String selectedExe = availableRuntimes.first;
+                          
+                          if (availableRuntimes.length > 1 && mounted) {
+                            final selected = await showDialog<String>(
+                              context: context,
+                              builder: (ctx) {
+                                return AlertDialog(
+                                  backgroundColor: const Color(0xFF252526),
+                                  title: Text('Pilih Versi ${language.toUpperCase()}', style: const TextStyle(color: Colors.white, fontSize: 16)),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: availableRuntimes.map((path) {
+                                      return ListTile(
+                                        title: Text(path, style: const TextStyle(color: Colors.white70)),
+                                        onTap: () => Navigator.pop(ctx, path),
+                                      );
+                                    }).toList(),
+                                  ),
+                                );
+                              }
+                            );
+                            if (selected != null) {
+                              selectedExe = selected;
+                            } else {
+                              resultString = 'Eksekusi dibatalkan.\r\n';
+                            }
+                          }
+                          
+                          if (resultString.isEmpty) {
+                            final result = await CodeExecutorService.executeWithRuntime(selectedExe, content, language);
+                            resultString = result.replaceAll('\n', '\r\n') + '\r\n';
+                          }
+                        }
+                      } else {
+                        // Fallback to internal Rust VM for RPL or others
+                        final prevDir = Directory.current.path;
+                        final fileDir = File(tab.filePath).parent.path;
+                        try {
+                          Directory.current = fileDir;
+                        } catch (_) {}
+                        
+                        final result = await runCode(code: content);
+                        
+                        try {
+                          Directory.current = prevDir;
+                        } catch (_) {}
+                        
+                        resultString = result.replaceAll('\n', '\r\n') + '\r\n';
+                      }
+                      
+                      if (!mounted) return;
+                      
+                      _terminal.write(resultString);
+                      
+                      if (_classroomService.isHost && _classroomService.isLiveCodeSharingEnabled) {
+                        _classroomService.broadcastTerminalOutput(cmdString + resultString);
+                      }
+                    },
+                  );
+                },
+              ),
+            ],
           ],
         ],
       ),
