@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
+import 'package:webview_windows/webview_windows.dart' as win_web;
+import 'package:uuid/uuid.dart';
+import 'dart:async';
 import 'devtools_panel.dart';
 
 class BrowserWorkspace extends StatefulWidget {
@@ -17,6 +20,9 @@ class BrowserWorkspace extends StatefulWidget {
 
 class _BrowserWorkspaceState extends State<BrowserWorkspace> {
   late final WebViewController _controller;
+  final _windowsController = win_web.WebviewController();
+  bool _isWindowsWebviewInitialized = false;
+  final Map<String, Completer<dynamic>> _jsCallbacks = {};
   late final TextEditingController _urlController = TextEditingController(
     text: widget.initialUrl ?? 'https://flutter.dev',
   );
@@ -31,22 +37,29 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
   Map<String, String> _localStorage = {};
   bool _isDevToolsMinimized = true;
 
-  @override
+@override
   void dispose() {
-    // Kosongkan memori WebView secara paksa saat tab ditutup (Mode Ringan)
     try {
-      _controller.loadHtmlString('about:blank');
-      _controller.clearCache();
-      _controller.clearLocalStorage();
-    } catch (_) {
-      // Ignore if controller is already disposed
-    }
+      if (Platform.isWindows) {
+        _windowsController.dispose();
+      } else {
+        _controller.loadHtmlString('about:blank');
+        _controller.clearCache();
+        _controller.clearLocalStorage();
+      }
+    } catch (_) {}
     super.dispose();
   }
 
   @override
   void initState() {
     super.initState();
+
+    if (Platform.isWindows) {
+      _initWindowsWebview();
+      return;
+    }
+
     if (!kIsWeb && Platform.isMacOS) {
       WebViewPlatform.instance = WebKitWebViewPlatform();
     }
@@ -264,33 +277,53 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
   Future<void> _extractDevToolsData() async {
     try {
       // Inject console override to capture logs
-      await _controller.runJavaScript('''
+      await _runJavascript('''
         if (!window._consoleOverridden) {
           window._consoleOverridden = true;
+          function sendLog(msg) {
+             if (window.ConsoleChannel) {
+                ConsoleChannel.postMessage(msg);
+             } else if (window.chrome && window.chrome.webview) {
+                window.chrome.webview.postMessage({ type: 'console', message: msg });
+             }
+          }
           const oldLog = console.log;
           const oldError = console.error;
           const oldWarn = console.warn;
           console.log = function(...args) {
-            ConsoleChannel.postMessage('[LOG] ' + args.join(' '));
+            sendLog('[LOG] ' + args.join(' '));
             oldLog.apply(console, args);
           };
           console.error = function(...args) {
-            ConsoleChannel.postMessage('[ERROR] ' + args.join(' '));
+            sendLog('[ERROR] ' + args.join(' '));
             oldError.apply(console, args);
           };
           console.warn = function(...args) {
-            ConsoleChannel.postMessage('[WARN] ' + args.join(' '));
+            sendLog('[WARN] ' + args.join(' '));
             oldWarn.apply(console, args);
           };
         }
       ''');
 
       // Inject network interceptor
-      await _controller.runJavaScript('''
+      await _runJavascript('''
         if (!window._networkOverridden) {
           window._networkOverridden = true;
 
           // 1. Intercept Fetch
+          function sendNet(obj) {
+             if (window.NetworkChannel) {
+                if (window.NetworkChannel) {
+                NetworkChannel.postMessage(JSON.stringify(obj));
+              } else if (window.chrome && window.chrome.webview) {
+                obj.type = 'network';
+                window.chrome.webview.postMessage(obj);
+              }
+             } else if (window.chrome && window.chrome.webview) {
+                obj.type = 'network';
+                window.chrome.webview.postMessage(obj);
+             }
+          }
           const originalFetch = window.fetch;
           window.fetch = async function(...args) {
             const url = args[0];
@@ -298,14 +331,14 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
             const method = options.method || 'GET';
             const payload = options.body ? options.body.toString() : '';
 
-            NetworkChannel.postMessage(JSON.stringify({
+            sendNet({
               url: url,
               method: method,
               status: 'Pending',
               payload: payload,
               response: '',
               contentType: 'application/json'
-            }));
+            });
 
             try {
               const response = await originalFetch(...args);
@@ -315,24 +348,24 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
                 responseText = await clone.text();
               } catch (_) {}
               
-              NetworkChannel.postMessage(JSON.stringify({
+              sendNet({
                 url: url,
                 method: method,
                 status: response.status + ' ' + response.statusText,
                 payload: payload,
                 response: responseText,
                 contentType: response.headers.get('content-type') || 'application/json'
-              }));
+              });
               return response;
             } catch (err) {
-              NetworkChannel.postMessage(JSON.stringify({
+              sendNet({
                 url: url,
                 method: method,
                 status: 'Failed',
                 payload: payload,
                 response: err.toString(),
                 contentType: 'text/plain'
-              }));
+              });
               throw err;
             }
           };
@@ -353,35 +386,35 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
             const method = xhr._method || 'GET';
             const payload = body ? body.toString() : '';
 
-            NetworkChannel.postMessage(JSON.stringify({
+            sendNet({
               url: url,
               method: method,
               status: 'Pending',
               payload: payload,
               response: '',
               contentType: 'text/plain'
-            }));
+            });
 
             xhr.addEventListener('load', function() {
-              NetworkChannel.postMessage(JSON.stringify({
+              sendNet({
                 url: url,
                 method: method,
                 status: xhr.status + ' ' + xhr.statusText,
                 payload: payload,
                 response: xhr.responseText,
                 contentType: xhr.getResponseHeader('content-type') || 'text/plain'
-              }));
+              });
             });
 
             xhr.addEventListener('error', function() {
-              NetworkChannel.postMessage(JSON.stringify({
+              sendNet({
                 url: url,
                 method: method,
                 status: 'Failed',
                 payload: payload,
                 response: 'Network Error',
                 contentType: 'text/plain'
-              }));
+              });
             });
 
             return origSend.apply(this, arguments);
@@ -390,7 +423,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
       ''');
 
       // 3. Inject Resource Timing collector for CSS, JS, Images, Media
-      await _controller.runJavaScript('''
+      await _runJavascript('''
         (function() {
           const resources = performance.getEntriesByType('resource');
           for (const res of resources) {
@@ -400,21 +433,21 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
               else if (res.initiatorType === 'img') cType = 'image/png';
               else if (res.initiatorType === 'script') cType = 'text/javascript';
 
-              NetworkChannel.postMessage(JSON.stringify({
+              sendNet({
                 url: res.name,
                 method: 'GET',
                 status: '200 OK',
                 payload: '',
                 response: '[Resource Loaded from Cache/Network]',
                 contentType: cType
-              }));
+              });
             }
           }
         })();
       ''');
 
       // Get page source
-      final html = await _controller.runJavaScriptReturningResult(
+      final html = await _evaluateJavascript(
         'document.documentElement.outerHTML',
       );
       String htmlStr = html.toString();
@@ -428,7 +461,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
       });
 
       // Get cookies
-      final cookiesObj = await _controller.runJavaScriptReturningResult(
+      final cookiesObj = await _evaluateJavascript(
         'document.cookie',
       );
       String cookiesStr = cookiesObj.toString();
@@ -456,7 +489,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
       });
 
       // Get local storage
-      final lsObj = await _controller.runJavaScriptReturningResult(
+      final lsObj = await _evaluateJavascript(
         'JSON.stringify(localStorage)',
       );
       String lsStr = lsObj.toString();
@@ -492,7 +525,11 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
     url = url.trim();
     if (url.isEmpty) return;
     if (url == 'rpl://browser') {
-      _controller.loadHtmlString(_getDefaultHtml());
+      if (Platform.isWindows) {
+        if (_isWindowsWebviewInitialized) _windowsController.loadStringContent(_getDefaultHtml());
+      } else {
+        _controller.loadHtmlString(_getDefaultHtml());
+      }
       FocusScope.of(context).unfocus();
       return;
     }
@@ -504,7 +541,12 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
         url = 'https://www.google.com/search?q=${Uri.encodeComponent(url)}';
       }
     }
-    _controller.loadRequest(Uri.parse(url));
+    
+    if (Platform.isWindows) {
+      if (_isWindowsWebviewInitialized) _windowsController.loadUrl(url);
+    } else {
+      _controller.loadRequest(Uri.parse(url));
+    }
     FocusScope.of(context).unfocus();
   }
 
@@ -641,6 +683,160 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
 ''';
   }
 
+
+  Future<void> _initWindowsWebview() async {
+    try {
+      await _windowsController.initialize();
+      _windowsController.url.listen((url) {
+        if (!mounted) return;
+        setState(() {
+          _urlController.text = (url.startsWith('data:text/html') || url == 'about:blank') ? 'rpl://browser' : url;
+          _isLoading = true;
+          _consoleLogs.clear();
+          _networkRequests.add({
+            'url': _urlController.text,
+            'method': 'GET',
+            'status': 'Pending',
+            'time': DateTime.now().toString(),
+          });
+        });
+      });
+      _windowsController.loadingState.listen((state) {
+        if (!mounted) return;
+        if (state == win_web.LoadingState.navigationCompleted) {
+          setState(() {
+            _isLoading = false;
+            if (_networkRequests.isNotEmpty) {
+              _networkRequests.last['status'] = '200 OK';
+            }
+          });
+          _extractDevToolsData();
+        }
+      });
+      _windowsController.webMessage.listen((msg) {
+        if (!mounted) return;
+        try {
+          if (msg is Map) {
+            if (msg['type'] == 'js_eval_result') {
+              final id = msg['id'];
+              final result = msg['result'];
+              final error = msg['error'];
+              if (_jsCallbacks.containsKey(id)) {
+                if (error != null) {
+                  _jsCallbacks[id]!.completeError(error);
+                } else {
+                  _jsCallbacks[id]!.complete(result);
+                }
+                _jsCallbacks.remove(id);
+              }
+              return;
+            }
+            if (msg['type'] == 'network') {
+               setState(() {
+                 _networkRequests.add({
+                    'url': msg['url'] ?? '',
+                    'method': msg['method'] ?? 'GET',
+                    'status': msg['status'] ?? '',
+                    'payload': msg['payload'] ?? '',
+                    'response': msg['response'] ?? '',
+                    'time': DateTime.now().toString(),
+                    'contentType': msg['contentType'] ?? '',
+                 });
+               });
+               return;
+            }
+            if (msg['type'] == 'console') {
+               setState(() {
+                  _consoleLogs.add(msg['message']);
+               });
+               return;
+            }
+          }
+        } catch (e) {
+          debugPrint('Error parsing Windows WebMessage: $e');
+        }
+      });
+      
+      setState(() {
+        _isWindowsWebviewInitialized = true;
+      });
+      
+      if (widget.initialUrl != null && widget.initialUrl!.isNotEmpty) {
+        await _windowsController.loadUrl(widget.initialUrl!);
+      } else {
+        await _windowsController.loadStringContent(_getDefaultHtml());
+      }
+    } catch (e) {
+      debugPrint('Windows Webview Initialization Error: $e');
+    }
+  }
+
+  Future<void> _runJavascript(String code) async {
+    if (Platform.isWindows) {
+      if (!_isWindowsWebviewInitialized) return;
+      await _windowsController.executeScript(code);
+    } else {
+      await _runJavascript(code);
+    }
+  }
+
+  Future<dynamic> _evaluateJavascript(String code) async {
+    if (Platform.isWindows) {
+      if (!_isWindowsWebviewInitialized) return null;
+      final id = const Uuid().v4();
+      final completer = Completer<dynamic>();
+      _jsCallbacks[id] = completer;
+      final wrappedCode = '''
+        (function() {
+          try {
+            var result = eval(${jsonEncode(code)});
+            window.chrome.webview.postMessage({
+              type: 'js_eval_result',
+              id: '$id',
+              result: result,
+              error: null
+            });
+          } catch(e) {
+            window.chrome.webview.postMessage({
+              type: 'js_eval_result',
+              id: '$id',
+              result: null,
+              error: e.toString()
+            });
+          }
+        })();
+      ''';
+      await _windowsController.executeScript(wrappedCode);
+      return completer.future;
+    } else {
+      return await _evaluateJavascript(code);
+    }
+  }
+
+  void _goBack() {
+    if (Platform.isWindows) {
+      if (_isWindowsWebviewInitialized) _windowsController.goBack();
+    } else {
+      _goBack();
+    }
+  }
+
+  void _goForward() {
+    if (Platform.isWindows) {
+      if (_isWindowsWebviewInitialized) _windowsController.goForward();
+    } else {
+      _goForward();
+    }
+  }
+
+  void _reload() {
+    if (Platform.isWindows) {
+      if (_isWindowsWebviewInitialized) _windowsController.reload();
+    } else {
+      _reload();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -657,21 +853,21 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
                 ),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 32),
-                onPressed: () => _controller.goBack(),
+                onPressed: () => _goBack(),
               ),
               IconButton(
                 icon: HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 20, color: Colors.white70,
                 ),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 32),
-                onPressed: () => _controller.goForward(),
+                onPressed: () => _goForward(),
               ),
               IconButton(
                 icon: HugeIcon(icon: HugeIcons.strokeRoundedRefresh, size: 20, color: Colors.white70,
                 ),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 32),
-                onPressed: () => _controller.reload(),
+                onPressed: () => _reload(),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -718,7 +914,12 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Browser View
-              Expanded(flex: 3, child: WebViewWidget(controller: _controller)),
+              Expanded(
+                flex: 3,
+                child: Platform.isWindows
+                    ? (_isWindowsWebviewInitialized ? win_web.Webview(_windowsController) : const Center(child: CircularProgressIndicator()))
+                    : WebViewWidget(controller: _controller),
+              ),
               Container(height: 1, color: const Color(0xFF333333)),
               // DevTools View
               if (_isDevToolsMinimized)
@@ -737,13 +938,13 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
                     onClearNetwork: () =>
                         setState(() => _networkRequests.clear()),
                     onUpdateCookie: (key, value) async {
-                      await _controller.runJavaScript(
+                      await _runJavascript(
                         'document.cookie = "$key=${Uri.encodeComponent(value)}; path=/";',
                       );
                       _extractDevToolsData();
                     },
                     onDeleteCookie: (key) async {
-                      await _controller.runJavaScript(
+                      await _runJavascript(
                         'document.cookie = "$key=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/";',
                       );
                       _extractDevToolsData();
@@ -751,14 +952,14 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
                     onUpdateLocalStorage: (key, value) async {
                       final safeKey = key.replaceAll("'", "\\'");
                       final safeValue = value.replaceAll("'", "\\'");
-                      await _controller.runJavaScript(
+                      await _runJavascript(
                         "localStorage.setItem('$safeKey', '$safeValue');",
                       );
                       _extractDevToolsData();
                     },
                     onDeleteLocalStorage: (key) async {
                       final safeKey = key.replaceAll("'", "\\'");
-                      await _controller.runJavaScript(
+                      await _runJavascript(
                         "localStorage.removeItem('$safeKey');",
                       );
                       _extractDevToolsData();
@@ -782,13 +983,13 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
                     onClearNetwork: () =>
                         setState(() => _networkRequests.clear()),
                     onUpdateCookie: (key, value) async {
-                      await _controller.runJavaScript(
+                      await _runJavascript(
                         'document.cookie = "$key=${Uri.encodeComponent(value)}; path=/";',
                       );
                       _extractDevToolsData();
                     },
                     onDeleteCookie: (key) async {
-                      await _controller.runJavaScript(
+                      await _runJavascript(
                         'document.cookie = "$key=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/";',
                       );
                       _extractDevToolsData();
@@ -796,14 +997,14 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
                     onUpdateLocalStorage: (key, value) async {
                       final safeKey = key.replaceAll("'", "\\'");
                       final safeValue = value.replaceAll("'", "\\'");
-                      await _controller.runJavaScript(
+                      await _runJavascript(
                         "localStorage.setItem('$safeKey', '$safeValue');",
                       );
                       _extractDevToolsData();
                     },
                     onDeleteLocalStorage: (key) async {
                       final safeKey = key.replaceAll("'", "\\'");
-                      await _controller.runJavaScript(
+                      await _runJavascript(
                         "localStorage.removeItem('$safeKey');",
                       );
                       _extractDevToolsData();
