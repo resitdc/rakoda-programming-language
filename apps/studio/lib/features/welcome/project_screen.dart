@@ -86,9 +86,9 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     _terminalController = TerminalController();
 
     if (!Platform.isIOS) {
-      String shell =
-          Platform.environment['SHELL'] ??
-          (Platform.isWindows ? 'cmd.exe' : 'sh');
+      String shell = Platform.isWindows
+          ? 'powershell.exe' // Gunakan PowerShell secara default di Windows, abaikan env SHELL yang mungkin berantakan karena Git Bash
+          : (Platform.environment['SHELL'] ?? 'sh');
       try {
         _pty = Pty.start(
           shell,
