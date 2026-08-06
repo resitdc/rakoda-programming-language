@@ -8,6 +8,8 @@ pub mod email;
 #[cfg(feature = "enterprise")]
 pub mod env;
 #[cfg(feature = "enterprise")]
+pub mod ffi;
+#[cfg(feature = "enterprise")]
 pub mod file;
 #[cfg(feature = "enterprise")]
 pub mod html;

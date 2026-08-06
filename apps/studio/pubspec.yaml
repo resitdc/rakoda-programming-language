@@ -24,6 +24,7 @@ dependencies:
   rust_lib_rpl_studio:
     path: rust_builder
   webview_flutter: ^4.14.1
+  webview_windows: ^0.4.0
   html: ^0.15.6
   window_manager: ^0.5.2
   mysql_client: ^0.0.27
