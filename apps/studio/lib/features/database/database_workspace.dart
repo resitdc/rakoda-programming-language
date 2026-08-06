@@ -21,7 +21,7 @@ class DatabaseWorkspace extends ConsumerStatefulWidget {
   const DatabaseWorkspace({super.key, required this.projectPath});
 
   @override
-  ConsumerState<DatabaseWorkspace> createState() => _DatabaseWorkspaceState();
+  ConsumerState<DatabaseWorkspace> createState() => DatabaseWorkspaceState();
 }
 
 // ─── Tree Node Model ─────────────────────────────────────────────────────────
@@ -87,7 +87,7 @@ class _ColumnDef {
   bool isUnique = false;
 }
 
-class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
+class DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
   // ── Sidebar State ──
   List<_DbNode> _roots = [];
   bool _isSidebarLoading = true;
@@ -120,7 +120,7 @@ class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
   @override
   void initState() {
     super.initState();
-    _loadConnections();
+    loadConnections();
   }
 
   @override
@@ -138,7 +138,7 @@ class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
   // SIDEBAR: Connection & Tree Logic
   // ═══════════════════════════════════════════════════════════════════════════
 
-  Future<void> _loadConnections() async {
+  Future<void> loadConnections() async {
     setState(() => _isSidebarLoading = true);
     final conns = await ConnectionService.getConnections(widget.projectPath);
     setState(() {
@@ -162,7 +162,7 @@ class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
     );
     if (result != null) {
       await ConnectionService.saveConnection(widget.projectPath, result);
-      _loadConnections();
+      loadConnections();
     }
   }
 
@@ -176,7 +176,7 @@ class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
     );
     if (result != null) {
       await ConnectionService.saveConnection(widget.projectPath, result);
-      _loadConnections();
+      loadConnections();
     }
   }
 
@@ -207,7 +207,7 @@ class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
     );
     if (ok == true) {
       await ConnectionService.deleteConnection(widget.projectPath, node.connection.id);
-      _loadConnections();
+      loadConnections();
     }
   }
 
@@ -1665,7 +1665,7 @@ class _DatabaseWorkspaceState extends ConsumerState<DatabaseWorkspace> {
                 ),
                 _sidebarAction(Icons.add, 'New Connection', _addConnection),
                 const SizedBox(width: 4),
-                _sidebarAction(Icons.refresh, 'Refresh', _loadConnections),
+                _sidebarAction(Icons.refresh, 'Refresh', loadConnections),
               ],
             ),
           ),

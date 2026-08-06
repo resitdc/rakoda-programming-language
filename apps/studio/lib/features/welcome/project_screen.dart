@@ -1,5 +1,8 @@
 import 'dart:io';
 import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
+import '../../models/database_connection.dart';
+import '../../services/database/connection_service.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:file_picker/file_picker.dart';
@@ -49,6 +52,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   int? _targetLineNumber;
 
   WorkspaceType _activeWorkspace = WorkspaceType.editor;
+  final GlobalKey<DatabaseWorkspaceState> _dbWorkspaceKey = GlobalKey<DatabaseWorkspaceState>();
   String? _browserInitialUrl;
 
   bool _showLocalSearch = false;
@@ -301,6 +305,34 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     final newFile = File(mainPath);
     newFile.createSync(recursive: true);
     return newFile;
+  }
+
+
+  void _openSqliteDatabase(String path) async {
+    final fileName = path.split(Platform.pathSeparator).last;
+    
+    final existingConns = await ConnectionService.getConnections(widget.project.path);
+    final existing = existingConns.where((c) => c.sqlitePath == path && c.engine == DatabaseEngine.sqlite).firstOrNull;
+    
+    if (existing == null) {
+      final conn = DatabaseConnection(
+        id: const Uuid().v4(),
+        name: fileName,
+        engine: DatabaseEngine.sqlite,
+        sqlitePath: path,
+      );
+      await ConnectionService.saveConnection(widget.project.path, conn);
+    }
+    
+    if (mounted) {
+      setState(() {
+        _activeWorkspace = WorkspaceType.database;
+        _activeActivity = ActivityType.database;
+      });
+      Future.delayed(const Duration(milliseconds: 100), () {
+        _dbWorkspaceKey.currentState?.loadConnections();
+      });
+    }
   }
 
   void _openFile(String path, {int? lineNumber}) {
@@ -997,7 +1029,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                               ? const SizedBox() // Bebaskan memori webview saat tidak aktif
                               : const BrowserWorkspace(),
                           // Index 2: Database Workspace
-                          DatabaseWorkspace(projectPath: widget.project.path),
+                          DatabaseWorkspace(key: _dbWorkspaceKey, projectPath: widget.project.path),
                           // Index 3: HTTP Workspace
                           const HttpWorkspace(),
                         ],
@@ -1330,6 +1362,12 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
               final ext = path.contains('.')
                   ? path.split('.').last.toLowerCase()
                   : '';
+                  
+              if (['db', 'sqlite', 'sqlite3'].contains(ext)) {
+                _openSqliteDatabase(path);
+                return;
+              }
+              
               final isUnsupportedBinary = [
                 'zip',
                 'tar',
@@ -1338,8 +1376,6 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                 'dll',
                 'so',
                 'dylib',
-                'db',
-                'sqlite',
               ].contains(ext);
               if (!isUnsupportedBinary) _openFile(path);
             },
