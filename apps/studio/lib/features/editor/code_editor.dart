@@ -97,7 +97,41 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
       _controller.selection = TextSelection.collapsed(offset: offset);
     }
 
+    _setupAutocomplete();
+
     _controller.addListener(_onTextChanged);
+  }
+
+  void _setupAutocomplete() {
+    final language = _controller.language;
+    if (language == xml || language == rplHtml) {
+      _controller.autocompleter.setCustomWords([
+        'div', 'span', 'html', 'body', 'head', 'title', 'meta', 'link', 'style', 'script',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'hr', 'a', 'img', 'ul', 'ol', 'li',
+        'table', 'tr', 'td', 'th', 'thead', 'tbody', 'tfoot', 'form', 'input', 'button',
+        'select', 'option', 'textarea', 'label', 'iframe', 'canvas', 'svg', 'nav', 'header',
+        'footer', 'main', 'section', 'article', 'aside', 'class', 'id', 'src', 'href', 'style', 'type',
+        '<!--', '-->', 'DOCTYPE', 'html'
+      ]);
+    } else if (language == css) {
+      _controller.autocompleter.setCustomWords([
+        'color', 'background', 'background-color', 'font-size', 'font-family', 'font-weight',
+        'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
+        'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
+        'border', 'border-radius', 'width', 'height', 'display', 'position', 'top', 'right',
+        'bottom', 'left', 'z-index', 'flex', 'justify-content', 'align-items', 'grid',
+        'box-shadow', 'opacity', 'transition', 'transform', 'cursor', 'overflow', 'hover', 'active',
+        'important', 'rem', 'em', 'px', 'vh', 'vw', 'auto', 'none', 'block', 'inline', 'inline-block'
+      ]);
+    } else if (language == javascript) {
+      _controller.autocompleter.setCustomWords([
+        'function', 'const', 'let', 'var', 'if', 'else', 'for', 'while', 'switch', 'case',
+        'break', 'return', 'import', 'export', 'default', 'class', 'extends', 'constructor',
+        'super', 'this', 'async', 'await', 'try', 'catch', 'finally', 'throw', 'new', 'typeof',
+        'console.log', 'document.getElementById', 'document.querySelector', 'addEventListener',
+        'setTimeout', 'setInterval', 'Promise', 'fetch', 'Math', 'JSON.parse', 'JSON.stringify'
+      ]);
+    }
   }
 
   Mode? _getLanguageMode(String filePath, String content) {
