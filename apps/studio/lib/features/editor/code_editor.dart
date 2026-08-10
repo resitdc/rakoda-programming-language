@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:flutter/services.dart';
@@ -60,6 +61,7 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
   String _content = '';
   Timer? _debounceTimer;
   Timer? _autoSaveTimer;
+  int _currentLine = 0;
 
   @override
   void initState() {
@@ -137,9 +139,20 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
     // Selalu trigger onChanged karena seleksi (kursor) mungkin berubah
     widget.onChanged?.call(
       _content,
-      _controller.selection.baseOffset,
+    _controller.selection.baseOffset,
       _controller.selection.extentOffset,
     );
+    
+    final selection = _controller.selection;
+    if (selection.baseOffset >= 0) {
+      final textBeforeCursor = _controller.text.substring(0, min(selection.baseOffset, _controller.text.length));
+      final currentLine = textBeforeCursor.split('\n').length - 1;
+      if (currentLine != _currentLine) {
+        setState(() {
+          _currentLine = currentLine;
+        });
+      }
+    }
     
     if (hasContentChanged) {
       final settings = ref.read(settingsProvider);
@@ -390,7 +403,7 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
     // We can inject custom background color into the theme map
     final customTheme = Map<String, TextStyle>.from(baseTheme);
     customTheme['root'] = customTheme['root']?.copyWith(
-      backgroundColor: const Color(0xFF1E1E1E), // VS Code exact editor background
+      backgroundColor: const Color(0xFF1E1E1E),
     ) ?? const TextStyle(backgroundColor: Color(0xFF1E1E1E));
 
     final codeTextStyle = TextStyle(
@@ -400,11 +413,26 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
     );
 
     final gutterTextStyle = TextStyle(
-      color: const Color(0xFF858585),
+      color: const Color(0xFF6E7681),
       fontSize: editorFontSize,
       fontFamily: 'monospace',
       height: 1.6,
     );
+
+    // VS Code style: active line number is bright, others are dim
+    TextSpan lineNumberBuilder(int lineNumber, TextStyle? style) {
+      final isActive = lineNumber == _currentLine + 1;
+      return TextSpan(
+        text: '$lineNumber',
+        style: style?.copyWith(
+          color: isActive ? const Color(0xFFC6C6C6) : const Color(0xFF6E7681),
+        ),
+      );
+    }
+
+    // Dynamic gutter width: scales with font size so numbers never get clipped
+    // Formula: (charWidth * 3 digits) + margin(16) + internal subtraction(32)
+    final gutterWidth = (editorFontSize * 0.6 * 3) + 16 + 32;
 
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
@@ -442,7 +470,6 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
             behavior: HitTestBehavior.opaque,
             child: Container(
               color: const Color(0xFF1E1E1E),
-              padding: const EdgeInsets.only(top: 4.0),
               child: Theme(
                 data: Theme.of(context).copyWith(
                   inputDecorationTheme: const InputDecorationTheme(
@@ -460,11 +487,17 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
                       undoController: widget.tab.undoController,
                       maxLines: null,
                       textStyle: codeTextStyle,
+                      lineNumberBuilder: lineNumberBuilder,
+                      activeLine: _currentLine + 1,
+                      activeLineColor: Colors.white.withOpacity(0.06),
                       gutterStyle: GutterStyle(
                         textStyle: gutterTextStyle,
+                        textAlign: TextAlign.right,
                         background: const Color(0xFF1E1E1E),
-                        margin: 0,
-                        width: 60,
+                        margin: 16,
+                        width: gutterWidth,
+                        showErrors: false,
+                        showFoldingHandles: false,
                       ),
                     )
                   : CodeField(
@@ -475,11 +508,17 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
                       focusNode: _focusNode,
                       undoController: widget.tab.undoController,
                       textStyle: codeTextStyle,
+                      lineNumberBuilder: lineNumberBuilder,
+                      activeLine: _currentLine + 1,
+                      activeLineColor: Colors.white.withOpacity(0.06),
                       gutterStyle: GutterStyle(
                         textStyle: gutterTextStyle,
+                        textAlign: TextAlign.right,
                         background: const Color(0xFF1E1E1E),
-                        margin: 0,
-                        width: 60,
+                        margin: 16,
+                        width: gutterWidth,
+                        showErrors: false,
+                        showFoldingHandles: false,
                       ),
                     ),
               ),
