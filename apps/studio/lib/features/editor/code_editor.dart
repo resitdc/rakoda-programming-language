@@ -497,7 +497,7 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
                         margin: 16,
                         width: gutterWidth,
                         showErrors: false,
-                        showFoldingHandles: false,
+                        showFoldingHandles: true,
                       ),
                     )
                   : CodeField(
@@ -518,7 +518,7 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
                         margin: 16,
                         width: gutterWidth,
                         showErrors: false,
-                        showFoldingHandles: false,
+                        showFoldingHandles: true,
                       ),
                     ),
               ),
