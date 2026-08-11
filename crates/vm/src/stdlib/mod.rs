@@ -47,6 +47,7 @@ pub mod ocr;
 pub mod regex;
 pub mod tensor;
 pub mod statistik;
+pub mod linalg;
 
 use crate::machine::VM;
 
@@ -58,6 +59,7 @@ pub fn register_all(vm: &mut VM) {
     json::register(vm);
     tensor::register(vm);
     statistik::register(vm);
+    linalg::register(vm);
     #[cfg(feature = "enterprise")]
     http::register(vm);
     #[cfg(feature = "enterprise")]
