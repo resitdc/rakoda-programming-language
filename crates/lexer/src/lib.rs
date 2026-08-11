@@ -567,7 +567,15 @@ impl Lexer {
         }
 
         match number_str.parse::<f64>() {
-            Ok(val) => Ok(Token::Angka(val)),
+            Ok(val) => {
+                if let Some(c) = self.current_char() {
+                    if c == 'j' {
+                        self.advance();
+                        return Ok(Token::AngkaImajiner(val));
+                    }
+                }
+                Ok(Token::Angka(val))
+            }
             Err(_) => Err(RplError::Sintaks {
                 pesan: format!("Format angka tidak valid: {}", number_str),
                 lokasi: Lokasi::from(lokasi_awal),

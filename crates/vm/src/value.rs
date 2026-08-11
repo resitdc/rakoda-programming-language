@@ -44,6 +44,7 @@ pub struct FungsiVM {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Value {
     Angka(f64),
+    Kompleks(f64, f64),
     Boolean(bool),
     Kosong,
     String(usize),
@@ -63,6 +64,15 @@ impl Value {
     pub fn to_string(&self, heap: &Heap) -> String {
         match self {
             Value::Angka(val) => val.to_string(),
+            Value::Kompleks(real, imag) => {
+                if *real == 0.0 {
+                    format!("{}j", imag)
+                } else if *imag >= 0.0 {
+                    format!("{} + {}j", real, imag)
+                } else {
+                    format!("{} - {}j", real, -imag)
+                }
+            },
             Value::String(idx) => heap.get_string(*idx).clone(),
             Value::Boolean(val) => (if *val { "benar" } else { "salah" }).to_string(),
             Value::Fungsi(idx, _) => format!("<fungsi {}>", heap.get_fungsi(*idx).nama),
@@ -117,6 +127,7 @@ impl Value {
 pub fn deep_copy_value(val: &Value, source: &Heap, dest: &mut Heap) -> Value {
     match val {
         Value::Angka(n) => Value::Angka(*n),
+        Value::Kompleks(real, imag) => Value::Kompleks(*real, *imag),
         Value::Boolean(b) => Value::Boolean(*b),
         Value::Kosong => Value::Kosong,
         Value::String(idx) => {

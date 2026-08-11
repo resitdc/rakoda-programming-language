@@ -448,8 +448,10 @@ impl VM {
                     let a = self.stack.pop().unwrap();
                     if let Value::Angka(a_val) = a {
                         self.stack.push(Value::Angka(-a_val));
+                    } else if let Value::Kompleks(ar, ai) = a {
+                        self.stack.push(Value::Kompleks(-ar, -ai));
                     } else {
-                        return Err(self.err("Prefix minus hanya dapat digunakan pada angka"));
+                        return Err(self.err("Prefix minus hanya dapat digunakan pada bilangan (angka/kompleks)"));
                     }
                 }
                 OpCode::LoadModule => {

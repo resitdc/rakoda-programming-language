@@ -65,6 +65,7 @@ pub enum Token {
     Identifier(String),
     String(String),
     Angka(f64),
+    AngkaImajiner(f64),
 
     EOF,
 }
@@ -91,6 +92,7 @@ impl Token {
 
             Token::Identifier(s) => format!("nama (variabel/fungsi) '{}'", s),
             Token::Angka(f) => format!("angka {}", f),
+            Token::AngkaImajiner(f) => format!("angka kompleks {}j", f),
             Token::String(s) => format!("teks \"{}\"", s),
 
             Token::Assign => "tanda sama dengan '='".to_string(),

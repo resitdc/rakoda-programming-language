@@ -11,7 +11,21 @@ pub fn apply_binary_op(heap: &mut Heap, a: Value, b: Value, op: OpCode) -> Resul
             Ok(Value::Angka(res))
         }
 
-        // --- STRING VS SCALAR (Multiplication) ---
+        // --- KOMPLEKS VS SCALAR/KOMPLEKS ---
+        (Value::Kompleks(ar, ai), Value::Angka(b_val)) => {
+            let res = apply_complex_op(ar, ai, b_val, 0.0, op)?;
+            Ok(Value::Kompleks(res.0, res.1))
+        }
+        (Value::Angka(a_val), Value::Kompleks(br, bi)) => {
+            let res = apply_complex_op(a_val, 0.0, br, bi, op)?;
+            Ok(Value::Kompleks(res.0, res.1))
+        }
+        (Value::Kompleks(ar, ai), Value::Kompleks(br, bi)) => {
+            let res = apply_complex_op(ar, ai, br, bi, op)?;
+            Ok(Value::Kompleks(res.0, res.1))
+        }
+
+        // --- STRING VS SCALAR/KOMPLEKS (Multiplication / Add) ---
         (Value::String(s_idx), Value::Angka(n)) | (Value::Angka(n), Value::String(s_idx)) => {
             if matches!(op, OpCode::Multiply) {
                 let s = heap.get_string(s_idx).clone();
@@ -20,13 +34,22 @@ pub fn apply_binary_op(heap: &mut Heap, a: Value, b: Value, op: OpCode) -> Resul
                 let new_idx = heap.alloc(HeapData::String(new_str));
                 Ok(Value::String(new_idx))
             } else if matches!(op, OpCode::Add) {
-                // Konkatensi angka dan string (sudah ditangani di machine.rs, tapi kita pindahkan ke sini)
                 let s1 = a.to_string(heap);
                 let s2 = b.to_string(heap);
                 let new_idx = heap.alloc(HeapData::String(format!("{}{}", s1, s2)));
                 Ok(Value::String(new_idx))
             } else {
                 Err("Operasi tidak didukung antara teks dan angka".to_string())
+            }
+        }
+        (Value::String(_), Value::Kompleks(_, _)) | (Value::Kompleks(_, _), Value::String(_)) => {
+            if matches!(op, OpCode::Add) {
+                let s1 = a.to_string(heap);
+                let s2 = b.to_string(heap);
+                let new_idx = heap.alloc(HeapData::String(format!("{}{}", s1, s2)));
+                Ok(Value::String(new_idx))
+            } else {
+                Err("Operasi tidak didukung antara teks dan bilangan kompleks".to_string())
             }
         }
         
@@ -101,6 +124,24 @@ pub fn apply_binary_op(heap: &mut Heap, a: Value, b: Value, op: OpCode) -> Resul
         _ => Err("Operasi matematis tidak didukung untuk tipe data ini".to_string()),
     }
 }
+
+fn apply_complex_op(ar: f64, ai: f64, br: f64, bi: f64, op: OpCode) -> Result<(f64, f64), String> {
+    match op {
+        OpCode::Add => Ok((ar + br, ai + bi)),
+        OpCode::Subtract => Ok((ar - br, ai - bi)),
+        OpCode::Multiply => Ok((ar * br - ai * bi, ar * bi + ai * br)),
+        OpCode::Divide => {
+            let den = br * br + bi * bi;
+            if den == 0.0 {
+                Err("Pembagian dengan nol pada bilangan kompleks".to_string())
+            } else {
+                Ok(((ar * br + ai * bi) / den, (ai * br - ar * bi) / den))
+            }
+        }
+        _ => Err("Operasi matematis tidak didukung untuk bilangan kompleks".to_string()),
+    }
+}
+
 
 fn apply_scalar_op(a: f64, b: f64, op: OpCode) -> Result<f64, String> {
     match op {
