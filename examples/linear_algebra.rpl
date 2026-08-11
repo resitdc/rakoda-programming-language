@@ -1,0 +1,64 @@
+buat m1 = Float64Array([2, 3]) // 2 baris, 3 kolom
+m1[0,0] = 1
+m1[0,1] = 2
+m1[0,2] = 3
+m1[1,0] = 4
+m1[1,1] = 5
+m1[1,2] = 6
+tampilkan("M1 (2x3):")
+tampilkan(m1)
+tampilkan("")
+
+buat m2 = Float64Array([3, 2]) // 3 baris, 2 kolom
+m2[0,0] = 7
+m2[0,1] = 8
+m2[1,0] = 9
+m2[1,1] = 1
+m2[2,0] = 2
+m2[2,1] = 3
+tampilkan("M2 (3x2):")
+tampilkan(m2)
+tampilkan("")
+
+// Dot Product / MatMul (2x3 dikali 3x2 -> 2x2)
+buat hasil_dot = Matriks.dot(m1, m2)
+tampilkan("Hasil M1 * M2 (Dot Product):")
+tampilkan("Baris 0, Kolom 0: " + hasil_dot[0,0]) // (1*7 + 2*9 + 3*2) = 7 + 18 + 6 = 31
+tampilkan("Baris 1, Kolom 1: " + hasil_dot[1,1]) // (4*8 + 5*1 + 6*3) = 32 + 5 + 18 = 55
+tampilkan("")
+
+// Transpose
+buat mt = Matriks.transpose(m1)
+tampilkan("Transpose M1 (menjadi 3x2):")
+tampilkan(mt)
+tampilkan("")
+
+// Inverse & Determinant
+buat square = Float64Array([2, 2])
+square[0,0] = 4
+square[0,1] = 7
+square[1,0] = 2
+square[1,1] = 6
+tampilkan("Matriks Persegi (Square 2x2):")
+tampilkan("Determinant: " + Matriks.determinant(square)) // (4*6) - (7*2) = 24 - 14 = 10
+tampilkan("")
+
+buat inv = Matriks.inverse(square)
+tampilkan("Inverse Matriks Persegi:")
+tampilkan("Nilai [0,0]: " + inv[0,0]) // 6/10 = 0.6
+tampilkan("Nilai [1,1]: " + inv[1,1]) // -2/10 = -0.2 (Wait, the inverse of [[4, 7], [2, 6]] is [[6, -7], [-2, 4]] / 10 = [[0.6, -0.7], [-0.2, 0.4]])
+tampilkan("")
+
+// Symmetric Eigenvalues & Eigenvectors
+buat sym = Float64Array([2, 2])
+sym[0,0] = 2
+sym[0,1] = 1
+sym[1,0] = 1
+sym[1,1] = 2
+tampilkan("Symmetric Matriks (2x2):")
+buat e = Matriks.eigen(sym)
+buat nilai_eigen = e[0]
+buat vektor_eigen = e[1]
+tampilkan("Eigenvalues (1D Tensor):")
+tampilkan("Lambda 1: " + nilai_eigen[0]) // Harus bernilai 1
+tampilkan("Lambda 2: " + nilai_eigen[1]) // Harus bernilai 3

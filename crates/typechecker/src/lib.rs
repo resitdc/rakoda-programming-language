@@ -289,6 +289,7 @@ impl TypeChecker {
             // Tensor
             "Float64Array",
             "Int32Array",
+            "Matriks",
         ];
 
         let lokasi = errors::Lokasi::new(0, 0);
