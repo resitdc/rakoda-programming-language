@@ -1,0 +1,78 @@
+// Uji Coba Rakoda Machine Learning (Linear Regression)
+// Kita akan melatih model untuk mencari fungsi y = 2x + 1
+
+tampilkan("🚀 Memulai Pelatihan Machine Learning Rakoda...")
+
+// 1. Dataset Sintetis (X = input, Y = target)
+buat X = Float64Array([4, 1], salah)
+X[0] = 1.0
+X[1] = 2.0
+X[2] = 3.0
+X[3] = 4.0
+
+buat Y = Float64Array([4, 1], salah)
+Y[0] = 3.0   // 2(1) + 1
+Y[1] = 5.0   // 2(2) + 1
+Y[2] = 7.0   // 2(3) + 1
+Y[3] = 9.0   // 2(4) + 1
+
+// 2. Bobot Model (Weight & Bias)
+// Persamaan model: Prediksi = X * W + B
+buat W = Float64Array([1, 1], benar) // requires_grad = benar
+W[0] = 0.0 // Inisialisasi awal ngawur
+
+buat B = Float64Array([1, 1], benar)
+B[0] = 0.0 // Inisialisasi awal ngawur
+
+// 3. Buat Optimizer SGD
+buat learning_rate = 0.01
+buat optimizer = Optim.SGD([W, B], learning_rate)
+
+// 4. Training Loop (Epochs)
+buat epochs = 500
+buat i = 1
+
+buat dot_X_W = X // Inisialisasi dummy
+buat Pred = X 
+buat loss = X
+
+selama (i <= epochs) {
+    // a. Forward Pass
+    dot_X_W = Matriks.dot(X, W)
+    // Karena kita belum ada fitur broadcast tensor B ke ukuran batch secara otomatis,
+    // Kita tambahkan B ke hasil secara manual, atau kita broadcast
+    // Sebagai alternatif, kita bisa buat matriks B yang sesuai ukuran (4x1)
+    
+    // Namun Rakoda memiliki fitur Broadcasting pada Add!
+    Pred = dot_X_W + B
+    
+    // b. Hitung Loss (MSE)
+    loss = Matriks.mse_loss(Pred, Y)
+    
+    // c. Backward Pass
+    Matriks.backward(loss) // Gradien akan tersimpan di W.grad dan B.grad. Dan tape akan terhapus.
+    
+    // d. Update Bobot
+    optimizer.step()
+    
+    // e. Bersihkan Gradien
+    optimizer.zero_grad()
+    
+    // Cetak log tiap 100 epoch
+    jika (i % 100 == 0) {
+        tampilkan("Epoch " + i + " | Loss: " + loss[0])
+    }
+    
+    i = i + 1
+}
+
+tampilkan("\n✅ Pelatihan Selesai!")
+tampilkan("Bobot (W) Akhir (Harapan: mendekati 2.0): " + W[0])
+tampilkan("Bias (B) Akhir (Harapan: mendekati 1.0): " + B[0])
+
+// Test Prediksi
+buat X_test = Float64Array([1, 1], salah)
+X_test[0] = 10.0 // Jika X = 10, Y harusnya 2(10) + 1 = 21
+
+buat Pred_test = Matriks.dot(X_test, W) + B
+tampilkan("\nPrediksi untuk X = 10 (Harapan: mendekati 21.0): " + Pred_test[0])

@@ -48,6 +48,7 @@ pub mod regex;
 pub mod tensor;
 pub mod statistik;
 pub mod linalg;
+pub mod optim;
 
 use crate::machine::VM;
 
@@ -60,6 +61,7 @@ pub fn register_all(vm: &mut VM) {
     tensor::register(vm);
     statistik::register(vm);
     linalg::register(vm);
+    optim::bawaan_optim(vm);
     #[cfg(feature = "enterprise")]
     http::register(vm);
     #[cfg(feature = "enterprise")]

@@ -314,6 +314,7 @@ impl TypeChecker {
             "Tensor",
             "Linalg",
             "AljabarLinear",
+            "Optim",
         ];
 
         let lokasi = errors::Lokasi::new(0, 0);

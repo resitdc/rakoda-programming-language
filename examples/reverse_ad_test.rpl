@@ -1,0 +1,52 @@
+
+
+// 1. Buat Tensor dengan requires_grad = benar
+buat A = Float64Array([2, 2], benar)
+A[0, 0] = 2.0
+A[0, 1] = 3.0
+A[1, 0] = 4.0
+A[1, 1] = 5.0
+
+// 2. Operasi Forward
+buat B = A * A
+buat C = B + A
+
+// 3. Jalankan backward pada C (Loss akhir)
+Matriks.backward(C)
+
+// 4. Ambil gradien dari A
+buat grad_A = Matriks.grad(A)
+tampilkan("Nilai A:")
+tampilkan(A)
+
+tampilkan("Gradien A (dL/dA) untuk C = A^2 + A:")
+tampilkan(grad_A)
+
+// Harusnya C = A^2 + A
+// dC/dA = 2A + 1
+// Untuk A = [[2, 3], [4, 5]]
+// grad_A = [[5, 7], [9, 11]]
+
+// Test fungsi matematika lanjut
+buat X = Float64Array([1, 2], benar)
+X[0, 0] = 0.0
+X[0, 1] = 1.0
+
+buat Y = Matriks.sin(X)
+buat Z = Matriks.exp(Y)
+
+Matriks.backward(Z)
+
+buat grad_X = Matriks.grad(X)
+tampilkan("Gradien X (dL/dX) untuk Z = exp(sin(X)):")
+tampilkan(grad_X)
+// Z = exp(sin(X))
+// dZ/dX = exp(sin(X)) * cos(X)
+// Untuk X = [0, 1]
+// grad_X[0] = exp(sin(0)) * cos(0) = exp(0) * 1 = 1.0 * 1 = 1.0
+// grad_X[1] = exp(sin(1)) * cos(1) = 2.3197 * 0.5403 = 1.2533
+
+// Harusnya C = A^2 + A
+// dC/dA = 2A + 1
+// Untuk A = [[2, 3], [4, 5]]
+// grad_A = [[5, 7], [9, 11]]

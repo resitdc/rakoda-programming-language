@@ -128,7 +128,9 @@ impl VM {
                 | Value::FungsiBawaan(i)
                 | Value::Modul(i)
                 | Value::DbPool(i)
-                | Value::QueryState(i) => {
+                | Value::QueryState(i)
+                | Value::Float64Array(i)
+                | Value::Int32Array(i) => {
                     self.heap.mark(i);
                 }
                 _ => {}
@@ -596,6 +598,9 @@ impl VM {
                                     shape: new_shape,
                                     strides: new_strides,
                                     offset: new_offset,
+            requires_grad: false,
+            grad: None,
+            tape_node: None,
                                 };
                                 let new_idx = self.heap.alloc(HeapData::Float64Array(new_tensor));
                                 self.stack.push(Value::Float64Array(new_idx));
@@ -678,6 +683,9 @@ impl VM {
                                     shape: new_shape,
                                     strides: new_strides,
                                     offset: new_offset,
+            requires_grad: false,
+            grad: None,
+            tape_node: None,
                                 };
                                 let new_idx = self.heap.alloc(HeapData::Int32Array(new_tensor));
                                 self.stack.push(Value::Int32Array(new_idx));

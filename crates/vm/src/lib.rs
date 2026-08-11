@@ -3,6 +3,7 @@
 pub mod compiler;
 pub mod heap;
 pub mod machine;
+pub mod autograd;
 pub mod opcodes;
 pub mod stdlib;
 pub mod tensor_ops;
