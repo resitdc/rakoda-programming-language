@@ -263,85 +263,19 @@ impl VM {
                         self.environments[env_id].insert(name, val);
                     }
                 }
-                OpCode::Add => {
+                OpCode::Add
+                | OpCode::Subtract
+                | OpCode::Multiply
+                | OpCode::Divide
+                | OpCode::Modulus
+                | OpCode::BitwiseOr
+                | OpCode::Power => {
                     let b = self.stack.pop().unwrap();
                     let a = self.stack.pop().unwrap();
-                    match (a, b) {
-                        (Value::Angka(a_val), Value::Angka(b_val)) => {
-                            self.stack.push(Value::Angka(a_val + b_val))
-                        }
-                        (a, b) => {
-                            let is_a_string = matches!(a, Value::String(_));
-                            let is_b_string = matches!(b, Value::String(_));
-                            if is_a_string || is_b_string {
-                                let s1 = a.to_string(&self.heap);
-                                let s2 = b.to_string(&self.heap);
-                                let new_idx =
-                                    self.heap.alloc(HeapData::String(format!("{}{}", s1, s2)));
-                                self.stack.push(Value::String(new_idx));
-                            } else {
-                                return Err(
-                                    self.err("Operan harus angka atau teks untuk dijumlahkan")
-                                );
-                            }
-                        }
-                    }
-                }
-                OpCode::Subtract => {
-                    let b = self.stack.pop().unwrap();
-                    let a = self.stack.pop().unwrap();
-                    if let (Value::Angka(a_val), Value::Angka(b_val)) = (a, b) {
-                        self.stack.push(Value::Angka(a_val - b_val));
-                    } else {
-                        return Err(self.err("Operan harus angka untuk dikurangkan"));
-                    }
-                }
-                OpCode::Multiply => {
-                    let b = self.stack.pop().unwrap();
-                    let a = self.stack.pop().unwrap();
-                    if let (Value::Angka(a_val), Value::Angka(b_val)) = (a, b) {
-                        self.stack.push(Value::Angka(a_val * b_val));
-                    } else {
-                        return Err(self.err("Operan harus angka untuk dikali"));
-                    }
-                }
-                OpCode::Divide => {
-                    let b = self.stack.pop().unwrap();
-                    let a = self.stack.pop().unwrap();
-                    if let (Value::Angka(a_val), Value::Angka(b_val)) = (a, b) {
-                        if b_val == 0.0 {
-                            return Err(self.err("Pembagian dengan nol"));
-                        }
-                        self.stack.push(Value::Angka(a_val / b_val));
-                    } else {
-                        return Err(self.err("Operan harus angka untuk dibagi"));
-                    }
-                }
-                OpCode::Modulus => {
-                    let kanan = self.stack.pop().unwrap();
-                    let kiri = self.stack.pop().unwrap();
-                    if let (Value::Angka(k), Value::Angka(kn)) = (kiri, kanan) {
-                        self.stack.push(Value::Angka(k % kn));
-                    } else {
-                        return Err(self.err("Operator '%' hanya untuk angka"));
-                    }
-                }
-                OpCode::BitwiseOr => {
-                    let kanan = self.stack.pop().unwrap();
-                    let kiri = self.stack.pop().unwrap();
-                    if let (Value::Angka(k), Value::Angka(kn)) = (kiri, kanan) {
-                        self.stack.push(Value::Angka((k as i32 | kn as i32) as f64));
-                    } else {
-                        return Err(self.err("Operator '|' hanya untuk angka"));
-                    }
-                }
-                OpCode::Power => {
-                    let b = self.stack.pop().unwrap();
-                    let a = self.stack.pop().unwrap();
-                    if let (Value::Angka(a_val), Value::Angka(b_val)) = (a, b) {
-                        self.stack.push(Value::Angka(a_val.powf(b_val)));
-                    } else {
-                        return Err(self.err("Operan harus angka untuk dipangkatkan"));
+                    let current_op = opcode.clone();
+                    match crate::tensor_ops::apply_binary_op(&mut self.heap, a, b, current_op) {
+                        Ok(res) => self.stack.push(res),
+                        Err(e) => return Err(self.err(&e)),
                     }
                 }
                 OpCode::Equal => {

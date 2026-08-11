@@ -85,7 +85,9 @@ impl RplType {
                 | (_, InfixOperator::Dan)
                 | (_, InfixOperator::Atau)
                 | (RplType::Angka, _)
+                | (RplType::Array(_), _)
                 | (RplType::String, InfixOperator::Tambah)
+                | (RplType::String, InfixOperator::Kali)
                 | (RplType::String, InfixOperator::SamaDengan)
                 | (RplType::String, InfixOperator::TidakSamaDengan)
                 | (RplType::Boolean, InfixOperator::SamaDengan)
@@ -714,6 +716,11 @@ impl TypeChecker {
                 // - operator logika &&, ||, ?? mendukung berbagai tipe data (short-circuit)
                 let auto_coercion = (matches!(operator, InfixOperator::Tambah)
                     && (tipe_kiri == RplType::String || tipe_kanan == RplType::String))
+                    || (matches!(operator, InfixOperator::Kali)
+                        && ((tipe_kiri == RplType::String && tipe_kanan == RplType::Angka)
+                            || (tipe_kiri == RplType::Angka && tipe_kanan == RplType::String)))
+                    || (matches!(tipe_kiri, RplType::Array(_))
+                        || matches!(tipe_kanan, RplType::Array(_)))
                     || matches!(
                         operator,
                         InfixOperator::Dan | InfixOperator::Atau | InfixOperator::NullishCoalescing
@@ -752,11 +759,29 @@ impl TypeChecker {
                     InfixOperator::Tambah => {
                         if tipe_kiri == RplType::String || tipe_kanan == RplType::String {
                             RplType::String
+                        } else if tipe_kiri == RplType::TidakDiketahui || tipe_kanan == RplType::TidakDiketahui {
+                            RplType::TidakDiketahui
+                        } else if matches!(tipe_kiri, RplType::Array(_)) {
+                            tipe_kiri
+                        } else if matches!(tipe_kanan, RplType::Array(_)) {
+                            tipe_kanan
                         } else {
                             RplType::Angka
                         }
                     }
-                    _ => RplType::Angka,
+                    _ => {
+                        if *operator == InfixOperator::Kali && (tipe_kiri == RplType::String || tipe_kanan == RplType::String) {
+                            RplType::String
+                        } else if tipe_kiri == RplType::TidakDiketahui || tipe_kanan == RplType::TidakDiketahui {
+                            RplType::TidakDiketahui
+                        } else if matches!(tipe_kiri, RplType::Array(_)) {
+                            tipe_kiri
+                        } else if matches!(tipe_kanan, RplType::Array(_)) {
+                            tipe_kanan
+                        } else {
+                            RplType::Angka
+                        }
+                    }
                 }
             }
             Expression::Call {
