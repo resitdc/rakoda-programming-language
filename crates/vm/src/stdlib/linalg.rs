@@ -49,6 +49,9 @@ fn dmatrix_to_tensor(m: &DMatrix<f64>) -> Tensor<f64> {
         shape: vec![rows, cols],
         strides: vec![cols, 1],
         offset: 0,
+            requires_grad: false,
+            grad: None,
+            tape_node: None,
     }
 }
 

@@ -116,22 +116,93 @@ pub fn apply_binary_op(heap: &mut Heap, a: Value, b: Value, op: OpCode) -> Resul
 
         // --- TENSORS ---
         (Value::Float64Array(idx1), Value::Angka(n)) => {
-            let t = heap.get_f64_tensor(idx1);
-            let result_tensor = broadcast_tensor_scalar(t, n, op)?;
+            let t = heap.get_f64_tensor(idx1).clone();
+            let mut result_tensor = broadcast_tensor_scalar(&t, n, op.clone())?;
+            if t.requires_grad {
+                result_tensor.requires_grad = true;
+                let bwd_op = match op {
+                    OpCode::Add => crate::autograd::BackwardOp::Add,
+                    OpCode::Subtract => crate::autograd::BackwardOp::Sub,
+                    OpCode::Multiply => crate::autograd::BackwardOp::Mul,
+                    OpCode::Divide => crate::autograd::BackwardOp::Div,
+                    _ => crate::autograd::BackwardOp::NoOp,
+                };
+                let node = crate::autograd::TapeNode {
+                    op: bwd_op,
+                    parents: vec![idx1], // Hanya punya 1 parent tensor
+                    self_tensor_idx: 0,
+                };
+                let tape_node_id = heap.tape.push(node);
+                result_tensor.tape_node = Some(tape_node_id);
+            }
             let new_idx = heap.alloc(HeapData::Float64Array(result_tensor));
+            if heap.get_f64_tensor(new_idx).requires_grad {
+                let tape_node_id = heap.get_f64_tensor(new_idx).tape_node.unwrap();
+                heap.tape.nodes[tape_node_id].self_tensor_idx = new_idx;
+            }
             Ok(Value::Float64Array(new_idx))
         }
         (Value::Angka(n), Value::Float64Array(idx2)) => {
-            let t = heap.get_f64_tensor(idx2);
-            let result_tensor = broadcast_scalar_tensor(n, t, op)?;
+            let t = heap.get_f64_tensor(idx2).clone();
+            let mut result_tensor = broadcast_scalar_tensor(n, &t, op.clone())?;
+            if t.requires_grad {
+                result_tensor.requires_grad = true;
+                let bwd_op = match op {
+                    OpCode::Add => crate::autograd::BackwardOp::Add,
+                    OpCode::Subtract => crate::autograd::BackwardOp::Sub,
+                    OpCode::Multiply => crate::autograd::BackwardOp::Mul,
+                    OpCode::Divide => crate::autograd::BackwardOp::Div,
+                    _ => crate::autograd::BackwardOp::NoOp,
+                };
+                let node = crate::autograd::TapeNode {
+                    op: bwd_op,
+                    parents: vec![idx2], // Hanya punya 1 parent tensor
+                    self_tensor_idx: 0,
+                };
+                let tape_node_id = heap.tape.push(node);
+                result_tensor.tape_node = Some(tape_node_id);
+            }
             let new_idx = heap.alloc(HeapData::Float64Array(result_tensor));
+            if heap.get_f64_tensor(new_idx).requires_grad {
+                let tape_node_id = heap.get_f64_tensor(new_idx).tape_node.unwrap();
+                heap.tape.nodes[tape_node_id].self_tensor_idx = new_idx;
+            }
             Ok(Value::Float64Array(new_idx))
         }
         (Value::Float64Array(idx1), Value::Float64Array(idx2)) => {
-            let t1 = heap.get_f64_tensor(idx1);
-            let t2 = heap.get_f64_tensor(idx2);
-            let result_tensor = broadcast_tensor_tensor(t1, t2, op)?;
+            let t1 = heap.get_f64_tensor(idx1).clone();
+            let t2 = heap.get_f64_tensor(idx2).clone();
+            let mut result_tensor = broadcast_tensor_tensor(&t1, &t2, op.clone())?;
+            
+            // Autograd: Jika salah satu input membutuhkan gradien, maka output juga
+            if t1.requires_grad || t2.requires_grad {
+                result_tensor.requires_grad = true;
+                
+                let bwd_op = match op {
+                    OpCode::Add => crate::autograd::BackwardOp::Add,
+                    OpCode::Subtract => crate::autograd::BackwardOp::Sub,
+                    OpCode::Multiply => crate::autograd::BackwardOp::Mul,
+                    OpCode::Divide => crate::autograd::BackwardOp::Div,
+                    _ => crate::autograd::BackwardOp::NoOp,
+                };
+
+                let node = crate::autograd::TapeNode {
+                    op: bwd_op,
+                    parents: vec![idx1, idx2],
+                    self_tensor_idx: 0, // Akan diset setelah alokasi
+                };
+                let tape_node_id = heap.tape.push(node);
+                result_tensor.tape_node = Some(tape_node_id);
+            }
+            
             let new_idx = heap.alloc(HeapData::Float64Array(result_tensor));
+            
+            // Perbarui self_tensor_idx
+            if heap.get_f64_tensor(new_idx).requires_grad {
+                let tape_node_id = heap.get_f64_tensor(new_idx).tape_node.unwrap();
+                heap.tape.nodes[tape_node_id].self_tensor_idx = new_idx;
+            }
+            
             Ok(Value::Float64Array(new_idx))
         }
 
@@ -216,6 +287,9 @@ fn broadcast_tensor_scalar(t: &Tensor<f64>, scalar: f64, op: OpCode) -> Result<T
         shape: t.shape.clone(),
         strides: t.strides.clone(),
         offset: 0,
+            requires_grad: false,
+            grad: None,
+            tape_node: None,
     })
 }
 
@@ -232,6 +306,9 @@ fn broadcast_scalar_tensor(scalar: f64, t: &Tensor<f64>, op: OpCode) -> Result<T
         shape: t.shape.clone(),
         strides: t.strides.clone(),
         offset: 0,
+            requires_grad: false,
+            grad: None,
+            tape_node: None,
     })
 }
 
@@ -334,5 +411,8 @@ fn broadcast_tensor_tensor(t1: &Tensor<f64>, t2: &Tensor<f64>, op: OpCode) -> Re
         shape: out_shape,
         strides: out_strides,
         offset: 0,
+            requires_grad: false,
+            grad: None,
+            tape_node: None,
     })
 }

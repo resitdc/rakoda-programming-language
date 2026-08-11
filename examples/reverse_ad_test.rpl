@@ -1,0 +1,28 @@
+
+
+// 1. Buat Tensor dengan requires_grad = benar
+buat A = Float64Array([2, 2], benar)
+A[0, 0] = 2.0
+A[0, 1] = 3.0
+A[1, 0] = 4.0
+A[1, 1] = 5.0
+
+// 2. Operasi Forward
+buat B = A * A
+buat C = B + A
+
+// 3. Jalankan backward pada C (Loss akhir)
+Matriks.backward(C)
+
+// 4. Ambil gradien dari A
+buat grad_A = Matriks.grad(A)
+tampilkan("Nilai A:")
+tampilkan(A)
+
+tampilkan("Gradien A (dL/dA):")
+tampilkan(grad_A)
+
+// Harusnya C = A^2 + A
+// dC/dA = 2A + 1
+// Untuk A = [[2, 3], [4, 5]]
+// grad_A = [[5, 7], [9, 11]]
