@@ -11,6 +11,11 @@ tampilkan("tan(0) = " + Matematika.tan(0.0))
 tampilkan("asin(1) = " + Matematika.asin(1.0))
 tampilkan("acos(1) = " + Matematika.acos(1.0))
 
+tampilkan("\n--- Trigonometri Hiperbolik ---")
+tampilkan("sinh(0) = " + Matematika.sinh(0.0))
+tampilkan("cosh(0) = " + Matematika.cosh(0.0))
+tampilkan("tanh(0) = " + Matematika.tanh(0.0))
+
 tampilkan("\n--- Eksponensial & Logaritma ---")
 tampilkan("exp(1) = " + Matematika.exp(1.0))
 tampilkan("log(E) = " + Matematika.log(Matematika.E))
