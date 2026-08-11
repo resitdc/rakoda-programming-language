@@ -706,6 +706,85 @@ impl Parser {
         Statement::Lempar { nilai, lokasi }
     }
 
+    fn is_arrow_function(&self) -> bool {
+        if self.current().token != Token::KurungBuka {
+            if matches!(self.current().token, Token::Identifier(_)) {
+                if self.posisi + 1 < self.tokens.len() && self.tokens[self.posisi + 1].token == Token::Panah {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        let mut i = self.posisi + 1;
+        while i < self.tokens.len() {
+            if self.tokens[i].token == Token::KurungTutup {
+                if i + 1 < self.tokens.len() && self.tokens[i + 1].token == Token::Panah {
+                    return true;
+                }
+                break;
+            }
+            if !matches!(self.tokens[i].token, Token::Identifier(_) | Token::Koma) {
+                return false;
+            }
+            i += 1;
+        }
+        false
+    }
+
+    fn parse_arrow_function(&mut self) -> Result<Expression, RplError> {
+        let lokasi = self.current_lokasi();
+        let mut parameter = Vec::new();
+
+        if self.current().token == Token::KurungBuka {
+            self.advance();
+            if self.current().token != Token::KurungTutup {
+                loop {
+                    match &self.current().token {
+                        Token::Identifier(p) => {
+                            parameter.push(p.clone());
+                            self.advance();
+                        }
+                        _ => {
+                            return Err(RplError::Sintaks {
+                                pesan: "Parameter fungsi panah tidak valid.".to_string(),
+                                lokasi: self.current_lokasi(),
+                                saran: Some("Gunakan nama variabel, misalnya: (a, b) => a + b".to_string()),
+                            });
+                        }
+                    }
+                    if self.current().token == Token::Koma {
+                        self.advance();
+                    } else {
+                        break;
+                    }
+                }
+            }
+            self.expect(Token::KurungTutup);
+        } else if let Token::Identifier(p) = &self.current().token {
+            parameter.push(p.clone());
+            self.advance();
+        }
+
+        self.expect(Token::Panah);
+
+        let body = if self.current().token == Token::KurawalBuka {
+            self.parse_block()
+        } else {
+            let expr = self.parse_expression(Precedence::Lowest)?;
+            vec![Statement::Kembalikan {
+                nilai: Some(expr),
+                lokasi: self.current_lokasi(),
+            }]
+        };
+
+        Ok(Expression::FungsiAnonim {
+            parameter,
+            body,
+            lokasi,
+        })
+    }
+
     fn parse_expression(&mut self, precedence: Precedence) -> Result<Expression, RplError> {
         let mut left = self.parse_prefix()?;
 
@@ -719,6 +798,10 @@ impl Parser {
     }
 
     fn parse_prefix(&mut self) -> Result<Expression, RplError> {
+        if self.is_arrow_function() {
+            return self.parse_arrow_function();
+        }
+
         let token = self.current().clone();
         let lok = token.lokasi();
         match token.token {

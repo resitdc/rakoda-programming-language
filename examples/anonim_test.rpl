@@ -1,0 +1,4 @@
+buat kali_dua = fungsi(x) {
+    kembalikan x * 2
+}
+tampilkan(kali_dua(10))

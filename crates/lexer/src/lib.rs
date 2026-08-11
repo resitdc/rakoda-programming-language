@@ -184,6 +184,9 @@ impl Lexer {
                     if self.current_char() == Some('=') {
                         self.advance();
                         Token::SamaDengan
+                    } else if self.current_char() == Some('>') {
+                        self.advance();
+                        Token::Panah
                     } else {
                         Token::Assign
                     }

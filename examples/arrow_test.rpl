@@ -1,0 +1,14 @@
+// Satu parameter, tanpa kurung
+buat kali_dua = x => x * 2
+tampilkan("kali_dua(10) = " + kali_dua(10))
+
+// Dua parameter, dengan kurung
+buat tambah = (a, b) => a + b
+tampilkan("tambah(5, 7) = " + tambah(5, 7))
+
+// Block body
+buat sapa = (nama) => {
+    buat kalimat = "Halo, " + nama + "!"
+    kembalikan kalimat
+}
+tampilkan("sapa('Rakoda') = " + sapa("Rakoda"))
