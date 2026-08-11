@@ -99,21 +99,21 @@ pub fn run_source(
     if !check_result.errors.is_empty() {
         if let Some(file) = nama_file {
             eprintln!(
-                "\x1b[1;33m⚠️  Peringatan pengecekan tipe di {}:\x1b[0m",
+                "\x1b[1;31m❌ Error pengecekan tipe di {}:\x1b[0m",
                 file
             );
         } else {
-            eprintln!("\x1b[1;33m⚠️  Peringatan pengecekan tipe:\x1b[0m");
+            eprintln!("\x1b[1;31m❌ Error pengecekan tipe:\x1b[0m");
         }
         for e in &check_result.errors {
             if let Some(file) = nama_file {
                 eprintln!(
-                    "  \x1b[1;36m--> \x1b[0m{}:{}:{}: \x1b[1;33m{}\x1b[0m",
+                    "  \x1b[1;36m--> \x1b[0m{}:{}:{}: \x1b[1;31m{}\x1b[0m",
                     file, e.lokasi.baris, e.lokasi.kolom, e.pesan
                 );
             } else {
                 eprintln!(
-                    "  \x1b[1;36m--> \x1b[0mbaris {}, kolom {}: \x1b[1;33m{}\x1b[0m",
+                    "  \x1b[1;36m--> \x1b[0mbaris {}, kolom {}: \x1b[1;31m{}\x1b[0m",
                     e.lokasi.baris, e.lokasi.kolom, e.pesan
                 );
             }
@@ -122,6 +122,7 @@ pub fn run_source(
             }
         }
         eprintln!();
+        return Err("Program gagal dijalankan karena terdapat error pengecekan tipe.".into());
     }
 
     let mut machine = vm::VM::new();

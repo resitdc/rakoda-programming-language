@@ -119,6 +119,7 @@ impl<'a> Compiler<'a> {
             Statement::DeklarasiVariabel {
                 nama,
                 nilai,
+                is_tetap: _,
                 lokasi,
             }
             | Statement::Assignment {

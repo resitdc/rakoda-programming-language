@@ -1,0 +1,5 @@
+tetap pi = 3.14
+tampilkan("Nilai pi: " + pi)
+
+
+tampilkan("Jika baris ini dieksekusi, berarti ada yang salah!")

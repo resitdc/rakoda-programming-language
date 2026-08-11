@@ -14,6 +14,7 @@ pub enum Statement {
     DeklarasiVariabel {
         nama: String,
         nilai: Expression,
+        is_tetap: bool,
         lokasi: Lokasi,
     },
     Jika {
