@@ -4,6 +4,7 @@ use errors::{Lokasi, Span};
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     Buat,       // buat
+    Tetap,      // tetap
     Tampilkan,  // tampilkan
     Cetak,      // cetak
     Masukkan,   // masukkan
@@ -74,6 +75,7 @@ impl Token {
     pub fn to_indonesian_string(&self) -> String {
         match self {
             Token::Buat => "kata 'buat'".to_string(),
+            Token::Tetap => "kata 'tetap'".to_string(),
             Token::Tampilkan => "kata 'tampilkan'".to_string(),
             Token::Cetak => "kata 'cetak'".to_string(),
             Token::Masukkan => "kata 'masukkan'".to_string(),
@@ -130,6 +132,7 @@ impl Token {
     pub fn dari_keyword(k: &str) -> Option<Token> {
         match k {
             "buat" => Some(Token::Buat),
+            "tetap" => Some(Token::Tetap),
             "tampilkan" => Some(Token::Tampilkan),
             "cetak" => Some(Token::Cetak),
             "masukkan" => Some(Token::Masukkan),

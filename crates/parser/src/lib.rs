@@ -154,7 +154,8 @@ impl Parser {
 
     fn parse_statement(&mut self) -> Statement {
         match self.current().token {
-            Token::Buat => self.parse_deklarasi_variabel(),
+            Token::Buat => self.parse_deklarasi_variabel(false),
+            Token::Tetap => self.parse_deklarasi_variabel(true),
             Token::Jika => self.parse_jika(),
             Token::Selama => self.parse_selama(),
             Token::Setiap => self.parse_setiap(),
@@ -169,7 +170,7 @@ impl Parser {
         }
     }
 
-    fn parse_deklarasi_variabel(&mut self) -> Statement {
+    fn parse_deklarasi_variabel(&mut self, is_tetap: bool) -> Statement {
         let lokasi = self.current_lokasi();
         self.advance();
 
@@ -204,6 +205,7 @@ impl Parser {
         Statement::DeklarasiVariabel {
             nama,
             nilai,
+            is_tetap,
             lokasi,
         }
     }

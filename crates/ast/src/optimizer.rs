@@ -14,10 +14,12 @@ fn optimize_statement(stmt: Statement) -> Vec<Statement> {
         Statement::DeklarasiVariabel {
             nama,
             nilai,
+            is_tetap,
             lokasi,
         } => vec![Statement::DeklarasiVariabel {
             nama,
             nilai: optimize_expression(nilai),
+            is_tetap,
             lokasi,
         }],
         Statement::Assignment {

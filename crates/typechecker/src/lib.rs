@@ -132,8 +132,9 @@ impl std::fmt::Display for RplType {
 
 /// Satu entry dalam tabel simbol.
 #[derive(Debug, Clone)]
-struct Symbol {
+pub struct Symbol {
     tipe: RplType,
+    is_tetap: bool,
     // Lokasi deklarasi disimpan untuk pelacakan error (belum digunakan)
     #[allow(dead_code)]
     dideklarasikan_di: Lokasi,
@@ -171,7 +172,7 @@ impl SymbolTable {
     }
 
     /// Deklarasi variabel baru di scope saat ini.
-    pub fn deklarasi(&mut self, nama: &str, tipe: RplType, lokasi: Lokasi) -> Result<(), String> {
+    pub fn deklarasi(&mut self, nama: &str, tipe: RplType, is_tetap: bool, lokasi: Lokasi) -> Result<(), String> {
         let scope = self.scopes.last_mut().unwrap();
         if scope.contains_key(nama) {
             return Err(format!(
@@ -183,6 +184,7 @@ impl SymbolTable {
             nama.to_string(),
             Symbol {
                 tipe,
+                is_tetap,
                 dideklarasikan_di: lokasi,
             },
         );
@@ -191,24 +193,31 @@ impl SymbolTable {
 
     /// Cari tipe variabel di semua scope dari dalam ke luar.
     pub fn cari(&self, nama: &str) -> Option<&RplType> {
-        // Scope lookup: cek semua scope dari terdalam ke terluar
+        self.cari_symbol(nama).map(|s| &s.tipe)
+    }
+
+    /// Cari simbol variabel di semua scope.
+    pub fn cari_symbol(&self, nama: &str) -> Option<&Symbol> {
         for scope in self.scopes.iter().rev() {
             if let Some(sym) = scope.get(nama) {
-                return Some(&sym.tipe);
+                return Some(sym);
             }
         }
         None
     }
 
     /// Update tipe variabel yang sudah ada (untuk assignment).
-    pub fn perbarui_tipe(&mut self, nama: &str, tipe_baru: RplType) -> Option<()> {
+    pub fn perbarui_tipe(&mut self, nama: &str, tipe_baru: RplType) -> Result<(), String> {
         for scope in self.scopes.iter_mut().rev() {
             if let Some(sym) = scope.get_mut(nama) {
+                if sym.is_tetap {
+                    return Err(format!("Variabel '{}' dideklarasikan dengan 'tetap' dan tidak bisa diubah", nama));
+                }
                 sym.tipe = tipe_baru;
-                return Some(());
+                return Ok(());
             }
         }
-        None
+        Err(format!("Variabel '{}' belum ada", nama))
     }
 }
 
@@ -309,7 +318,7 @@ impl TypeChecker {
             // type checker tidak melaporkan "belum dibuat".
             let _ = self
                 .symbols
-                .deklarasi(nama, RplType::Kamus(HashMap::new()), lokasi);
+                .deklarasi(nama, RplType::Kamus(HashMap::new()), true, lokasi);
         }
     }
 
@@ -340,6 +349,7 @@ impl TypeChecker {
             Statement::DeklarasiVariabel {
                 nama,
                 nilai,
+                is_tetap,
                 lokasi,
             } => {
                 let tipe = self.infer_expression(nilai);
@@ -349,7 +359,7 @@ impl TypeChecker {
                 } else {
                     tipe
                 };
-                if let Err(e) = self.symbols.deklarasi(nama, tipe_final.clone(), *lokasi) {
+                if let Err(e) = self.symbols.deklarasi(nama, tipe_final.clone(), *is_tetap, *lokasi) {
                     self.error(e, *lokasi, None);
                 }
             }
@@ -374,7 +384,9 @@ impl TypeChecker {
                                 )),
                             );
                         }
-                        self.symbols.perbarui_tipe(nama, tipe_nilai);
+                        if let Err(e) = self.symbols.perbarui_tipe(nama, tipe_nilai) {
+                            self.error(e, *lokasi, None);
+                        }
                     }
                     None => {
                         self.error(
@@ -432,7 +444,7 @@ impl TypeChecker {
                     params,
                     return_type: Box::new(RplType::Kosong),
                 };
-                if let Err(e) = self.symbols.deklarasi(nama, func_type, *lokasi) {
+                if let Err(e) = self.symbols.deklarasi(nama, func_type, true, *lokasi) {
                     self.error(e, *lokasi, None);
                 }
 
@@ -440,7 +452,7 @@ impl TypeChecker {
                 self.symbols.push_scope();
                 // Deklarasi parameter di scope fungsi
                 for p in parameter {
-                    let _ = self.symbols.deklarasi(p, RplType::TidakDiketahui, *lokasi);
+                    let _ = self.symbols.deklarasi(p, RplType::TidakDiketahui, false, *lokasi);
                 }
                 for s in body {
                     self.check_statement(s);
@@ -550,7 +562,7 @@ impl TypeChecker {
                 };
 
                 self.symbols.push_scope();
-                let _ = self.symbols.deklarasi(elemen, tipe_elemen, *lokasi);
+                let _ = self.symbols.deklarasi(elemen, tipe_elemen, false, *lokasi);
 
                 if let Some(idx_name) = indeks {
                     let tipe_indeks = match tipe_koleksi {
@@ -558,7 +570,7 @@ impl TypeChecker {
                         RplType::Kamus(_) => RplType::String,
                         _ => RplType::TidakDiketahui,
                     };
-                    let _ = self.symbols.deklarasi(idx_name, tipe_indeks, *lokasi);
+                    let _ = self.symbols.deklarasi(idx_name, tipe_indeks, true, *lokasi);
                 }
 
                 for s in body {
@@ -597,7 +609,7 @@ impl TypeChecker {
                 self.symbols.push_scope();
 
                 if let Some(nama_indeks) = sebagai {
-                    let _ = self.symbols.deklarasi(nama_indeks, RplType::Angka, *lokasi);
+                    let _ = self.symbols.deklarasi(nama_indeks, RplType::Angka, false, *lokasi);
                 }
 
                 for s in body {
@@ -620,7 +632,7 @@ impl TypeChecker {
                 self.symbols.push_scope();
                 let _ = self
                     .symbols
-                    .deklarasi(error_ident, RplType::String, *lokasi);
+                    .deklarasi(error_ident, RplType::String, true, *lokasi);
                 for s in tangkap_body {
                     self.check_statement(s);
                 }
@@ -909,7 +921,7 @@ impl TypeChecker {
                 for p in parameter {
                     let _ = self
                         .symbols
-                        .deklarasi(p, RplType::TidakDiketahui, Lokasi::new(0, 0));
+                        .deklarasi(p, RplType::TidakDiketahui, false, Lokasi::new(0, 0));
                 }
                 for s in body {
                     self.check_statement(s);
