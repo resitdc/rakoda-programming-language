@@ -40,4 +40,15 @@ pub fn register(vm: &mut VM) {
 
     let dict_idx = vm.heap.alloc(HeapData::Kamus(module_dict));
     vm.set_global("matematika".to_string(), Value::Kamus(dict_idx));
+    
+    // Also register Matematika for uppercase (often users capitalize Math modules)
+    vm.set_global("Matematika".to_string(), Value::Kamus(dict_idx));
+
+    // Add Mathematical Constants to the dictionary directly
+    if let HeapData::Kamus(ref mut dict) = vm.heap.objects[dict_idx].data {
+        dict.insert("PI".to_string(), Value::Angka(std::f64::consts::PI));
+        dict.insert("E".to_string(), Value::Angka(std::f64::consts::E));
+        dict.insert("Infinity".to_string(), Value::Angka(std::f64::INFINITY));
+        dict.insert("NaN".to_string(), Value::Angka(std::f64::NAN));
+    }
 }

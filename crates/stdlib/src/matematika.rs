@@ -14,6 +14,18 @@ pub fn fungsi_matematika() -> DaftarFungsiRpl {
         ("acak", acak_impl),
         ("absolute", mutlak_impl),
         ("mutlak", mutlak_impl),
+        ("sin", sin_impl),
+        ("cos", cos_impl),
+        ("tan", tan_impl),
+        ("asin", asin_impl),
+        ("acos", acos_impl),
+        ("sinh", sinh_impl),
+        ("cosh", cosh_impl),
+        ("tanh", tanh_impl),
+        ("exp", exp_impl),
+        ("log", log_impl),
+        ("log10", log10_impl),
+        ("sqrt", sqrt_impl),
     ]
 }
 
@@ -104,5 +116,101 @@ fn mutlak_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
     match &args[0] {
         NilaiRpl::Angka(n) => Ok(NilaiRpl::Angka(n.abs())),
         _ => Err("matematika.mutlak hanya menerima angka".to_string()),
+    }
+}
+
+fn sin_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
+    if args.is_empty() { return Err("matematika.sin membutuhkan 1 argumen angka".to_string()); }
+    match &args[0] {
+        NilaiRpl::Angka(n) => Ok(NilaiRpl::Angka(n.sin())),
+        _ => Err("matematika.sin hanya menerima angka".to_string()),
+    }
+}
+
+fn cos_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
+    if args.is_empty() { return Err("matematika.cos membutuhkan 1 argumen angka".to_string()); }
+    match &args[0] {
+        NilaiRpl::Angka(n) => Ok(NilaiRpl::Angka(n.cos())),
+        _ => Err("matematika.cos hanya menerima angka".to_string()),
+    }
+}
+
+fn tan_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
+    if args.is_empty() { return Err("matematika.tan membutuhkan 1 argumen angka".to_string()); }
+    match &args[0] {
+        NilaiRpl::Angka(n) => Ok(NilaiRpl::Angka(n.tan())),
+        _ => Err("matematika.tan hanya menerima angka".to_string()),
+    }
+}
+
+fn asin_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
+    if args.is_empty() { return Err("matematika.asin membutuhkan 1 argumen angka".to_string()); }
+    match &args[0] {
+        NilaiRpl::Angka(n) => Ok(NilaiRpl::Angka(n.asin())),
+        _ => Err("matematika.asin hanya menerima angka".to_string()),
+    }
+}
+
+fn acos_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
+    if args.is_empty() { return Err("matematika.acos membutuhkan 1 argumen angka".to_string()); }
+    match &args[0] {
+        NilaiRpl::Angka(n) => Ok(NilaiRpl::Angka(n.acos())),
+        _ => Err("matematika.acos hanya menerima angka".to_string()),
+    }
+}
+
+fn sinh_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
+    if args.is_empty() { return Err("matematika.sinh membutuhkan 1 argumen angka".to_string()); }
+    match &args[0] {
+        NilaiRpl::Angka(n) => Ok(NilaiRpl::Angka(n.sinh())),
+        _ => Err("matematika.sinh hanya menerima angka".to_string()),
+    }
+}
+
+fn cosh_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
+    if args.is_empty() { return Err("matematika.cosh membutuhkan 1 argumen angka".to_string()); }
+    match &args[0] {
+        NilaiRpl::Angka(n) => Ok(NilaiRpl::Angka(n.cosh())),
+        _ => Err("matematika.cosh hanya menerima angka".to_string()),
+    }
+}
+
+fn tanh_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
+    if args.is_empty() { return Err("matematika.tanh membutuhkan 1 argumen angka".to_string()); }
+    match &args[0] {
+        NilaiRpl::Angka(n) => Ok(NilaiRpl::Angka(n.tanh())),
+        _ => Err("matematika.tanh hanya menerima angka".to_string()),
+    }
+}
+
+fn exp_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
+    if args.is_empty() { return Err("matematika.exp membutuhkan 1 argumen angka".to_string()); }
+    match &args[0] {
+        NilaiRpl::Angka(n) => Ok(NilaiRpl::Angka(n.exp())),
+        _ => Err("matematika.exp hanya menerima angka".to_string()),
+    }
+}
+
+fn log_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
+    if args.is_empty() { return Err("matematika.log membutuhkan 1 argumen angka".to_string()); }
+    match &args[0] {
+        NilaiRpl::Angka(n) => Ok(NilaiRpl::Angka(n.ln())), // ln() = natural log
+        _ => Err("matematika.log hanya menerima angka".to_string()),
+    }
+}
+
+fn log10_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
+    if args.is_empty() { return Err("matematika.log10 membutuhkan 1 argumen angka".to_string()); }
+    match &args[0] {
+        NilaiRpl::Angka(n) => Ok(NilaiRpl::Angka(n.log10())),
+        _ => Err("matematika.log10 hanya menerima angka".to_string()),
+    }
+}
+
+fn sqrt_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
+    if args.is_empty() { return Err("matematika.sqrt membutuhkan 1 argumen angka".to_string()); }
+    match &args[0] {
+        NilaiRpl::Angka(n) => Ok(NilaiRpl::Angka(n.sqrt())),
+        _ => Err("matematika.sqrt hanya menerima angka".to_string()),
     }
 }
