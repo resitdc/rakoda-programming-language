@@ -1,0 +1,35 @@
+buat c1 = 3 + 4j
+buat c2 = 1 - 2j
+
+tampilkan("c1 = " + c1) // Harusnya: 3 + 4j
+tampilkan("c2 = " + c2) // Harusnya: 1 - 2j
+
+// Penjumlahan
+buat hasil_tambah = c1 + c2
+tampilkan("c1 + c2 = " + hasil_tambah) // Harusnya: (3+1) + (4-2)j = 4 + 2j
+
+// Pengurangan
+buat hasil_kurang = c1 - c2
+tampilkan("c1 - c2 = " + hasil_kurang) // Harusnya: (3-1) + (4 - (-2))j = 2 + 6j
+
+// Perkalian
+buat hasil_kali = c1 * c2
+// (3 + 4j)(1 - 2j) = 3 - 6j + 4j - 8j^2 = 3 - 2j - 8(-1) = 11 - 2j
+tampilkan("c1 * c2 = " + hasil_kali) // Harusnya: 11 - 2j
+
+// Pembagian
+buat c3 = 8 + 4j
+buat c4 = 2j
+buat hasil_bagi = c3 / c4
+// (8 + 4j) / 2j = (8 + 4j)(-2j) / 4 = (-16j - 8j^2) / 4 = (-16j + 8) / 4 = 2 - 4j
+tampilkan("c3 / c4 = " + hasil_bagi) // Harusnya: 2 - 4j
+
+// Operasi dengan angka biasa
+buat hasil_skalar_1 = c1 + 10
+buat hasil_skalar_2 = c1 * 2
+tampilkan("c1 + 10 = " + hasil_skalar_1) // Harusnya: 13 + 4j
+tampilkan("c1 * 2 = " + hasil_skalar_2) // Harusnya: 6 + 8j
+
+// Negasi (Prefix Minus)
+buat neg_c1 = -c1
+tampilkan("-c1 = " + neg_c1) // Harusnya: -3 - 4j

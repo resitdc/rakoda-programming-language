@@ -405,6 +405,11 @@ impl<'a> Compiler<'a> {
                 self.chunk.write_opcode(OpCode::LoadConst, lokasi);
                 self.chunk.write_u16(const_idx, lokasi);
             }
+            Expression::AngkaImajiner(val, lokasi) => {
+                let const_idx = self.chunk.write_constant(Value::Kompleks(0.0, val));
+                self.chunk.write_opcode(OpCode::LoadConst, lokasi);
+                self.chunk.write_u16(const_idx, lokasi);
+            }
             Expression::String(val, lokasi) => {
                 let s_idx = self.heap.alloc(HeapData::String(val));
                 let const_idx = self.chunk.write_constant(Value::String(s_idx));

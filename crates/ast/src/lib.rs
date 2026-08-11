@@ -89,6 +89,7 @@ pub enum Statement {
 pub enum Expression {
     Identifier(String, Lokasi),
     Angka(f64, Lokasi),
+    AngkaImajiner(f64, Lokasi),
     String(String, Lokasi),
     Boolean(bool, Lokasi),
     Kosong(Lokasi),
@@ -204,6 +205,7 @@ impl Expression {
         match self {
             Expression::Identifier(_, l) => l,
             Expression::Angka(_, l) => l,
+            Expression::AngkaImajiner(_, l) => l,
             Expression::String(_, l) => l,
             Expression::Boolean(_, l) => l,
             Expression::Kosong(l) => l,

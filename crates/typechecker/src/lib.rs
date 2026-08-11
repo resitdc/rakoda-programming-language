@@ -22,6 +22,8 @@ use std::collections::HashMap;
 pub enum RplType {
     /// Tipe angka (bilangan pecahan)
     Angka,
+    /// Tipe bilangan kompleks
+    Kompleks,
     /// Tipe string (teks)
     String,
     /// Tipe boolean (benar/salah)
@@ -46,6 +48,7 @@ impl RplType {
     pub fn nama(&self) -> &'static str {
         match self {
             RplType::Angka => "angka",
+            RplType::Kompleks => "angka kompleks",
             RplType::String => "teks",
             RplType::Boolean => "boolean",
             RplType::Kosong => "kosong",
@@ -62,6 +65,7 @@ impl RplType {
             (RplType::TidakDiketahui, _) | (_, RplType::TidakDiketahui) => true,
             (RplType::Kosong, _) | (_, RplType::Kosong) => true,
             (RplType::Angka, RplType::Angka) => true,
+            (RplType::Kompleks, RplType::Kompleks) => true,
             (RplType::String, RplType::String) => true,
             (RplType::Boolean, RplType::Boolean) => true,
             (RplType::Array(a), RplType::Array(b)) => a.kompatibel_dengan(b),
@@ -85,6 +89,7 @@ impl RplType {
                 | (_, InfixOperator::Dan)
                 | (_, InfixOperator::Atau)
                 | (RplType::Angka, _)
+                | (RplType::Kompleks, _)
                 | (RplType::Array(_), _)
                 | (RplType::String, InfixOperator::Tambah)
                 | (RplType::String, InfixOperator::Kali)
@@ -643,6 +648,7 @@ impl TypeChecker {
     fn infer_expression(&mut self, expr: &Expression) -> RplType {
         match expr {
             Expression::Angka(_, _) => RplType::Angka,
+            Expression::AngkaImajiner(_, _) => RplType::Kompleks,
             Expression::String(_, _) => RplType::String,
             Expression::Boolean(_, _) => RplType::Boolean,
             Expression::Kosong(_) => RplType::Kosong,
@@ -678,14 +684,14 @@ impl TypeChecker {
                         RplType::Boolean
                     }
                     PrefixOperator::Minus => {
-                        if tipe_kanan != RplType::Angka && tipe_kanan != RplType::TidakDiketahui {
+                        if tipe_kanan != RplType::Angka && tipe_kanan != RplType::Kompleks && tipe_kanan != RplType::TidakDiketahui {
                             self.error(
-                                format!("Operator '-' (minus) hanya bisa digunakan untuk angka, bukan '{}'", tipe_kanan),
+                                format!("Operator '-' (minus) hanya bisa digunakan untuk angka atau angka kompleks, bukan '{}'", tipe_kanan),
                                 *lokasi,
-                                Some("Gunakan minus hanya untuk angka".to_string()),
+                                Some("Gunakan '-' hanya untuk bilangan".to_string()),
                             );
                         }
-                        RplType::Angka
+                        tipe_kanan
                     }
                 }
             }
@@ -718,10 +724,13 @@ impl TypeChecker {
                 let auto_coercion = (matches!(operator, InfixOperator::Tambah)
                     && (tipe_kiri == RplType::String || tipe_kanan == RplType::String))
                     || (matches!(operator, InfixOperator::Kali)
-                        && ((tipe_kiri == RplType::String && tipe_kanan == RplType::Angka)
-                            || (tipe_kiri == RplType::Angka && tipe_kanan == RplType::String)))
+                        && ((tipe_kiri == RplType::String && (tipe_kanan == RplType::Angka || tipe_kanan == RplType::Kompleks))
+                            || ((tipe_kiri == RplType::Angka || tipe_kiri == RplType::Kompleks) && tipe_kanan == RplType::String)))
                     || (matches!(tipe_kiri, RplType::Array(_))
                         || matches!(tipe_kanan, RplType::Array(_)))
+                    || (matches!(operator, InfixOperator::Tambah | InfixOperator::Kurang | InfixOperator::Kali | InfixOperator::Bagi | InfixOperator::Pangkat)
+                        && ((tipe_kiri == RplType::Kompleks && tipe_kanan == RplType::Angka)
+                            || (tipe_kiri == RplType::Angka && tipe_kanan == RplType::Kompleks)))
                     || matches!(
                         operator,
                         InfixOperator::Dan | InfixOperator::Atau | InfixOperator::NullishCoalescing
@@ -762,6 +771,8 @@ impl TypeChecker {
                             RplType::String
                         } else if tipe_kiri == RplType::TidakDiketahui || tipe_kanan == RplType::TidakDiketahui {
                             RplType::TidakDiketahui
+                        } else if tipe_kiri == RplType::Kompleks || tipe_kanan == RplType::Kompleks {
+                            RplType::Kompleks
                         } else if matches!(tipe_kiri, RplType::Array(_)) {
                             tipe_kiri
                         } else if matches!(tipe_kanan, RplType::Array(_)) {
@@ -775,6 +786,8 @@ impl TypeChecker {
                             RplType::String
                         } else if tipe_kiri == RplType::TidakDiketahui || tipe_kanan == RplType::TidakDiketahui {
                             RplType::TidakDiketahui
+                        } else if tipe_kiri == RplType::Kompleks || tipe_kanan == RplType::Kompleks {
+                            RplType::Kompleks
                         } else if matches!(tipe_kiri, RplType::Array(_)) {
                             tipe_kiri
                         } else if matches!(tipe_kanan, RplType::Array(_)) {

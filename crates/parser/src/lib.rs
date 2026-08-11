@@ -702,6 +702,10 @@ impl Parser {
                 self.advance();
                 Ok(Expression::Angka(val, lok))
             }
+            Token::AngkaImajiner(val) => {
+                self.advance();
+                Ok(Expression::AngkaImajiner(val, lok))
+            }
             Token::String(s) => {
                 self.advance();
                 Ok(Expression::String(s, lok))
