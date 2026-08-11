@@ -1,0 +1,11 @@
+buat angka = 5
+angka += 1
+tampilkan(angka)
+
+buat teks = "Halo "
+teks += "Dunia"
+tampilkan(teks)
+
+buat m = Float64Array(2, 2, [1.0, 2.0, 3.0, 4.0])
+m += 5.0
+tampilkan(m)

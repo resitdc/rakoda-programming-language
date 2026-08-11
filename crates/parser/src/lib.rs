@@ -264,16 +264,42 @@ impl Parser {
         let lokasi = self.current_lokasi();
         match self.parse_expression(Precedence::Lowest) {
             Ok(expr) => {
-                if self.current().token == Token::Assign {
-                    self.advance(); // lewati '='
+                if matches!(
+                    self.current().token,
+                    Token::Assign
+                        | Token::TambahAssign
+                        | Token::KurangAssign
+                        | Token::KaliAssign
+                        | Token::BagiAssign
+                        | Token::ModAssign
+                ) {
+                    let op_token = self.current().token.clone();
+                    self.advance(); // lewati '=' atau '+=' dll
 
-                    let nilai = match self.parse_expression(Precedence::Lowest) {
+                    let mut nilai = match self.parse_expression(Precedence::Lowest) {
                         Ok(e) => e,
                         Err(e) => {
                             self.errors.push(e);
                             return Statement::Error(lokasi);
                         }
                     };
+
+                    if op_token != Token::Assign {
+                        let operator = match op_token {
+                            Token::TambahAssign => ast::InfixOperator::Tambah,
+                            Token::KurangAssign => ast::InfixOperator::Kurang,
+                            Token::KaliAssign => ast::InfixOperator::Kali,
+                            Token::BagiAssign => ast::InfixOperator::Bagi,
+                            Token::ModAssign => ast::InfixOperator::Mod,
+                            _ => unreachable!(),
+                        };
+                        nilai = Expression::Infix {
+                            kiri: Box::new(expr.clone()),
+                            operator,
+                            kanan: Box::new(nilai),
+                            lokasi,
+                        };
+                    }
 
                     match expr {
                         Expression::Identifier(nama, _) => Statement::Assignment {
