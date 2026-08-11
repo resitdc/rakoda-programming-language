@@ -46,6 +46,7 @@ pub mod ktp;
 pub mod ocr;
 pub mod regex;
 pub mod tensor;
+pub mod statistik;
 
 use crate::machine::VM;
 
@@ -56,6 +57,7 @@ pub fn register_all(vm: &mut VM) {
     list::register(vm);
     json::register(vm);
     tensor::register(vm);
+    statistik::register(vm);
     #[cfg(feature = "enterprise")]
     http::register(vm);
     #[cfg(feature = "enterprise")]

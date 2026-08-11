@@ -58,6 +58,7 @@ pub enum Value {
     Rentang(usize),
     Float64Array(usize),
     Int32Array(usize),
+    RandomGenerator(usize),
 }
 
 impl Value {
@@ -120,6 +121,7 @@ impl Value {
                 let t = heap.get_i32_tensor(*idx);
                 format!("<Int32Array bentuk={:?}>", t.shape)
             }
+            Value::RandomGenerator(_) => "<random generator>".to_string(),
         }
     }
 }
@@ -182,6 +184,11 @@ pub fn deep_copy_value(val: &Value, source: &Heap, dest: &mut Heap) -> Value {
             let t = source.get_i32_tensor(*idx).clone();
             let new_idx = dest.alloc(crate::heap::HeapData::Int32Array(t));
             Value::Int32Array(new_idx)
+        }
+        Value::RandomGenerator(idx) => {
+            let rng = source.get_random_generator(*idx).borrow().clone();
+            let new_idx = dest.alloc(crate::heap::HeapData::RandomGenerator(std::cell::RefCell::new(rng)));
+            Value::RandomGenerator(new_idx)
         }
     }
 }
