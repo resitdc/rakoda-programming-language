@@ -309,6 +309,8 @@ impl TypeChecker {
             "Int32Array",
             "Matriks",
             "Statistik",
+            "Matematika",
+            "matematika",
         ];
 
         let lokasi = errors::Lokasi::new(0, 0);
