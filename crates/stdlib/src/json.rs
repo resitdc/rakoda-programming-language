@@ -12,6 +12,13 @@ pub fn ke_json(nilai: &NilaiRpl) -> Value {
                 Value::Null
             }
         }
+        NilaiRpl::AngkaDual(n, _) => {
+            if let Some(num) = serde_json::Number::from_f64(*n) {
+                Value::Number(num)
+            } else {
+                Value::Null
+            }
+        }
         NilaiRpl::Teks(s) => Value::String(s.clone()),
         NilaiRpl::Boolean(b) => Value::Bool(*b),
         NilaiRpl::Kosong => Value::Null,

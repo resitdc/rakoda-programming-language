@@ -448,6 +448,8 @@ impl VM {
                     let a = self.stack.pop().unwrap();
                     if let Value::Angka(a_val) = a {
                         self.stack.push(Value::Angka(-a_val));
+                    } else if let Value::AngkaDual(ar, ag) = a {
+                        self.stack.push(Value::AngkaDual(-ar, -ag));
                     } else if let Value::Kompleks(ar, ai) = a {
                         self.stack.push(Value::Kompleks(-ar, -ai));
                     } else {

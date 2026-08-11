@@ -44,6 +44,7 @@ pub struct FungsiVM {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Value {
     Angka(f64),
+    AngkaDual(f64, f64),
     Kompleks(f64, f64),
     Boolean(bool),
     Kosong,
@@ -65,6 +66,7 @@ impl Value {
     pub fn to_string(&self, heap: &Heap) -> String {
         match self {
             Value::Angka(val) => val.to_string(),
+            Value::AngkaDual(real, _) => real.to_string(),
             Value::Kompleks(real, imag) => {
                 if *real == 0.0 {
                     format!("{}j", imag)
@@ -129,6 +131,7 @@ impl Value {
 pub fn deep_copy_value(val: &Value, source: &Heap, dest: &mut Heap) -> Value {
     match val {
         Value::Angka(n) => Value::Angka(*n),
+        Value::AngkaDual(r, g) => Value::AngkaDual(*r, *g),
         Value::Kompleks(real, imag) => Value::Kompleks(*real, *imag),
         Value::Boolean(b) => Value::Boolean(*b),
         Value::Kosong => Value::Kosong,

@@ -11,6 +11,20 @@ pub fn apply_binary_op(heap: &mut Heap, a: Value, b: Value, op: OpCode) -> Resul
             Ok(Value::Angka(res))
         }
 
+        // --- DUAL NUMBERS ---
+        (Value::AngkaDual(ar, ag), Value::AngkaDual(br, bg)) => {
+            let res = apply_dual_op(ar, ag, br, bg, op)?;
+            Ok(Value::AngkaDual(res.0, res.1))
+        }
+        (Value::AngkaDual(ar, ag), Value::Angka(b_val)) => {
+            let res = apply_dual_op(ar, ag, b_val, 0.0, op)?;
+            Ok(Value::AngkaDual(res.0, res.1))
+        }
+        (Value::Angka(a_val), Value::AngkaDual(br, bg)) => {
+            let res = apply_dual_op(a_val, 0.0, br, bg, op)?;
+            Ok(Value::AngkaDual(res.0, res.1))
+        }
+
         // --- KOMPLEKS VS SCALAR/KOMPLEKS ---
         (Value::Kompleks(ar, ai), Value::Angka(b_val)) => {
             let res = apply_complex_op(ar, ai, b_val, 0.0, op)?;
@@ -142,6 +156,30 @@ fn apply_complex_op(ar: f64, ai: f64, br: f64, bi: f64, op: OpCode) -> Result<(f
     }
 }
 
+fn apply_dual_op(ar: f64, ag: f64, br: f64, bg: f64, op: OpCode) -> Result<(f64, f64), String> {
+    match op {
+        OpCode::Add => Ok((ar + br, ag + bg)),
+        OpCode::Subtract => Ok((ar - br, ag - bg)),
+        OpCode::Multiply => Ok((ar * br, ag * br + ar * bg)),
+        OpCode::Divide => {
+            if br == 0.0 {
+                Err("Pembagian dengan nol".to_string())
+            } else {
+                Ok((ar / br, (ag * br - ar * bg) / (br * br)))
+            }
+        }
+        OpCode::Power => {
+            let r = ar.powf(br);
+            let d = if bg == 0.0 {
+                br * ar.powf(br - 1.0) * ag
+            } else {
+                r * (bg * ar.ln() + br * ag / ar)
+            };
+            Ok((r, d))
+        }
+        _ => Err("Operasi matematis tidak didukung untuk bilangan dual (AutoGrad)".to_string()),
+    }
+}
 
 fn apply_scalar_op(a: f64, b: f64, op: OpCode) -> Result<f64, String> {
     match op {

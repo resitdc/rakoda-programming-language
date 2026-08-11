@@ -123,6 +123,7 @@ fn sin_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
     if args.is_empty() { return Err("matematika.sin membutuhkan 1 argumen angka".to_string()); }
     match &args[0] {
         NilaiRpl::Angka(n) => Ok(NilaiRpl::Angka(n.sin())),
+        NilaiRpl::AngkaDual(n, d) => Ok(NilaiRpl::AngkaDual(n.sin(), d * n.cos())),
         _ => Err("matematika.sin hanya menerima angka".to_string()),
     }
 }
@@ -131,6 +132,7 @@ fn cos_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
     if args.is_empty() { return Err("matematika.cos membutuhkan 1 argumen angka".to_string()); }
     match &args[0] {
         NilaiRpl::Angka(n) => Ok(NilaiRpl::Angka(n.cos())),
+        NilaiRpl::AngkaDual(n, d) => Ok(NilaiRpl::AngkaDual(n.cos(), -d * n.sin())),
         _ => Err("matematika.cos hanya menerima angka".to_string()),
     }
 }
@@ -187,6 +189,7 @@ fn exp_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
     if args.is_empty() { return Err("matematika.exp membutuhkan 1 argumen angka".to_string()); }
     match &args[0] {
         NilaiRpl::Angka(n) => Ok(NilaiRpl::Angka(n.exp())),
+        NilaiRpl::AngkaDual(n, d) => Ok(NilaiRpl::AngkaDual(n.exp(), d * n.exp())),
         _ => Err("matematika.exp hanya menerima angka".to_string()),
     }
 }
@@ -195,6 +198,7 @@ fn log_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
     if args.is_empty() { return Err("matematika.log membutuhkan 1 argumen angka".to_string()); }
     match &args[0] {
         NilaiRpl::Angka(n) => Ok(NilaiRpl::Angka(n.ln())), // ln() = natural log
+        NilaiRpl::AngkaDual(n, d) => Ok(NilaiRpl::AngkaDual(n.ln(), d / n)),
         _ => Err("matematika.log hanya menerima angka".to_string()),
     }
 }
@@ -211,6 +215,7 @@ fn sqrt_impl(args: &[NilaiRpl]) -> Result<NilaiRpl, String> {
     if args.is_empty() { return Err("matematika.sqrt membutuhkan 1 argumen angka".to_string()); }
     match &args[0] {
         NilaiRpl::Angka(n) => Ok(NilaiRpl::Angka(n.sqrt())),
+        NilaiRpl::AngkaDual(n, d) => Ok(NilaiRpl::AngkaDual(n.sqrt(), d / (2.0 * n.sqrt()))),
         _ => Err("matematika.sqrt hanya menerima angka".to_string()),
     }
 }

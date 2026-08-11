@@ -44,11 +44,40 @@ pub fn register(vm: &mut VM) {
     // Also register Matematika for uppercase (often users capitalize Math modules)
     vm.set_global("Matematika".to_string(), Value::Kamus(dict_idx));
 
-    // Add Mathematical Constants to the dictionary directly
+    // Register Matematika.turunan (AutoGrad)
+    let turunan_func = FungsiBawaanVM {
+        nama: "turunan".to_string(),
+        func: std::sync::Arc::new(
+            move |ctx: &mut dyn VmContext, args: Vec<Value>| -> Result<Value, String> {
+                if args.len() != 2 {
+                    return Err("Matematika.turunan membutuhkan 2 argumen: (fungsi, nilai_x)".to_string());
+                }
+                let func = args[0];
+                let x_val = args[1];
+                let x = match x_val {
+                    Value::Angka(n) => n,
+                    _ => return Err("Nilai x harus berupa angka".to_string()),
+                };
+                
+                let dual_x = Value::AngkaDual(x, 1.0);
+                let result = ctx.execute_function(func, vec![dual_x])?;
+                
+                match result {
+                    Value::AngkaDual(_, grad) => Ok(Value::Angka(grad)),
+                    Value::Angka(_) => Ok(Value::Angka(0.0)), // Constant function returns 0.0 derivative
+                    _ => Err("Fungsi tidak mengembalikan nilai numerik yang dapat diturunkan".to_string()),
+                }
+            },
+        ),
+    };
+    let turunan_idx = vm.heap.alloc(HeapData::FungsiBawaan(turunan_func));
+
+    // Add Mathematical Constants and Special VM Functions to the dictionary directly
     if let HeapData::Kamus(ref mut dict) = vm.heap.objects[dict_idx].data {
         dict.insert("PI".to_string(), Value::Angka(std::f64::consts::PI));
         dict.insert("E".to_string(), Value::Angka(std::f64::consts::E));
         dict.insert("Infinity".to_string(), Value::Angka(std::f64::INFINITY));
         dict.insert("NaN".to_string(), Value::Angka(std::f64::NAN));
+        dict.insert("turunan".to_string(), Value::FungsiBawaan(turunan_idx));
     }
 }
