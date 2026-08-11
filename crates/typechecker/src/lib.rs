@@ -284,6 +284,9 @@ impl TypeChecker {
             // Http helpers
             "unduh",
             "kirim_http",
+            // Tensor
+            "Float64Array",
+            "Int32Array",
         ];
 
         let lokasi = errors::Lokasi::new(0, 0);
@@ -376,10 +379,12 @@ impl TypeChecker {
                 kiri,
                 indeks,
                 nilai,
-                lokasi,
+                lokasi: _,
             } => {
                 let tipe_kiri = self.infer_expression(kiri);
-                let _tipe_indeks = self.infer_expression(indeks);
+                for idx in indeks {
+                    let _tipe_indeks = self.infer_expression(idx);
+                }
                 let _tipe_nilai = self.infer_expression(nilai);
 
                 match tipe_kiri {
@@ -392,7 +397,7 @@ impl TypeChecker {
                                 "Tidak dapat menggunakan indeks/property pada tipe {}",
                                 tipe_kiri
                             ),
-                            *lokasi,
+                            *kiri.lokasi(),
                             Some("Pastikan nilai sebelumnya adalah Array atau Kamus".to_string()),
                         );
                     }
@@ -817,10 +822,16 @@ impl TypeChecker {
             Expression::Index {
                 kiri,
                 indeks,
-                lokasi,
+                lokasi: _,
             } => {
                 let tipe_kiri = self.infer_expression(kiri);
-                let _tipe_indeks = self.infer_expression(indeks);
+                for idx in indeks {
+                    let _tipe_indeks = self.infer_expression(idx);
+                }
+
+                if tipe_kiri == RplType::TidakDiketahui {
+                    return RplType::TidakDiketahui;
+                }
 
                 match tipe_kiri {
                     RplType::Array(t) => (*t).clone(),
@@ -830,7 +841,7 @@ impl TypeChecker {
                     _ => {
                         self.error(
                             format!("Tipe '{}' tidak bisa diakses dengan indeks [ ]", tipe_kiri),
-                            *lokasi,
+                            *kiri.lokasi(),
                             Some(
                                 "Hanya daftar, kamus, dan teks yang bisa diakses dengan [ ]"
                                     .to_string(),
@@ -876,11 +887,12 @@ impl TypeChecker {
                 alternatif,
                 lokasi: _,
             } => {
-                self.infer_expression(kondisi);
+                let _tipe_kondisi = self.infer_expression(kondisi);
                 let tipe_konsekuensi = self.infer_expression(konsekuensi);
                 let _tipe_alternatif = self.infer_expression(alternatif);
                 tipe_konsekuensi
             }
+            Expression::Rentang { .. } => RplType::TidakDiketahui,
         }
     }
 }

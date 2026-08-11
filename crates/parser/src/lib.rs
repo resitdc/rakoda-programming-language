@@ -281,7 +281,7 @@ impl Parser {
                         },
                         Expression::Index { kiri, indeks, .. } => Statement::IndexAssignment {
                             kiri: *kiri,
-                            indeks: *indeks,
+                            indeks,
                             nilai,
                             lokasi,
                         },
@@ -837,11 +837,57 @@ impl Parser {
         if token.token == Token::KurungSikuBuka {
             let lokasi = self.current_lokasi();
             self.advance(); // lewati '['
-            let indeks = self.parse_expression(Precedence::Lowest)?;
-            self.expect(Token::KurungSikuTutup);
+            let mut indices = Vec::new();
+            if self.current().token != Token::KurungSikuTutup {
+                loop {
+                    let mut start = None;
+                    if self.current().token != Token::TitikDua {
+                        start = Some(self.parse_expression(Precedence::Lowest)?);
+                    }
+
+                    if self.current().token == Token::TitikDua {
+                        let rentang_lokasi = self.current_lokasi();
+                        self.advance(); // lewati ':'
+                        let mut end = None;
+                        if self.current().token != Token::KurungSikuTutup
+                            && self.current().token != Token::Koma
+                        {
+                            end = Some(self.parse_expression(Precedence::Lowest)?);
+                        }
+                        indices.push(Expression::Rentang {
+                            mulai: start.map(Box::new),
+                            sampai: end.map(Box::new),
+                            lokasi: rentang_lokasi,
+                        });
+                    } else if let Some(expr) = start {
+                        indices.push(expr);
+                    } else {
+                        // Tidak ada start dan tidak ada titik dua, berarti format salah
+                        self.push_error(
+                            "Indeks tidak valid".to_string(),
+                            self.current_lokasi(),
+                            None,
+                        );
+                        break;
+                    }
+
+                    if self.current().token == Token::Koma {
+                        self.advance(); // lewati ','
+                    } else {
+                        break;
+                    }
+                }
+            }
+            if !self.expect(Token::KurungSikuTutup) {
+                return Err(RplError::Sintaks {
+                    pesan: "Kehilangan kurung siku penutup ']'.".to_string(),
+                    lokasi: self.current_lokasi(),
+                    saran: Some("Pastikan ada tanda ']' setelah indeks array".to_string()),
+                });
+            }
             return Ok(Expression::Index {
                 kiri: Box::new(left),
-                indeks: Box::new(indeks),
+                indeks: indices,
                 lokasi,
             });
         }
@@ -907,7 +953,7 @@ impl Parser {
             self.advance();
             return Ok(Expression::Index {
                 kiri: Box::new(left),
-                indeks: Box::new(Expression::String(properti, lokasi)),
+                indeks: vec![Expression::String(properti, lokasi.clone())],
                 lokasi,
             });
         }

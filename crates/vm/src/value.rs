@@ -54,6 +54,9 @@ pub enum Value {
     Modul(usize),
     DbPool(usize),
     QueryState(usize),
+    Rentang(usize),
+    Float64Array(usize),
+    Int32Array(usize),
 }
 
 impl Value {
@@ -86,6 +89,27 @@ impl Value {
             Value::Kosong => "kosong".to_string(),
             Value::DbPool(_) => "<koneksi database>".to_string(),
             Value::QueryState(_) => "<query builder>".to_string(),
+            Value::Rentang(idx) => {
+                let (mulai, sampai) = heap.get_rentang(*idx);
+                let ms = mulai
+                    .as_ref()
+                    .map(|v| v.to_string(heap))
+                    .unwrap_or_else(|| "".to_string());
+                let ss = sampai
+                    .as_ref()
+                    .map(|v| v.to_string(heap))
+                    .unwrap_or_else(|| "".to_string());
+                format!("{}:{}", ms, ss)
+            }
+            Value::Float64Array(idx) => {
+                let t = heap.get_f64_tensor(*idx);
+                let _lock = t.data.read().unwrap();
+                format!("<Float64Array bentuk={:?}>", t.shape)
+            }
+            Value::Int32Array(idx) => {
+                let t = heap.get_i32_tensor(*idx);
+                format!("<Int32Array bentuk={:?}>", t.shape)
+            }
         }
     }
 }
@@ -131,5 +155,22 @@ pub fn deep_copy_value(val: &Value, source: &Heap, dest: &mut Heap) -> Value {
         Value::Modul(idx) => Value::Modul(*idx),
         Value::DbPool(idx) => Value::DbPool(*idx),
         Value::QueryState(idx) => Value::QueryState(*idx),
+        Value::Rentang(idx) => {
+            let (m, s) = source.get_rentang(*idx);
+            let nm = m.as_ref().map(|v| deep_copy_value(v, source, dest));
+            let ns = s.as_ref().map(|v| deep_copy_value(v, source, dest));
+            let new_idx = dest.alloc(crate::heap::HeapData::Rentang(nm, ns));
+            Value::Rentang(new_idx)
+        }
+        Value::Float64Array(idx) => {
+            let t = source.get_f64_tensor(*idx).clone();
+            let new_idx = dest.alloc(crate::heap::HeapData::Float64Array(t));
+            Value::Float64Array(new_idx)
+        }
+        Value::Int32Array(idx) => {
+            let t = source.get_i32_tensor(*idx).clone();
+            let new_idx = dest.alloc(crate::heap::HeapData::Int32Array(t));
+            Value::Int32Array(new_idx)
+        }
     }
 }

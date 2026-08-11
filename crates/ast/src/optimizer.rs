@@ -36,7 +36,7 @@ fn optimize_statement(stmt: Statement) -> Vec<Statement> {
             lokasi,
         } => vec![Statement::IndexAssignment {
             kiri: optimize_expression(kiri),
-            indeks: optimize_expression(indeks),
+            indeks: indeks.into_iter().map(optimize_expression).collect(),
             nilai: optimize_expression(nilai),
             lokasi,
         }],
@@ -313,13 +313,23 @@ fn optimize_expression(expr: Expression) -> Expression {
             lokasi,
         } => {
             let opt_kiri = optimize_expression(*kiri);
-            let opt_indeks = optimize_expression(*indeks);
+            let opt_indeks = indeks.into_iter().map(optimize_expression).collect();
+
             Expression::Index {
                 kiri: Box::new(opt_kiri),
-                indeks: Box::new(opt_indeks),
+                indeks: opt_indeks,
                 lokasi,
             }
         }
+        Expression::Rentang {
+            mulai,
+            sampai,
+            lokasi,
+        } => Expression::Rentang {
+            mulai: mulai.map(|e| Box::new(optimize_expression(*e))),
+            sampai: sampai.map(|e| Box::new(optimize_expression(*e))),
+            lokasi,
+        },
         Expression::FungsiAnonim {
             parameter,
             body,

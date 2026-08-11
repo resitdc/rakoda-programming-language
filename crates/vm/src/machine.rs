@@ -552,13 +552,21 @@ impl VM {
                     });
                 }
                 OpCode::GetIndex => {
-                    let index = self.stack.pop().unwrap();
+                    let count = self.frames.last_mut().unwrap().read_byte(&self.heap) as usize;
+                    let mut indices = Vec::with_capacity(count);
+                    for _ in 0..count {
+                        indices.push(self.stack.pop().unwrap());
+                    }
+                    indices.reverse();
                     let target = self.stack.pop().unwrap();
 
                     match target {
                         Value::Kamus(k_idx) => {
-                            if let Value::String(key_idx) = index {
-                                let key_str = self.heap.get_string(key_idx).clone();
+                            if count != 1 {
+                                return Err(self.err("Kamus hanya menerima 1 indeks"));
+                            }
+                            if let Value::String(key_idx) = &indices[0] {
+                                let key_str = self.heap.get_string(*key_idx).clone();
                                 let val = self
                                     .heap
                                     .get_kamus(k_idx)
@@ -571,8 +579,11 @@ impl VM {
                             }
                         }
                         Value::Array(a_idx) => {
-                            if let Value::Angka(idx) = index {
-                                let i = idx as usize;
+                            if count != 1 {
+                                return Err(self.err("Array hanya menerima 1 indeks (gunakan Float64Array untuk n-dimensi)"));
+                            }
+                            if let Value::Angka(idx) = &indices[0] {
+                                let i = *idx as usize;
                                 let val = self
                                     .heap
                                     .get_array(a_idx)
@@ -584,9 +595,175 @@ impl VM {
                                 return Err(self.err("Indeks array harus berupa angka"));
                             }
                         }
+                        Value::Float64Array(t_idx) => {
+                            let tensor = self.heap.get_f64_tensor(t_idx);
+
+                            // Check if it's a slice or scalar access
+                            let is_slice =
+                                indices.iter().any(|idx| matches!(idx, Value::Rentang(_)));
+
+                            if is_slice {
+                                // Implement slicing (creating a new view)
+                                let mut new_shape = Vec::new();
+                                let mut new_strides = Vec::new();
+                                let mut new_offset = tensor.offset;
+
+                                for (dim, idx) in indices.iter().enumerate() {
+                                    if dim >= tensor.shape.len() {
+                                        break;
+                                    }
+                                    match idx {
+                                        Value::Rentang(r_idx) => {
+                                            let (m, s) = self.heap.get_rentang(*r_idx);
+                                            let start = m
+                                                .as_ref()
+                                                .and_then(|v| {
+                                                    if let Value::Angka(n) = v {
+                                                        Some(*n as usize)
+                                                    } else {
+                                                        None
+                                                    }
+                                                })
+                                                .unwrap_or(0);
+                                            let end = s
+                                                .as_ref()
+                                                .and_then(|v| {
+                                                    if let Value::Angka(n) = v {
+                                                        Some(*n as usize)
+                                                    } else {
+                                                        None
+                                                    }
+                                                })
+                                                .unwrap_or(tensor.shape[dim]);
+
+                                            let len = end.saturating_sub(start);
+                                            new_shape.push(len);
+                                            new_strides.push(tensor.strides[dim]);
+                                            new_offset += start * tensor.strides[dim];
+                                        }
+                                        Value::Angka(n) => {
+                                            let idx = *n as usize;
+                                            new_offset += idx * tensor.strides[dim];
+                                        }
+                                        _ => {
+                                            return Err(self.err(
+                                                "Indeks Tensor harus berupa Angka atau Rentang",
+                                            ));
+                                        }
+                                    }
+                                }
+
+                                let new_tensor = crate::heap::Tensor {
+                                    data: tensor.data.clone(),
+                                    shape: new_shape,
+                                    strides: new_strides,
+                                    offset: new_offset,
+                                };
+                                let new_idx = self.heap.alloc(HeapData::Float64Array(new_tensor));
+                                self.stack.push(Value::Float64Array(new_idx));
+                            } else {
+                                // Scalar access
+                                let mut flat_idx = tensor.offset;
+                                for (dim, idx) in indices.iter().enumerate() {
+                                    if dim >= tensor.shape.len() {
+                                        break;
+                                    }
+                                    if let Value::Angka(n) = idx {
+                                        flat_idx += (*n as usize) * tensor.strides[dim];
+                                    } else {
+                                        return Err(self
+                                            .err("Indeks Tensor harus berupa Angka atau Rentang"));
+                                    }
+                                }
+                                let lock = tensor.data.read().unwrap();
+                                let val = lock.get(flat_idx).cloned().unwrap_or(0.0);
+                                self.stack.push(Value::Angka(val));
+                            }
+                        }
+                        Value::Int32Array(t_idx) => {
+                            let tensor = self.heap.get_i32_tensor(t_idx);
+                            let is_slice =
+                                indices.iter().any(|idx| matches!(idx, Value::Rentang(_)));
+
+                            if is_slice {
+                                let mut new_shape = Vec::new();
+                                let mut new_strides = Vec::new();
+                                let mut new_offset = tensor.offset;
+
+                                for (dim, idx) in indices.iter().enumerate() {
+                                    if dim >= tensor.shape.len() {
+                                        break;
+                                    }
+                                    match idx {
+                                        Value::Rentang(r_idx) => {
+                                            let (m, s) = self.heap.get_rentang(*r_idx);
+                                            let start = m
+                                                .as_ref()
+                                                .and_then(|v| {
+                                                    if let Value::Angka(n) = v {
+                                                        Some(*n as usize)
+                                                    } else {
+                                                        None
+                                                    }
+                                                })
+                                                .unwrap_or(0);
+                                            let end = s
+                                                .as_ref()
+                                                .and_then(|v| {
+                                                    if let Value::Angka(n) = v {
+                                                        Some(*n as usize)
+                                                    } else {
+                                                        None
+                                                    }
+                                                })
+                                                .unwrap_or(tensor.shape[dim]);
+
+                                            let len = end.saturating_sub(start);
+                                            new_shape.push(len);
+                                            new_strides.push(tensor.strides[dim]);
+                                            new_offset += start * tensor.strides[dim];
+                                        }
+                                        Value::Angka(n) => {
+                                            let idx = *n as usize;
+                                            new_offset += idx * tensor.strides[dim];
+                                        }
+                                        _ => {
+                                            return Err(self.err(
+                                                "Indeks Tensor harus berupa Angka atau Rentang",
+                                            ));
+                                        }
+                                    }
+                                }
+
+                                let new_tensor = crate::heap::Tensor {
+                                    data: tensor.data.clone(),
+                                    shape: new_shape,
+                                    strides: new_strides,
+                                    offset: new_offset,
+                                };
+                                let new_idx = self.heap.alloc(HeapData::Int32Array(new_tensor));
+                                self.stack.push(Value::Int32Array(new_idx));
+                            } else {
+                                let mut flat_idx = tensor.offset;
+                                for (dim, idx) in indices.iter().enumerate() {
+                                    if dim >= tensor.shape.len() {
+                                        break;
+                                    }
+                                    if let Value::Angka(n) = idx {
+                                        flat_idx += (*n as usize) * tensor.strides[dim];
+                                    }
+                                }
+                                let lock = tensor.data.read().unwrap();
+                                let val = lock.get(flat_idx).cloned().unwrap_or(0);
+                                self.stack.push(Value::Angka(val as f64));
+                            }
+                        }
                         Value::Modul(m_idx) => {
-                            if let Value::String(key_idx) = index {
-                                let key_str = self.heap.get_string(key_idx).clone();
+                            if count != 1 {
+                                return Err(self.err("Modul hanya menerima 1 indeks"));
+                            }
+                            if let Value::String(key_idx) = &indices[0] {
+                                let key_str = self.heap.get_string(*key_idx).clone();
                                 let val = self
                                     .heap
                                     .get_modul(m_idx)
@@ -602,22 +779,33 @@ impl VM {
                     }
                 }
                 OpCode::SetIndex => {
+                    let count = self.frames.last_mut().unwrap().read_byte(&self.heap) as usize;
                     let nilai = self.stack.pop().unwrap();
-                    let indeks = self.stack.pop().unwrap();
+                    let mut indices = Vec::with_capacity(count);
+                    for _ in 0..count {
+                        indices.push(self.stack.pop().unwrap());
+                    }
+                    indices.reverse();
                     let target = self.stack.pop().unwrap();
 
                     match target {
                         Value::Kamus(k_idx) => {
-                            if let Value::String(key_idx) = indeks {
-                                let key_str = self.heap.get_string(key_idx).clone();
+                            if count != 1 {
+                                return Err(self.err("Kamus hanya menerima 1 indeks"));
+                            }
+                            if let Value::String(key_idx) = &indices[0] {
+                                let key_str = self.heap.get_string(*key_idx).clone();
                                 self.heap.get_kamus_mut(k_idx).insert(key_str, nilai);
                             } else {
                                 return Err(self.err("Indeks kamus harus berupa teks"));
                             }
                         }
                         Value::Array(a_idx) => {
-                            if let Value::Angka(idx) = indeks {
-                                let i = idx as usize;
+                            if count != 1 {
+                                return Err(self.err("Array hanya menerima 1 indeks (gunakan Float64Array untuk n-dimensi)"));
+                            }
+                            if let Value::Angka(idx) = &indices[0] {
+                                let i = *idx as usize;
                                 let arr = self.heap.get_array_mut(a_idx);
                                 if i < arr.len() {
                                     arr[i] = nilai;
@@ -630,6 +818,60 @@ impl VM {
                                 }
                             } else {
                                 return Err(self.err("Indeks array harus berupa angka"));
+                            }
+                        }
+                        Value::Float64Array(t_idx) => {
+                            let tensor = self.heap.get_f64_tensor(t_idx);
+                            let is_slice =
+                                indices.iter().any(|idx| matches!(idx, Value::Rentang(_)));
+
+                            if is_slice {
+                                return Err(
+                                    self.err("Assign ke slice Tensor belum didukung sepenuhnya")
+                                );
+                            } else {
+                                let mut flat_idx = tensor.offset;
+                                for (dim, idx) in indices.iter().enumerate() {
+                                    if dim >= tensor.shape.len() {
+                                        break;
+                                    }
+                                    if let Value::Angka(n) = idx {
+                                        flat_idx += (*n as usize) * tensor.strides[dim];
+                                    }
+                                }
+                                let mut lock = tensor.data.write().unwrap();
+                                if let Value::Angka(v) = nilai {
+                                    if flat_idx < lock.len() {
+                                        lock[flat_idx] = v;
+                                    }
+                                }
+                            }
+                        }
+                        Value::Int32Array(t_idx) => {
+                            let tensor = self.heap.get_i32_tensor(t_idx);
+                            let is_slice =
+                                indices.iter().any(|idx| matches!(idx, Value::Rentang(_)));
+
+                            if is_slice {
+                                return Err(
+                                    self.err("Assign ke slice Tensor belum didukung sepenuhnya")
+                                );
+                            } else {
+                                let mut flat_idx = tensor.offset;
+                                for (dim, idx) in indices.iter().enumerate() {
+                                    if dim >= tensor.shape.len() {
+                                        break;
+                                    }
+                                    if let Value::Angka(n) = idx {
+                                        flat_idx += (*n as usize) * tensor.strides[dim];
+                                    }
+                                }
+                                let mut lock = tensor.data.write().unwrap();
+                                if let Value::Angka(v) = nilai {
+                                    if flat_idx < lock.len() {
+                                        lock[flat_idx] = v as i32;
+                                    }
+                                }
                             }
                         }
                         _ => {
@@ -648,6 +890,21 @@ impl VM {
                     elements.reverse();
                     let new_idx = self.heap.alloc(HeapData::Array(elements));
                     self.stack.push(Value::Array(new_idx));
+                }
+                OpCode::MakeRentang => {
+                    let mask = self.frames.last_mut().unwrap().read_byte(&self.heap);
+                    let end = if (mask & 2) != 0 {
+                        Some(self.stack.pop().unwrap())
+                    } else {
+                        None
+                    };
+                    let start = if (mask & 1) != 0 {
+                        Some(self.stack.pop().unwrap())
+                    } else {
+                        None
+                    };
+                    let new_idx = self.heap.alloc(HeapData::Rentang(start, end));
+                    self.stack.push(Value::Rentang(new_idx));
                 }
                 OpCode::MakeKamus => {
                     let count = self.frames.last_mut().unwrap().read_short(&self.heap) as usize;

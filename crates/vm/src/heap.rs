@@ -7,7 +7,15 @@ use r2d2_postgres::{PostgresConnectionManager, postgres::NoTls};
 use r2d2_sqlite::SqliteConnectionManager;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
+
+#[derive(Clone)]
+pub struct Tensor<T> {
+    pub data: Arc<RwLock<Vec<T>>>,
+    pub shape: Vec<usize>,
+    pub strides: Vec<usize>,
+    pub offset: usize,
+}
 
 pub type SessionMap = Arc<Mutex<HashMap<String, (Option<std::time::Instant>, usize)>>>;
 
@@ -97,6 +105,9 @@ pub enum HeapData {
     Modul(HashMap<String, Value>),
     DbPool(DbPool),
     QueryState(DbQueryState),
+    Rentang(Option<Value>, Option<Value>),
+    Float64Array(Tensor<f64>),
+    Int32Array(Tensor<i32>),
     #[cfg(feature = "enterprise")]
     FfiLibrary(std::sync::Arc<libloading::Library>),
     Free(usize), // Next free index
@@ -281,10 +292,30 @@ impl Heap {
     }
 
     pub fn get_fungsi_bawaan(&self, idx: usize) -> &FungsiBawaanVM {
-        if let HeapData::FungsiBawaan(f) = &self.objects[idx].data {
-            f
-        } else {
-            panic!("Expected FungsiBawaan at heap index {}", idx);
+        match &self.objects[idx].data {
+            HeapData::FungsiBawaan(f) => f,
+            _ => panic!("Expected FungsiBawaan di heap indeks {}", idx),
+        }
+    }
+
+    pub fn get_rentang(&self, idx: usize) -> (Option<Value>, Option<Value>) {
+        match &self.objects[idx].data {
+            HeapData::Rentang(mulai, sampai) => (*mulai, *sampai),
+            _ => panic!("Expected Rentang di heap indeks {}", idx),
+        }
+    }
+
+    pub fn get_f64_tensor(&self, idx: usize) -> &Tensor<f64> {
+        match &self.objects[idx].data {
+            HeapData::Float64Array(t) => t,
+            _ => panic!("Expected Float64Array di heap indeks {}", idx),
+        }
+    }
+
+    pub fn get_i32_tensor(&self, idx: usize) -> &Tensor<i32> {
+        match &self.objects[idx].data {
+            HeapData::Int32Array(t) => t,
+            _ => panic!("Expected Int32Array di heap indeks {}", idx),
         }
     }
 

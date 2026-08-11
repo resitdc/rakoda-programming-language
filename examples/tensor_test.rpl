@@ -1,0 +1,20 @@
+buat matriks = Float64Array([3, 3])
+
+matriks[0, 0] = 1
+matriks[0, 1] = 2
+matriks[0, 2] = 3
+
+matriks[1, 0] = 4
+matriks[1, 1] = 5
+matriks[1, 2] = 6
+
+matriks[2, 0] = 7
+matriks[2, 1] = 8
+matriks[2, 2] = 9
+
+tampilkan("Nilai di baris 1, kolom 2: " + matriks[1, 2])
+
+tampilkan("Slice baris ke-0 (semua kolom): " + matriks[0, 0:3])
+tampilkan("Slice semua baris, kolom ke-1: " + matriks[0:3, 1])
+
+tampilkan("Berhasil menyelesaikan pengujian Tensor/Matriks!")

@@ -11,9 +11,9 @@ pub mod dev_dashboard;
 #[cfg(feature = "enterprise")]
 pub mod dokumen;
 #[cfg(feature = "enterprise")]
-pub mod ffi;
-#[cfg(feature = "enterprise")]
 pub mod env;
+#[cfg(feature = "enterprise")]
+pub mod ffi;
 #[cfg(feature = "enterprise")]
 pub mod file;
 #[cfg(feature = "enterprise")]
@@ -45,6 +45,7 @@ pub mod ktp;
 #[cfg(feature = "enterprise")]
 pub mod ocr;
 pub mod regex;
+pub mod tensor;
 
 use crate::machine::VM;
 
@@ -54,6 +55,7 @@ pub fn register_all(vm: &mut VM) {
     matematika::register(vm);
     list::register(vm);
     json::register(vm);
+    tensor::register(vm);
     #[cfg(feature = "enterprise")]
     http::register(vm);
     #[cfg(feature = "enterprise")]
