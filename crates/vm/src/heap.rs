@@ -393,6 +393,12 @@ impl Heap {
                         if let Value::QueryState(i) = val {
                             c.push(*i);
                         }
+                        if let Value::Float64Array(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Int32Array(i) = val {
+                            c.push(*i);
+                        }
                     }
                     c
                 }
@@ -417,6 +423,12 @@ impl Heap {
                         if let Value::Modul(i) = val {
                             c.push(*i);
                         }
+                        if let Value::Float64Array(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Int32Array(i) = val {
+                            c.push(*i);
+                        }
                     }
                     c
                 }
@@ -439,6 +451,12 @@ impl Heap {
                             c.push(*i);
                         }
                         if let Value::Modul(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Float64Array(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Int32Array(i) = val {
                             c.push(*i);
                         }
                     }
@@ -469,6 +487,12 @@ impl Heap {
                             c.push(*i);
                         }
                         if let Value::QueryState(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Float64Array(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Int32Array(i) = val {
                             c.push(*i);
                         }
                     }

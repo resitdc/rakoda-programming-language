@@ -18,6 +18,7 @@ pub enum BackwardOp {
     Cos,
     Tan,
     Pow,
+    MseLoss,
     NoOp, // Untuk leaf nodes
 }
 

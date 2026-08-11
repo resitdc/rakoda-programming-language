@@ -438,6 +438,66 @@ pub fn register(vm: &mut VM) {
         }
     }
 
+    // Matriks.mse_loss(pred, target)
+    fn matriks_mse_loss_wrapper(ctx: &mut dyn VmContext, args: Vec<Value>) -> Result<Value, String> {
+        if args.len() != 2 {
+            return Err("Matriks.mse_loss membutuhkan 2 argumen: pred dan target".to_string());
+        }
+        let heap = ctx.get_heap_mut();
+        
+        let (pred_idx, target_idx) = match (&args[0], &args[1]) {
+            (Value::Float64Array(a), Value::Float64Array(b)) => (*a, *b),
+            _ => return Err("Kedua argumen mse_loss harus berupa Float64Array".to_string()),
+        };
+
+        let pred = heap.get_f64_tensor(pred_idx).clone();
+        let target = heap.get_f64_tensor(target_idx).clone();
+        
+        if pred.shape != target.shape {
+            return Err(format!("Shape tensor tidak cocok: {:?} dan {:?}", pred.shape, target.shape));
+        }
+        
+        let p_data = pred.data.read().unwrap();
+        let t_data = target.data.read().unwrap();
+        let n = p_data.len() as f64;
+        
+        let mut sum_sq = 0.0;
+        for i in 0..p_data.len() {
+            let diff = p_data[i] - t_data[i];
+            sum_sq += diff * diff;
+        }
+        let mse = sum_sq / n;
+        
+        let mut new_tensor = crate::heap::Tensor {
+            data: std::sync::Arc::new(std::sync::RwLock::new(vec![mse])),
+            shape: vec![1],
+            strides: vec![1],
+            offset: 0,
+            requires_grad: false,
+            grad: None,
+            tape_node: None,
+        };
+        
+        if pred.requires_grad || target.requires_grad {
+            new_tensor.requires_grad = true;
+            let node = crate::autograd::TapeNode {
+                op: crate::autograd::BackwardOp::MseLoss,
+                parents: vec![pred_idx, target_idx],
+                self_tensor_idx: 0,
+            };
+            let tape_node_id = heap.tape.push(node);
+            new_tensor.tape_node = Some(tape_node_id);
+        }
+        
+        let new_idx = heap.alloc(HeapData::Float64Array(new_tensor));
+        if heap.get_f64_tensor(new_idx).requires_grad {
+            let tape_node_id = heap.get_f64_tensor(new_idx).tape_node.unwrap();
+            heap.tape.nodes[tape_node_id].self_tensor_idx = new_idx;
+        }
+        
+        Ok(Value::Float64Array(new_idx))
+    }
+
     fn matriks_grad_wrapper(ctx: &mut dyn VmContext, args: Vec<Value>) -> Result<Value, String> {
         if args.len() != 1 {
             return Err("Matriks.grad membutuhkan 1 argumen".to_string());
@@ -469,9 +529,19 @@ pub fn register(vm: &mut VM) {
     }
 
     fn matriks_backward_wrapper(ctx: &mut dyn VmContext, args: Vec<Value>) -> Result<Value, String> {
-        if args.len() != 1 {
-            return Err("Matriks.backward membutuhkan 1 argumen".to_string());
+        if args.len() < 1 || args.len() > 2 {
+            return Err("Matriks.backward membutuhkan 1 argumen utama, opsional argumen ke-2 retain_graph".to_string());
         }
+        
+        let mut retain_graph = false;
+        if args.len() == 2 {
+            if let Value::Boolean(b) = args[1] {
+                retain_graph = b;
+            } else {
+                return Err("Argumen ke-2 retain_graph harus berupa boolean".to_string());
+            }
+        }
+
         if let Value::Float64Array(idx) = args[0] {
             let heap = ctx.get_heap_mut();
             
@@ -681,10 +751,39 @@ pub fn register(vm: &mut VM) {
                                 }
                             }
                         }
+                        crate::autograd::BackwardOp::MseLoss => {
+                            if node.parents.len() == 2 {
+                                let p_idx = node.parents[0];
+                                let t_idx = node.parents[1];
+                                let (p_data, t_data) = {
+                                    let p_p = heap.get_f64_tensor_opt(p_idx).unwrap();
+                                    let p_t = heap.get_f64_tensor_opt(t_idx).unwrap();
+                                    (p_p.data.read().unwrap().clone(), p_t.data.read().unwrap().clone())
+                                };
+                                let n = p_data.len() as f64;
+                                
+                                if let Some(p_p) = heap.get_f64_tensor_opt_mut(p_idx) {
+                                    if p_p.grad.is_none() { p_p.grad = Some(std::sync::Arc::new(std::sync::RwLock::new(vec![0.0; p_data.len()]))); }
+                                    let mut p_grad = p_p.grad.as_ref().unwrap().write().unwrap();
+                                    // s_grad is 1x1 since MseLoss is scalar, so s_grad[0]
+                                    for i in 0..p_grad.len() { p_grad[i] += s_grad[0] * (2.0 / n) * (p_data[i] - t_data[i]); }
+                                }
+                                if let Some(p_t) = heap.get_f64_tensor_opt_mut(t_idx) {
+                                    if p_t.grad.is_none() { p_t.grad = Some(std::sync::Arc::new(std::sync::RwLock::new(vec![0.0; t_data.len()]))); }
+                                    let mut p_grad = p_t.grad.as_ref().unwrap().write().unwrap();
+                                    for i in 0..p_grad.len() { p_grad[i] -= s_grad[0] * (2.0 / n) * (p_data[i] - t_data[i]); }
+                                }
+                            }
+                        }
                         _ => {}
                     }
                 }
             }
+            
+            if !retain_graph {
+                heap.tape.nodes.clear();
+            }
+            
             return Ok(Value::Kosong);
         }
         Err("Argumen harus berupa Float64Array".to_string())
@@ -703,6 +802,7 @@ pub fn register(vm: &mut VM) {
         ("exp", matriks_exp_wrapper),
         ("log", matriks_log_wrapper),
         ("relu", matriks_relu_wrapper),
+        ("mse_loss", matriks_mse_loss_wrapper),
     ];
 
     for (name, func) in funcs {
