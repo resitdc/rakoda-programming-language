@@ -1,0 +1,39 @@
+buat matriks1 = Float64Array([2, 2])
+matriks1[0,0] = 1
+matriks1[0,1] = 2
+matriks1[1,0] = 3
+matriks1[1,1] = 4
+
+buat skalar = 5
+buat matriks_kali = matriks1 * skalar
+tampilkan("Perkalian Skalar:")
+tampilkan("Nilai [0,0]: " + matriks_kali[0,0])
+tampilkan("Nilai [1,1]: " + matriks_kali[1,0])
+tampilkan("")
+
+buat array_biasa = [10, 20, 30]
+buat array_tambah = array_biasa + 5
+tampilkan("Array Skalar Tambah:")
+tampilkan(array_tambah)
+tampilkan("")
+
+tampilkan("String Multiplikasi:")
+buat teks = "A" * 3
+tampilkan(teks)
+tampilkan("")
+
+// numpy style broadcast
+// shape(2,2) vs shape(1,2)
+buat matriks2 = Float64Array([1, 2])
+matriks2[0,0] = 100
+matriks2[0,1] = 200
+
+buat matriks_broadcast = matriks1 + matriks2
+tampilkan("Broadcasting Tensor 2x2 + 1x2:")
+tampilkan("Nilai [0,0]: " + matriks_broadcast[0,0]) // 1 + 100 = 101
+tampilkan("Nilai [0,1]: " + matriks_broadcast[0,1]) // 2 + 200 = 202
+tampilkan("Nilai [1,0]: " + matriks_broadcast[1,0]) // 3 + 100 = 103
+tampilkan("Nilai [1,1]: " + matriks_broadcast[1,1]) // 4 + 200 = 204
+
+
+tampilkan [10, 20, 30] * [2, 3, 4]

@@ -5,6 +5,7 @@ pub mod heap;
 pub mod machine;
 pub mod opcodes;
 pub mod stdlib;
+pub mod tensor_ops;
 pub mod value;
 
 pub use compiler::Compiler;
