@@ -83,15 +83,30 @@ impl Lexer {
             let token = match c {
                 '+' => {
                     self.advance();
-                    Token::Tambah
+                    if self.current_char() == Some('=') {
+                        self.advance();
+                        Token::TambahAssign
+                    } else {
+                        Token::Tambah
+                    }
                 }
                 '-' => {
                     self.advance();
-                    Token::Kurang
+                    if self.current_char() == Some('=') {
+                        self.advance();
+                        Token::KurangAssign
+                    } else {
+                        Token::Kurang
+                    }
                 }
                 '*' => {
                     self.advance();
-                    Token::Kali
+                    if self.current_char() == Some('=') {
+                        self.advance();
+                        Token::KaliAssign
+                    } else {
+                        Token::Kali
+                    }
                 }
                 '^' => {
                     self.advance();
@@ -108,6 +123,10 @@ impl Lexer {
                             self.advance();
                         }
                         continue;
+                    } else if self.peek_char() == Some('=') {
+                        self.advance();
+                        self.advance();
+                        Token::BagiAssign
                     } else {
                         self.advance();
                         Token::Bagi
@@ -115,7 +134,12 @@ impl Lexer {
                 }
                 '%' => {
                     self.advance();
-                    Token::Mod
+                    if self.current_char() == Some('=') {
+                        self.advance();
+                        Token::ModAssign
+                    } else {
+                        Token::Mod
+                    }
                 }
                 '?' => {
                     if self.peek_char() == Some('?') {

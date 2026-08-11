@@ -49,6 +49,11 @@ pub enum Token {
     Pangkat, // ^
 
     Assign,          // =
+    TambahAssign,    // +=
+    KurangAssign,    // -=
+    KaliAssign,      // *=
+    BagiAssign,      // /=
+    ModAssign,       // %=
     TitikKoma,       // ;
     Koma,            // ,
     TitikDua,        // :
@@ -98,6 +103,11 @@ impl Token {
             Token::String(s) => format!("teks \"{}\"", s),
 
             Token::Assign => "tanda sama dengan '='".to_string(),
+            Token::TambahAssign => "tanda tambah sama dengan '+='".to_string(),
+            Token::KurangAssign => "tanda kurang sama dengan '-='".to_string(),
+            Token::KaliAssign => "tanda kali sama dengan '*='".to_string(),
+            Token::BagiAssign => "tanda bagi sama dengan '/='".to_string(),
+            Token::ModAssign => "tanda sisa bagi sama dengan '%='".to_string(),
             Token::SamaDengan => "tanda cek kesamaan".to_string(),
             Token::TidakSamaDengan => "tanda tidak sama dengan".to_string(),
             Token::KurangDari => "tanda kurang dari".to_string(),
