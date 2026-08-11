@@ -12,6 +12,12 @@ pub enum BackwardOp {
     Neg,
     Relu,
     Sigmoid,
+    Exp,
+    Log,
+    Sin,
+    Cos,
+    Tan,
+    Pow,
     NoOp, // Untuk leaf nodes
 }
 
