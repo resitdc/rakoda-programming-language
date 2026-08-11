@@ -108,6 +108,7 @@ pub enum HeapData {
     Rentang(Option<Value>, Option<Value>),
     Float64Array(Tensor<f64>),
     Int32Array(Tensor<i32>),
+    RandomGenerator(std::cell::RefCell<rand_mt::Mt64>),
     #[cfg(feature = "enterprise")]
     FfiLibrary(std::sync::Arc<libloading::Library>),
     Free(usize), // Next free index
@@ -316,6 +317,13 @@ impl Heap {
         match &self.objects[idx].data {
             HeapData::Int32Array(t) => t,
             _ => panic!("Expected Int32Array di heap indeks {}", idx),
+        }
+    }
+
+    pub fn get_random_generator(&self, idx: usize) -> &std::cell::RefCell<rand_mt::Mt64> {
+        match &self.objects[idx].data {
+            HeapData::RandomGenerator(rng) => rng,
+            _ => panic!("Expected RandomGenerator di heap indeks {}", idx),
         }
     }
 

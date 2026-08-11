@@ -41,6 +41,8 @@ pub enum RplType {
     },
     /// Tipe tidak diketahui (inference gagal karena error sebelumnya)
     TidakDiketahui,
+    /// Tipe objek generator acak
+    RandomGenerator,
 }
 
 impl RplType {
@@ -56,6 +58,7 @@ impl RplType {
             RplType::Kamus(_) => "kamus",
             RplType::Fungsi { .. } => "fungsi",
             RplType::TidakDiketahui => "?",
+            RplType::RandomGenerator => "random generator",
         }
     }
 
@@ -68,6 +71,7 @@ impl RplType {
             (RplType::Kompleks, RplType::Kompleks) => true,
             (RplType::String, RplType::String) => true,
             (RplType::Boolean, RplType::Boolean) => true,
+            (RplType::RandomGenerator, RplType::RandomGenerator) => true,
             (RplType::Array(a), RplType::Array(b)) => a.kompatibel_dengan(b),
             (
                 RplType::Fungsi {
@@ -295,6 +299,7 @@ impl TypeChecker {
             "Float64Array",
             "Int32Array",
             "Matriks",
+            "Statistik",
         ];
 
         let lokasi = errors::Lokasi::new(0, 0);
