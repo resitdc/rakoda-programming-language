@@ -54,6 +54,7 @@ pub enum Token {
     KaliAssign,      // *=
     BagiAssign,      // /=
     ModAssign,       // %=
+    Panah,           // =>
     TitikKoma,       // ;
     Koma,            // ,
     TitikDua,        // :
@@ -105,9 +106,9 @@ impl Token {
             Token::Assign => "tanda sama dengan '='".to_string(),
             Token::TambahAssign => "tanda tambah sama dengan '+='".to_string(),
             Token::KurangAssign => "tanda kurang sama dengan '-='".to_string(),
-            Token::KaliAssign => "tanda kali sama dengan '*='".to_string(),
-            Token::BagiAssign => "tanda bagi sama dengan '/='".to_string(),
-            Token::ModAssign => "tanda sisa bagi sama dengan '%='".to_string(),
+            Token::KaliAssign => "tanda '*='".to_string(),
+            Token::BagiAssign => "tanda '/='".to_string(),
+            Token::ModAssign => "tanda '%='".to_string(),
             Token::SamaDengan => "tanda cek kesamaan".to_string(),
             Token::TidakSamaDengan => "tanda tidak sama dengan".to_string(),
             Token::KurangDari => "tanda kurang dari".to_string(),
@@ -117,8 +118,12 @@ impl Token {
             Token::Kali => "tanda kali '*'".to_string(),
             Token::Bagi => "tanda bagi '/'".to_string(),
             Token::Pangkat => "tanda pangkat '^'".to_string(),
-
-            Token::KurungBuka => "kurung buka '('".to_string(),
+            Token::Panah => "tanda '=>'".to_string(),
+            Token::TitikKoma => "tanda ';' (titik koma)".to_string(),
+            Token::Koma => "tanda ',' (koma)".to_string(),
+            Token::TitikDua => "tanda ':' (titik dua)".to_string(),
+            Token::Titik => "tanda '.' (titik)".to_string(),
+            Token::KurungBuka => "tanda '(' (kurung buka)".to_string(),
             Token::KurungTutup => "kurung tutup ')'".to_string(),
             Token::KurawalBuka => "kurawal buka '{' atau 'maka'".to_string(),
             Token::KurawalTutup => "kurawal tutup '}' atau 'selesai'".to_string(),
@@ -127,9 +132,6 @@ impl Token {
             Token::BitwiseAtau => "bitwise atau '|'".to_string(),
             Token::KurungSikuBuka => "'['".to_string(),
             Token::KurungSikuTutup => "']'".to_string(),
-            Token::TitikKoma => "titik koma ';'".to_string(),
-            Token::Koma => "koma ','".to_string(),
-            Token::Titik => "titik '.'".to_string(),
 
             Token::EOF => "akhir file".to_string(),
             Token::Coba => "'coba'".to_string(),
