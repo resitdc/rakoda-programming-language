@@ -11,6 +11,7 @@ use stdlib::jenis::NilaiRpl;
 pub fn nilai_ke_value(nilai: &NilaiRpl, heap: &mut Heap) -> Value {
     match nilai {
         NilaiRpl::Angka(n) => Value::Angka(*n),
+        NilaiRpl::AngkaDual(r, g) => Value::AngkaDual(*r, *g),
         NilaiRpl::Boolean(b) => Value::Boolean(*b),
         NilaiRpl::Kosong => Value::Kosong,
         NilaiRpl::Teks(s) => {
@@ -37,6 +38,7 @@ pub fn nilai_ke_value(nilai: &NilaiRpl, heap: &mut Heap) -> Value {
 pub fn value_ke_nilai(val: &Value, heap: &Heap) -> NilaiRpl {
     match val {
         Value::Angka(n) => NilaiRpl::Angka(*n),
+        Value::AngkaDual(r, g) => NilaiRpl::AngkaDual(*r, *g),
         Value::Boolean(b) => NilaiRpl::Boolean(*b),
         Value::Kosong => NilaiRpl::Kosong,
         Value::String(idx) => NilaiRpl::Teks(heap.get_string(*idx).clone()),

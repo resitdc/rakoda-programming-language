@@ -2,6 +2,7 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum NilaiRpl {
     Angka(f64),
+    AngkaDual(f64, f64),
     Teks(String),
     Boolean(bool),
     Kosong,
@@ -13,6 +14,7 @@ impl NilaiRpl {
     pub fn nama_tipe(&self) -> &str {
         match self {
             NilaiRpl::Angka(_) => "angka",
+            NilaiRpl::AngkaDual(_, _) => "angka dual",
             NilaiRpl::Teks(_) => "teks",
             NilaiRpl::Boolean(_) => "boolean",
             NilaiRpl::Kosong => "kosong",
