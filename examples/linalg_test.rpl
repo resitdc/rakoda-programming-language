@@ -1,0 +1,79 @@
+impor "matematika.rpl"
+
+tampilkan("=== Uji Coba Dekomposisi Matriks (Linalg) ===")
+
+// Matriks A berukuran 3x3
+buat A = Float64Array([3, 3])
+A[0, 0] = 1
+A[0, 1] = 2
+A[0, 2] = 3
+A[1, 0] = 0
+A[1, 1] = 1
+A[1, 2] = 4
+A[2, 0] = 5
+A[2, 1] = 6
+A[2, 2] = 0
+
+tampilkan("Matriks A:")
+tampilkan(A)
+
+tampilkan("\n1. Invers Matriks")
+buat A_inv = Linalg.invers(A)
+tampilkan(A_inv)
+
+tampilkan("\n2. Determinan")
+buat det = Linalg.determinan(A)
+tampilkan(det)
+
+tampilkan("\n3. Dekomposisi LU (L, U)")
+buat hasil_lu = Linalg.lu(A)
+tampilkan("Matriks L:")
+tampilkan(hasil_lu[0])
+tampilkan("Matriks U:")
+tampilkan(hasil_lu[1])
+
+tampilkan("\n4. Dekomposisi QR (Q, R)")
+buat hasil_qr = Linalg.qr(A)
+tampilkan("Matriks Q:")
+tampilkan(hasil_qr[0])
+tampilkan("Matriks R:")
+tampilkan(hasil_qr[1])
+
+tampilkan("\n5. Dekomposisi SVD (U, Sigma, Vt)")
+buat hasil_svd = Linalg.svd(A)
+tampilkan("Matriks U:")
+tampilkan(hasil_svd[0])
+tampilkan("Matriks Sigma:")
+tampilkan(hasil_svd[1])
+tampilkan("Matriks V Transpose:")
+tampilkan(hasil_svd[2])
+
+tampilkan("\n6. Menyelesaikan Sistem Persamaan Ax = b")
+// Kita punya Ax = b, kita mau cari x.
+// b berukuran 3x1
+buat b = Float64Array([3, 1])
+b[0, 0] = 1
+b[1, 0] = 2
+b[2, 0] = 3
+
+buat x = Linalg.solve(A, b)
+tampilkan("Solusi x:")
+tampilkan(x)
+
+tampilkan("\n7. Dekomposisi Cholesky (Hanya untuk matriks positif definit)")
+// Bikin matriks simetris positif definit secara manual
+buat B = Float64Array([2, 2])
+B[0, 0] = 4
+B[0, 1] = 12
+B[1, 0] = 12
+B[1, 1] = 37
+tampilkan("Matriks B (Positif Definit):")
+tampilkan(B)
+
+buat L_chol = Linalg.cholesky(B)
+tampilkan("Matriks L (Cholesky):")
+tampilkan(L_chol)
+tampilkan("Membuktikan L * L^T = B")
+tampilkan(Matriks.dot(L_chol, Matriks.transpose(L_chol)))
+
+tampilkan("=== Selesai ===")

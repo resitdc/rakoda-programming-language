@@ -311,6 +311,9 @@ impl TypeChecker {
             "Statistik",
             "Matematika",
             "matematika",
+            "Tensor",
+            "Linalg",
+            "AljabarLinear",
         ];
 
         let lokasi = errors::Lokasi::new(0, 0);
