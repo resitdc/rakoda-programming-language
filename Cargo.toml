@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "crates/*", "scratch_pdf",
+    "crates/*", "ndarray_test", "scratch_pdf",
 ]
 resolver = "2"
 

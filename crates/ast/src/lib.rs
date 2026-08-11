@@ -58,7 +58,7 @@ pub enum Statement {
     },
     IndexAssignment {
         kiri: Expression,
-        indeks: Expression,
+        indeks: Vec<Expression>,
         nilai: Expression,
         lokasi: Lokasi,
     },
@@ -93,6 +93,12 @@ pub enum Expression {
     Boolean(bool, Lokasi),
     Kosong(Lokasi),
 
+    Rentang {
+        mulai: Option<Box<Expression>>,
+        sampai: Option<Box<Expression>>,
+        lokasi: Lokasi,
+    },
+
     Impor(String, Lokasi),
 
     Prefix {
@@ -121,7 +127,7 @@ pub enum Expression {
     },
     Index {
         kiri: Box<Expression>,
-        indeks: Box<Expression>,
+        indeks: Vec<Expression>,
         lokasi: Lokasi,
     },
     FungsiAnonim {
@@ -211,6 +217,7 @@ impl Expression {
             Expression::Index { lokasi, .. } => lokasi,
             Expression::FungsiAnonim { lokasi, .. } => lokasi,
             Expression::Ternary { lokasi, .. } => lokasi,
+            Expression::Rentang { lokasi, .. } => lokasi,
         }
     }
 }

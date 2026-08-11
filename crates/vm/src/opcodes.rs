@@ -23,10 +23,10 @@ pub enum OpCode {
     JumpIfFalse, // operand: 2 bytes (jump offset)
     Jump,        // operand: 2 bytes (jump offset)
     Call,        // operand: 1 byte (arg count)
-    GetIndex,
-    MakeArray,  // operand: 2 bytes (element count)
-    MakeKamus,  // operand: 2 bytes (pair count)
-    SetupCatch, // operand: 2 bytes (jump offset)
+    GetIndex,    // operand: 1 byte (index count)
+    MakeArray,   // operand: 2 bytes (element count)
+    MakeKamus,   // operand: 2 bytes (pair count)
+    SetupCatch,  // operand: 2 bytes (jump offset)
     PopCatch,
     Throw,
     Negate,
@@ -34,13 +34,14 @@ pub enum OpCode {
     Pop,
     IterInit, // No operand. Pops collection, pushes Iterator(idx).
     IterNext, // operand: 2 bytes (jump offset if exhausted). Pops nothing. Modifies Iterator at top of stack. Pushes key, then value, or jumps.
-    SetIndex,
+    SetIndex, // operand: 1 byte (index count)
     Power,
     UlangiInit,
     UlangiNext, // operand: 2 bytes (jump offset if exhausted)
     BitwiseOr,
     JumpIfTrue,      // operand: 2 bytes
     JumpIfNotKosong, // operand: 2 bytes
+    MakeRentang,     // operand: 1 byte (bitmask: 1 = has_start, 2 = has_end)
 }
 
 impl OpCode {
@@ -86,6 +87,7 @@ impl OpCode {
             37 => Some(OpCode::BitwiseOr),
             38 => Some(OpCode::JumpIfTrue),
             39 => Some(OpCode::JumpIfNotKosong),
+            40 => Some(OpCode::MakeRentang),
             _ => None,
         }
     }

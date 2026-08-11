@@ -139,9 +139,13 @@ impl<'a> Compiler<'a> {
                 lokasi,
             } => {
                 self.compile_expression(kiri)?;
-                self.compile_expression(indeks)?;
+                let count = indeks.len();
+                for idx in indeks {
+                    self.compile_expression(idx)?;
+                }
                 self.compile_expression(nilai)?;
                 self.chunk.write_opcode(OpCode::SetIndex, lokasi);
+                self.chunk.write(count as u8, lokasi);
             }
             Statement::Tampilkan { nilai, lokasi } => {
                 for expr in nilai {
@@ -374,6 +378,26 @@ impl<'a> Compiler<'a> {
         Ok(())
     }
 
+    fn compile_rentang(
+        &mut self,
+        mulai: &Option<Box<Expression>>,
+        sampai: &Option<Box<Expression>>,
+        lokasi: &Lokasi,
+    ) -> Result<(), String> {
+        let mut mask = 0u8;
+        if let Some(m) = mulai {
+            self.compile_expression(*m.clone())?;
+            mask |= 1;
+        }
+        if let Some(s) = sampai {
+            self.compile_expression(*s.clone())?;
+            mask |= 2;
+        }
+        self.chunk.write_opcode(OpCode::MakeRentang, *lokasi);
+        self.chunk.write(mask, *lokasi);
+        Ok(())
+    }
+
     fn compile_expression(&mut self, expr: Expression) -> Result<(), String> {
         match expr {
             Expression::Angka(val, lokasi) => {
@@ -494,8 +518,20 @@ impl<'a> Compiler<'a> {
                 lokasi,
             } => {
                 self.compile_expression(*kiri)?;
-                self.compile_expression(*indeks)?;
+                let count = indeks.len();
+                for idx in indeks {
+                    self.compile_expression(idx)?;
+                }
                 self.chunk.write_opcode(OpCode::GetIndex, lokasi);
+                self.chunk.write(count as u8, lokasi);
+            }
+            Expression::Rentang {
+                mulai,
+                sampai,
+                lokasi,
+            } => {
+                // Rentang object on heap
+                self.compile_rentang(&mulai, &sampai, &lokasi)?;
             }
             Expression::Array { elemen, lokasi } => {
                 let count = elemen.len();
