@@ -6,6 +6,9 @@ on:
       - 'studio-v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-macos:
     name: 🍎 Build macOS DMG
@@ -48,14 +51,10 @@ jobs:
           echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
           cp build/macos/Build/Products/Release/rpl-studio-macos.dmg build/macos/Build/Products/Release/RPL-Studio-v${APP_VERSION}-mac.dmg
 
-      - name: 📤 Upload DMG to Google Drive
-        env:
-          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
-          FOLDER_ID: ${{ secrets.MAC_GDRIVE_FOLDER_ID }}
-          FILE_PATH: apps/studio/build/macos/Build/Products/Release/RPL-Studio-v${{ env.APP_VERSION }}-mac.dmg
-        run: |
-          pip3 install --break-system-packages google-api-python-client google-auth-httplib2 google-auth-oauthlib
-          python3 .github/scripts/upload_to_gdrive.py
+      - name: 📤 Upload DMG to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: apps/studio/build/macos/Build/Products/Release/RPL-Studio-v${{ env.APP_VERSION }}-mac.dmg
 
       - name: 📤 Upload DMG
         uses: actions/upload-artifact@v4

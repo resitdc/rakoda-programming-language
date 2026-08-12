@@ -39,11 +39,21 @@ pub fn register(vm: &mut VM) {
             current_stride *= shape[i];
         }
 
+        let mut requires_grad = false;
+        if args.len() > 1 {
+            if let Value::Boolean(true) = args[1] {
+                requires_grad = true;
+            }
+        }
+
         let tensor = crate::heap::Tensor {
             data,
             shape,
             strides,
             offset: 0,
+            requires_grad,
+            grad: None,
+            tape_node: None,
         };
 
         let new_idx = heap.alloc(HeapData::Float64Array(tensor));
@@ -100,6 +110,9 @@ pub fn register(vm: &mut VM) {
             shape,
             strides,
             offset: 0,
+            requires_grad: false,
+            grad: None,
+            tape_node: None,
         };
 
         let new_idx = heap.alloc(HeapData::Int32Array(tensor));
@@ -157,18 +170,95 @@ pub fn register(vm: &mut VM) {
             let mut out_strides = vec![1; 2];
             out_strides[0] = new_shape[1];
             
-            let res_tensor = crate::heap::Tensor {
+            let mut res_tensor = crate::heap::Tensor {
                 data: Arc::new(RwLock::new(out_data)),
                 shape: new_shape,
                 strides: out_strides,
                 offset: 0,
+                requires_grad: false,
+                grad: None,
+                tape_node: None,
             };
+
+            if a_tensor.requires_grad || b_tensor.requires_grad {
+                res_tensor.requires_grad = true;
+                let node = crate::autograd::TapeNode {
+                    op: crate::autograd::BackwardOp::Matmul,
+                    parents: vec![*a_idx, *b_idx],
+                    self_tensor_idx: 0,
+                };
+                let tape_node_id = heap.tape.push(node);
+                res_tensor.tape_node = Some(tape_node_id);
+            }
+
             let new_idx = heap.alloc(HeapData::Float64Array(res_tensor));
+            
+            if heap.get_f64_tensor(new_idx).requires_grad {
+                let tape_node_id = heap.get_f64_tensor(new_idx).tape_node.unwrap();
+                heap.tape.nodes[tape_node_id].self_tensor_idx = new_idx;
+            }
             Ok(Value::Float64Array(new_idx))
         } else {
             Err("Matriks.dot saat ini hanya mendukung Float64Array".to_string())
         }
     }
+
+    macro_rules! define_unary_math_op {
+        ($func_name:ident, $math_func:expr, $bwd_op:path, $op_name:expr) => {
+            fn $func_name(ctx: &mut dyn VmContext, args: Vec<Value>) -> Result<Value, String> {
+                if args.len() != 1 {
+                    return Err(format!("Matriks.{} butuh 1 argumen", $op_name));
+                }
+                let heap = ctx.get_heap_mut();
+                if let Value::Float64Array(idx) = &args[0] {
+                    let tensor = heap.get_f64_tensor(*idx).clone();
+                    
+                    let data = tensor.data.read().unwrap();
+                    let mut new_data = Vec::with_capacity(data.len());
+                    for &val in data.iter() {
+                        new_data.push($math_func(val));
+                    }
+                    
+                    let mut new_tensor = crate::heap::Tensor {
+                        data: std::sync::Arc::new(std::sync::RwLock::new(new_data)),
+                        shape: tensor.shape.clone(),
+                        strides: tensor.strides.clone(),
+                        offset: tensor.offset,
+                        requires_grad: false,
+                        grad: None,
+                        tape_node: None,
+                    };
+                    
+                    if tensor.requires_grad {
+                        new_tensor.requires_grad = true;
+                        let node = crate::autograd::TapeNode {
+                            op: $bwd_op,
+                            parents: vec![*idx],
+                            self_tensor_idx: 0,
+                        };
+                        let tape_node_id = heap.tape.push(node);
+                        new_tensor.tape_node = Some(tape_node_id);
+                    }
+                    
+                    let new_idx = heap.alloc(HeapData::Float64Array(new_tensor));
+                    if heap.get_f64_tensor(new_idx).requires_grad {
+                        let tape_node_id = heap.get_f64_tensor(new_idx).tape_node.unwrap();
+                        heap.tape.nodes[tape_node_id].self_tensor_idx = new_idx;
+                    }
+                    
+                    Ok(Value::Float64Array(new_idx))
+                } else {
+                    Err(format!("Matriks.{} saat ini hanya mendukung Float64Array", $op_name))
+                }
+            }
+        };
+    }
+
+    define_unary_math_op!(matriks_sin_wrapper, |x: f64| x.sin(), crate::autograd::BackwardOp::Sin, "sin");
+    define_unary_math_op!(matriks_cos_wrapper, |x: f64| x.cos(), crate::autograd::BackwardOp::Cos, "cos");
+    define_unary_math_op!(matriks_exp_wrapper, |x: f64| x.exp(), crate::autograd::BackwardOp::Exp, "exp");
+    define_unary_math_op!(matriks_log_wrapper, |x: f64| x.ln(), crate::autograd::BackwardOp::Log, "log");
+    define_unary_math_op!(matriks_relu_wrapper, |x: f64| if x > 0.0 { x } else { 0.0 }, crate::autograd::BackwardOp::Relu, "relu");
 
     // Matriks.transpose(a)
     fn matriks_transpose_wrapper(ctx: &mut dyn VmContext, args: Vec<Value>) -> Result<Value, String> {
@@ -186,13 +276,34 @@ pub fn register(vm: &mut VM) {
             let mut new_strides = tensor.strides.clone();
             new_strides.reverse();
 
-            let new_tensor = crate::heap::Tensor {
+            let mut new_tensor = crate::heap::Tensor {
                 data: tensor.data,
                 shape: new_shape,
                 strides: new_strides,
                 offset: tensor.offset,
+                requires_grad: false,
+                grad: None,
+                tape_node: None,
             };
+
+            if tensor.requires_grad {
+                new_tensor.requires_grad = true;
+                let node = crate::autograd::TapeNode {
+                    op: crate::autograd::BackwardOp::Transpose,
+                    parents: vec![*idx],
+                    self_tensor_idx: 0,
+                };
+                let tape_node_id = heap.tape.push(node);
+                new_tensor.tape_node = Some(tape_node_id);
+            }
+
             let new_idx = heap.alloc(HeapData::Float64Array(new_tensor));
+            
+            if heap.get_f64_tensor(new_idx).requires_grad {
+                let tape_node_id = heap.get_f64_tensor(new_idx).tape_node.unwrap();
+                heap.tape.nodes[tape_node_id].self_tensor_idx = new_idx;
+            }
+
             Ok(Value::Float64Array(new_idx))
         } else {
             Err("Matriks.transpose saat ini hanya mendukung Float64Array".to_string())
@@ -228,6 +339,9 @@ pub fn register(vm: &mut VM) {
                         shape: tensor.shape.clone(),
                         strides: out_strides,
                         offset: 0,
+            requires_grad: false,
+            grad: None,
+            tape_node: None,
                     };
                     let new_idx = heap.alloc(HeapData::Float64Array(new_tensor));
                     Ok(Value::Float64Array(new_idx))
@@ -289,6 +403,9 @@ pub fn register(vm: &mut VM) {
                 shape: vec![tensor.shape[0]],
                 strides: vec![1],
                 offset: 0,
+            requires_grad: false,
+            grad: None,
+            tape_node: None,
             };
             let val_idx = heap.alloc(HeapData::Float64Array(val_tensor));
 
@@ -304,6 +421,9 @@ pub fn register(vm: &mut VM) {
                 shape: tensor.shape.clone(),
                 strides: tensor.strides.clone(),
                 offset: 0,
+            requires_grad: false,
+            grad: None,
+            tape_node: None,
             };
             let vec_idx = heap.alloc(HeapData::Float64Array(vec_tensor));
 
@@ -318,12 +438,371 @@ pub fn register(vm: &mut VM) {
         }
     }
 
+    // Matriks.mse_loss(pred, target)
+    fn matriks_mse_loss_wrapper(ctx: &mut dyn VmContext, args: Vec<Value>) -> Result<Value, String> {
+        if args.len() != 2 {
+            return Err("Matriks.mse_loss membutuhkan 2 argumen: pred dan target".to_string());
+        }
+        let heap = ctx.get_heap_mut();
+        
+        let (pred_idx, target_idx) = match (&args[0], &args[1]) {
+            (Value::Float64Array(a), Value::Float64Array(b)) => (*a, *b),
+            _ => return Err("Kedua argumen mse_loss harus berupa Float64Array".to_string()),
+        };
+
+        let pred = heap.get_f64_tensor(pred_idx).clone();
+        let target = heap.get_f64_tensor(target_idx).clone();
+        
+        if pred.shape != target.shape {
+            return Err(format!("Shape tensor tidak cocok: {:?} dan {:?}", pred.shape, target.shape));
+        }
+        
+        let p_data = pred.data.read().unwrap();
+        let t_data = target.data.read().unwrap();
+        let n = p_data.len() as f64;
+        
+        let mut sum_sq = 0.0;
+        for i in 0..p_data.len() {
+            let diff = p_data[i] - t_data[i];
+            sum_sq += diff * diff;
+        }
+        let mse = sum_sq / n;
+        
+        let mut new_tensor = crate::heap::Tensor {
+            data: std::sync::Arc::new(std::sync::RwLock::new(vec![mse])),
+            shape: vec![1],
+            strides: vec![1],
+            offset: 0,
+            requires_grad: false,
+            grad: None,
+            tape_node: None,
+        };
+        
+        if pred.requires_grad || target.requires_grad {
+            new_tensor.requires_grad = true;
+            let node = crate::autograd::TapeNode {
+                op: crate::autograd::BackwardOp::MseLoss,
+                parents: vec![pred_idx, target_idx],
+                self_tensor_idx: 0,
+            };
+            let tape_node_id = heap.tape.push(node);
+            new_tensor.tape_node = Some(tape_node_id);
+        }
+        
+        let new_idx = heap.alloc(HeapData::Float64Array(new_tensor));
+        if heap.get_f64_tensor(new_idx).requires_grad {
+            let tape_node_id = heap.get_f64_tensor(new_idx).tape_node.unwrap();
+            heap.tape.nodes[tape_node_id].self_tensor_idx = new_idx;
+        }
+        
+        Ok(Value::Float64Array(new_idx))
+    }
+
+    fn matriks_grad_wrapper(ctx: &mut dyn VmContext, args: Vec<Value>) -> Result<Value, String> {
+        if args.len() != 1 {
+            return Err("Matriks.grad membutuhkan 1 argumen".to_string());
+        }
+        if let Value::Float64Array(idx) = args[0] {
+            let heap = ctx.get_heap_mut();
+            let tensor = heap.get_f64_tensor(idx);
+            if !tensor.requires_grad {
+                return Err("Tensor ini tidak memiliki requires_grad = benar".to_string());
+            }
+            if let Some(grad_ref) = &tensor.grad {
+                let grad_data = grad_ref.read().unwrap().clone();
+                let grad_tensor = crate::heap::Tensor {
+                    data: std::sync::Arc::new(std::sync::RwLock::new(grad_data)),
+                    shape: tensor.shape.clone(),
+                    strides: tensor.strides.clone(),
+                    offset: tensor.offset,
+                    requires_grad: false,
+                    grad: None,
+                    tape_node: None,
+                };
+                let grad_idx = heap.alloc(HeapData::Float64Array(grad_tensor));
+                return Ok(Value::Float64Array(grad_idx));
+            } else {
+                return Ok(Value::Kosong);
+            }
+        }
+        Err("Argumen harus berupa Float64Array".to_string())
+    }
+
+    fn matriks_backward_wrapper(ctx: &mut dyn VmContext, args: Vec<Value>) -> Result<Value, String> {
+        if args.len() < 1 || args.len() > 2 {
+            return Err("Matriks.backward membutuhkan 1 argumen utama, opsional argumen ke-2 retain_graph".to_string());
+        }
+        
+        let mut retain_graph = false;
+        if args.len() == 2 {
+            if let Value::Boolean(b) = args[1] {
+                retain_graph = b;
+            } else {
+                return Err("Argumen ke-2 retain_graph harus berupa boolean".to_string());
+            }
+        }
+
+        if let Value::Float64Array(idx) = args[0] {
+            let heap = ctx.get_heap_mut();
+            
+            // 1. Inisialisasi gradien tensor akhir dengan angka 1.0
+            {
+                let tensor = heap.get_f64_tensor_mut(idx);
+                if !tensor.requires_grad {
+                    return Err("Tensor ini tidak memiliki requires_grad = benar".to_string());
+                }
+                let data_len = tensor.data.read().unwrap().len();
+                tensor.grad = Some(std::sync::Arc::new(std::sync::RwLock::new(vec![1.0; data_len])));
+            }
+
+            // 2. Klon tape (untuk menghindari mutability conflict)
+            let nodes = heap.tape.nodes.clone();
+            
+            // 3. Eksekusi mundur melalui Tape
+            for node in nodes.iter().rev() {
+                // ... proses backward ...
+                // Sederhanakan untuk contoh ini: Ambil grad dari node hasil
+                let mut self_grad = None;
+                if let Some(t) = heap.get_f64_tensor_opt(node.self_tensor_idx) {
+                    if let Some(g) = &t.grad {
+                        self_grad = Some(g.read().unwrap().clone());
+                    }
+                }
+                
+                if let Some(s_grad) = self_grad {
+                    // Distribusikan ke parent berdasarkan op
+                    match node.op {
+                        crate::autograd::BackwardOp::Add => {
+                            for parent_idx in &node.parents {
+                                if let Some(p) = heap.get_f64_tensor_opt_mut(*parent_idx) {
+                                    if p.grad.is_none() {
+                                        p.grad = Some(std::sync::Arc::new(std::sync::RwLock::new(vec![0.0; s_grad.len()])));
+                                    }
+                                    let mut p_grad = p.grad.as_ref().unwrap().write().unwrap();
+                                    for i in 0..p_grad.len() {
+                                        p_grad[i] += s_grad[i];
+                                    }
+                                }
+                            }
+                        }
+                        crate::autograd::BackwardOp::Sub => {
+                            if node.parents.len() == 2 {
+                                let a_idx = node.parents[0];
+                                let b_idx = node.parents[1];
+                                if let Some(p_a) = heap.get_f64_tensor_opt_mut(a_idx) {
+                                    if p_a.grad.is_none() { p_a.grad = Some(std::sync::Arc::new(std::sync::RwLock::new(vec![0.0; s_grad.len()]))); }
+                                    let mut p_grad = p_a.grad.as_ref().unwrap().write().unwrap();
+                                    for i in 0..p_grad.len() { p_grad[i] += s_grad[i]; }
+                                }
+                                if let Some(p_b) = heap.get_f64_tensor_opt_mut(b_idx) {
+                                    if p_b.grad.is_none() { p_b.grad = Some(std::sync::Arc::new(std::sync::RwLock::new(vec![0.0; s_grad.len()]))); }
+                                    let mut p_grad = p_b.grad.as_ref().unwrap().write().unwrap();
+                                    for i in 0..p_grad.len() { p_grad[i] -= s_grad[i]; }
+                                }
+                            }
+                        }
+                        crate::autograd::BackwardOp::Mul => {
+                            if node.parents.len() == 2 {
+                                let a_idx = node.parents[0];
+                                let b_idx = node.parents[1];
+                                let (a_data, b_data) = {
+                                    let p_a = heap.get_f64_tensor_opt(a_idx).unwrap();
+                                    let p_b = heap.get_f64_tensor_opt(b_idx).unwrap();
+                                    (p_a.data.read().unwrap().clone(), p_b.data.read().unwrap().clone())
+                                };
+
+                                if let Some(p_a) = heap.get_f64_tensor_opt_mut(a_idx) {
+                                    if p_a.grad.is_none() { p_a.grad = Some(std::sync::Arc::new(std::sync::RwLock::new(vec![0.0; s_grad.len()]))); }
+                                    let mut p_grad = p_a.grad.as_ref().unwrap().write().unwrap();
+                                    for i in 0..p_grad.len() { p_grad[i] += s_grad[i] * b_data[i]; }
+                                }
+                                if let Some(p_b) = heap.get_f64_tensor_opt_mut(b_idx) {
+                                    if p_b.grad.is_none() { p_b.grad = Some(std::sync::Arc::new(std::sync::RwLock::new(vec![0.0; s_grad.len()]))); }
+                                    let mut p_grad = p_b.grad.as_ref().unwrap().write().unwrap();
+                                    for i in 0..p_grad.len() { p_grad[i] += s_grad[i] * a_data[i]; }
+                                }
+                            }
+                        }
+                        crate::autograd::BackwardOp::Div => {
+                            if node.parents.len() == 2 {
+                                let a_idx = node.parents[0];
+                                let b_idx = node.parents[1];
+                                let (a_data, b_data) = {
+                                    let p_a = heap.get_f64_tensor_opt(a_idx).unwrap();
+                                    let p_b = heap.get_f64_tensor_opt(b_idx).unwrap();
+                                    (p_a.data.read().unwrap().clone(), p_b.data.read().unwrap().clone())
+                                };
+                                if let Some(p_a) = heap.get_f64_tensor_opt_mut(a_idx) {
+                                    if p_a.grad.is_none() { p_a.grad = Some(std::sync::Arc::new(std::sync::RwLock::new(vec![0.0; s_grad.len()]))); }
+                                    let mut p_grad = p_a.grad.as_ref().unwrap().write().unwrap();
+                                    for i in 0..p_grad.len() { p_grad[i] += s_grad[i] / b_data[i]; }
+                                }
+                                if let Some(p_b) = heap.get_f64_tensor_opt_mut(b_idx) {
+                                    if p_b.grad.is_none() { p_b.grad = Some(std::sync::Arc::new(std::sync::RwLock::new(vec![0.0; s_grad.len()]))); }
+                                    let mut p_grad = p_b.grad.as_ref().unwrap().write().unwrap();
+                                    for i in 0..p_grad.len() { p_grad[i] -= s_grad[i] * a_data[i] / (b_data[i] * b_data[i]); }
+                                }
+                            }
+                        }
+                        crate::autograd::BackwardOp::Sin => {
+                            if node.parents.len() == 1 {
+                                let a_idx = node.parents[0];
+                                let a_data = heap.get_f64_tensor_opt(a_idx).unwrap().data.read().unwrap().clone();
+                                if let Some(p_a) = heap.get_f64_tensor_opt_mut(a_idx) {
+                                    if p_a.grad.is_none() { p_a.grad = Some(std::sync::Arc::new(std::sync::RwLock::new(vec![0.0; s_grad.len()]))); }
+                                    let mut p_grad = p_a.grad.as_ref().unwrap().write().unwrap();
+                                    for i in 0..p_grad.len() { p_grad[i] += s_grad[i] * a_data[i].cos(); }
+                                }
+                            }
+                        }
+                        crate::autograd::BackwardOp::Cos => {
+                            if node.parents.len() == 1 {
+                                let a_idx = node.parents[0];
+                                let a_data = heap.get_f64_tensor_opt(a_idx).unwrap().data.read().unwrap().clone();
+                                if let Some(p_a) = heap.get_f64_tensor_opt_mut(a_idx) {
+                                    if p_a.grad.is_none() { p_a.grad = Some(std::sync::Arc::new(std::sync::RwLock::new(vec![0.0; s_grad.len()]))); }
+                                    let mut p_grad = p_a.grad.as_ref().unwrap().write().unwrap();
+                                    for i in 0..p_grad.len() { p_grad[i] -= s_grad[i] * a_data[i].sin(); }
+                                }
+                            }
+                        }
+                        crate::autograd::BackwardOp::Exp => {
+                            if node.parents.len() == 1 {
+                                let a_idx = node.parents[0];
+                                let a_data = heap.get_f64_tensor_opt(a_idx).unwrap().data.read().unwrap().clone();
+                                if let Some(p_a) = heap.get_f64_tensor_opt_mut(a_idx) {
+                                    if p_a.grad.is_none() { p_a.grad = Some(std::sync::Arc::new(std::sync::RwLock::new(vec![0.0; s_grad.len()]))); }
+                                    let mut p_grad = p_a.grad.as_ref().unwrap().write().unwrap();
+                                    for i in 0..p_grad.len() { p_grad[i] += s_grad[i] * a_data[i].exp(); }
+                                }
+                            }
+                        }
+                        crate::autograd::BackwardOp::Log => {
+                            if node.parents.len() == 1 {
+                                let a_idx = node.parents[0];
+                                let a_data = heap.get_f64_tensor_opt(a_idx).unwrap().data.read().unwrap().clone();
+                                if let Some(p_a) = heap.get_f64_tensor_opt_mut(a_idx) {
+                                    if p_a.grad.is_none() { p_a.grad = Some(std::sync::Arc::new(std::sync::RwLock::new(vec![0.0; s_grad.len()]))); }
+                                    let mut p_grad = p_a.grad.as_ref().unwrap().write().unwrap();
+                                    for i in 0..p_grad.len() { p_grad[i] += s_grad[i] * (1.0 / a_data[i]); }
+                                }
+                            }
+                        }
+                        crate::autograd::BackwardOp::Relu => {
+                            if node.parents.len() == 1 {
+                                let a_idx = node.parents[0];
+                                let a_data = heap.get_f64_tensor_opt(a_idx).unwrap().data.read().unwrap().clone();
+                                if let Some(p_a) = heap.get_f64_tensor_opt_mut(a_idx) {
+                                    if p_a.grad.is_none() { p_a.grad = Some(std::sync::Arc::new(std::sync::RwLock::new(vec![0.0; s_grad.len()]))); }
+                                    let mut p_grad = p_a.grad.as_ref().unwrap().write().unwrap();
+                                    for i in 0..p_grad.len() { p_grad[i] += s_grad[i] * (if a_data[i] > 0.0 { 1.0 } else { 0.0 }); }
+                                }
+                            }
+                        }
+                        crate::autograd::BackwardOp::Matmul => {
+                            if node.parents.len() == 2 {
+                                let a_idx = node.parents[0];
+                                let b_idx = node.parents[1];
+                                
+                                let (a_shape, b_shape, a_data, b_data) = {
+                                    let p_a = heap.get_f64_tensor_opt(a_idx).unwrap();
+                                    let p_b = heap.get_f64_tensor_opt(b_idx).unwrap();
+                                    (p_a.shape.clone(), p_b.shape.clone(), p_a.data.read().unwrap().clone(), p_b.data.read().unwrap().clone())
+                                };
+
+                                let mat_s_grad = nalgebra::DMatrix::from_row_slice(a_shape[0], b_shape[1], &s_grad);
+                                let mat_a = nalgebra::DMatrix::from_row_slice(a_shape[0], a_shape[1], &a_data);
+                                let mat_b = nalgebra::DMatrix::from_row_slice(b_shape[0], b_shape[1], &b_data);
+
+                                let d_a = mat_s_grad.clone() * mat_b.transpose();
+                                let d_b = mat_a.transpose() * mat_s_grad;
+
+                                if let Some(p_a) = heap.get_f64_tensor_opt_mut(a_idx) {
+                                    if p_a.grad.is_none() { p_a.grad = Some(std::sync::Arc::new(std::sync::RwLock::new(vec![0.0; d_a.len()]))); }
+                                    let mut p_grad = p_a.grad.as_ref().unwrap().write().unwrap();
+                                    let mut d_a_row = Vec::with_capacity(d_a.len());
+                                    for r in 0..d_a.nrows() { for c in 0..d_a.ncols() { d_a_row.push(d_a[(r, c)]); } }
+                                    for i in 0..p_grad.len() { p_grad[i] += d_a_row[i]; }
+                                }
+
+                                if let Some(p_b) = heap.get_f64_tensor_opt_mut(b_idx) {
+                                    if p_b.grad.is_none() { p_b.grad = Some(std::sync::Arc::new(std::sync::RwLock::new(vec![0.0; d_b.len()]))); }
+                                    let mut p_grad = p_b.grad.as_ref().unwrap().write().unwrap();
+                                    let mut d_b_row = Vec::with_capacity(d_b.len());
+                                    for r in 0..d_b.nrows() { for c in 0..d_b.ncols() { d_b_row.push(d_b[(r, c)]); } }
+                                    for i in 0..p_grad.len() { p_grad[i] += d_b_row[i]; }
+                                }
+                            }
+                        }
+                        crate::autograd::BackwardOp::Transpose => {
+                            if node.parents.len() == 1 {
+                                let a_idx = node.parents[0];
+                                let a_shape = heap.get_f64_tensor_opt(a_idx).unwrap().shape.clone();
+                                
+                                let mat_s_grad = nalgebra::DMatrix::from_row_slice(a_shape[1], a_shape[0], &s_grad);
+                                let d_a = mat_s_grad.transpose();
+                                
+                                if let Some(p_a) = heap.get_f64_tensor_opt_mut(a_idx) {
+                                    if p_a.grad.is_none() { p_a.grad = Some(std::sync::Arc::new(std::sync::RwLock::new(vec![0.0; d_a.len()]))); }
+                                    let mut p_grad = p_a.grad.as_ref().unwrap().write().unwrap();
+                                    let mut d_a_row = Vec::with_capacity(d_a.len());
+                                    for r in 0..d_a.nrows() { for c in 0..d_a.ncols() { d_a_row.push(d_a[(r, c)]); } }
+                                    for i in 0..p_grad.len() { p_grad[i] += d_a_row[i]; }
+                                }
+                            }
+                        }
+                        crate::autograd::BackwardOp::MseLoss => {
+                            if node.parents.len() == 2 {
+                                let p_idx = node.parents[0];
+                                let t_idx = node.parents[1];
+                                let (p_data, t_data) = {
+                                    let p_p = heap.get_f64_tensor_opt(p_idx).unwrap();
+                                    let p_t = heap.get_f64_tensor_opt(t_idx).unwrap();
+                                    (p_p.data.read().unwrap().clone(), p_t.data.read().unwrap().clone())
+                                };
+                                let n = p_data.len() as f64;
+                                
+                                if let Some(p_p) = heap.get_f64_tensor_opt_mut(p_idx) {
+                                    if p_p.grad.is_none() { p_p.grad = Some(std::sync::Arc::new(std::sync::RwLock::new(vec![0.0; p_data.len()]))); }
+                                    let mut p_grad = p_p.grad.as_ref().unwrap().write().unwrap();
+                                    // s_grad is 1x1 since MseLoss is scalar, so s_grad[0]
+                                    for i in 0..p_grad.len() { p_grad[i] += s_grad[0] * (2.0 / n) * (p_data[i] - t_data[i]); }
+                                }
+                                if let Some(p_t) = heap.get_f64_tensor_opt_mut(t_idx) {
+                                    if p_t.grad.is_none() { p_t.grad = Some(std::sync::Arc::new(std::sync::RwLock::new(vec![0.0; t_data.len()]))); }
+                                    let mut p_grad = p_t.grad.as_ref().unwrap().write().unwrap();
+                                    for i in 0..p_grad.len() { p_grad[i] -= s_grad[0] * (2.0 / n) * (p_data[i] - t_data[i]); }
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            
+            if !retain_graph {
+                heap.tape.nodes.clear();
+            }
+            
+            return Ok(Value::Kosong);
+        }
+        Err("Argumen harus berupa Float64Array".to_string())
+    }
+
     let funcs = vec![
         ("dot", matriks_dot_wrapper as fn(&mut dyn VmContext, Vec<Value>) -> Result<Value, String>),
         ("transpose", matriks_transpose_wrapper),
         ("inverse", matriks_inverse_wrapper),
         ("determinant", matriks_determinant_wrapper),
         ("eigen", matriks_eigen_wrapper),
+        ("grad", matriks_grad_wrapper),
+        ("backward", matriks_backward_wrapper),
+        ("sin", matriks_sin_wrapper as fn(&mut dyn VmContext, Vec<Value>) -> Result<Value, String>),
+        ("cos", matriks_cos_wrapper),
+        ("exp", matriks_exp_wrapper),
+        ("log", matriks_log_wrapper),
+        ("relu", matriks_relu_wrapper),
+        ("mse_loss", matriks_mse_loss_wrapper),
     ];
 
     for (name, func) in funcs {

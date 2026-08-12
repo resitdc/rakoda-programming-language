@@ -15,6 +15,9 @@ pub struct Tensor<T> {
     pub shape: Vec<usize>,
     pub strides: Vec<usize>,
     pub offset: usize,
+    pub requires_grad: bool,
+    pub grad: Option<Arc<RwLock<Vec<T>>>>,
+    pub tape_node: Option<usize>,
 }
 
 pub type SessionMap = Arc<Mutex<HashMap<String, (Option<std::time::Instant>, usize)>>>;
@@ -168,9 +171,8 @@ pub struct Heap {
     pub db_pool: Option<DbPool>,
     pub db_query_state: DbQueryState,
     pub db_module_idx: Option<usize>,
-    /// Direktori root proyek (tempat file .rpl utama berada).
-    /// Digunakan untuk resolve path relatif seperti template, database, file.
     pub project_root: Option<PathBuf>,
+    pub tape: crate::autograd::Tape,
 }
 
 impl Default for Heap {
@@ -194,6 +196,7 @@ impl Heap {
             db_query_state: DbQueryState::default(),
             db_module_idx: None,
             project_root: None,
+            tape: crate::autograd::Tape::new(),
         }
     }
 
@@ -313,6 +316,32 @@ impl Heap {
         }
     }
 
+    pub fn get_f64_tensor_opt(&self, idx: usize) -> Option<&Tensor<f64>> {
+        if idx < self.objects.len() {
+            if let HeapData::Float64Array(t) = &self.objects[idx].data {
+                return Some(t);
+            }
+        }
+        None
+    }
+
+    pub fn get_f64_tensor_mut(&mut self, idx: usize) -> &mut Tensor<f64> {
+        if let HeapData::Float64Array(t) = &mut self.objects[idx].data {
+            t
+        } else {
+            panic!("Expected Float64Array di heap indeks {}", idx);
+        }
+    }
+
+    pub fn get_f64_tensor_opt_mut(&mut self, idx: usize) -> Option<&mut Tensor<f64>> {
+        if idx < self.objects.len() {
+            if let HeapData::Float64Array(t) = &mut self.objects[idx].data {
+                return Some(t);
+            }
+        }
+        None
+    }
+
     pub fn get_i32_tensor(&self, idx: usize) -> &Tensor<i32> {
         match &self.objects[idx].data {
             HeapData::Int32Array(t) => t,
@@ -364,6 +393,12 @@ impl Heap {
                         if let Value::QueryState(i) = val {
                             c.push(*i);
                         }
+                        if let Value::Float64Array(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Int32Array(i) = val {
+                            c.push(*i);
+                        }
                     }
                     c
                 }
@@ -388,6 +423,12 @@ impl Heap {
                         if let Value::Modul(i) = val {
                             c.push(*i);
                         }
+                        if let Value::Float64Array(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Int32Array(i) = val {
+                            c.push(*i);
+                        }
                     }
                     c
                 }
@@ -410,6 +451,12 @@ impl Heap {
                             c.push(*i);
                         }
                         if let Value::Modul(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Float64Array(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Int32Array(i) = val {
                             c.push(*i);
                         }
                     }
@@ -440,6 +487,12 @@ impl Heap {
                             c.push(*i);
                         }
                         if let Value::QueryState(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Float64Array(i) = val {
+                            c.push(*i);
+                        }
+                        if let Value::Int32Array(i) = val {
                             c.push(*i);
                         }
                     }
