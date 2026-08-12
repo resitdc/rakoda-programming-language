@@ -160,19 +160,19 @@ const Download = () => {
             </p>
           </div>
           <div className={styles.studioGrid}>
-            <a href={getStudioAssetUrl('Windows') || "https://github.com/resitdc/rakoda-programming-language/releases"} target="_blank" rel="noopener noreferrer" className={styles.platformCard}>
+            <a href={getStudioAssetUrl('Windows') || "https://github.com/resitdc/rakoda-programming-language/releases"} target="_self" rel="noopener noreferrer" className={styles.platformCard}>
               <div className={styles.platformIcon}><WindowsIcon /></div>
               <div><div className={styles.platformName}>Windows</div><div className={styles.platformMeta}>Installer / Portable</div></div>
             </a>
-            <a href={getStudioAssetUrl('macOS') || "https://github.com/resitdc/rakoda-programming-language/releases"} target="_blank" rel="noopener noreferrer" className={styles.platformCard}>
+            <a href={getStudioAssetUrl('macOS') || "https://github.com/resitdc/rakoda-programming-language/releases"} target="_self" rel="noopener noreferrer" className={styles.platformCard}>
               <div className={styles.platformIcon}><MacIcon /></div>
               <div><div className={styles.platformName}>macOS</div><div className={styles.platformMeta}>Installer (.dmg)</div></div>
             </a>
-            <a href={getStudioAssetUrl('Linux') || "https://github.com/resitdc/rakoda-programming-language/releases"} target="_blank" rel="noopener noreferrer" className={styles.platformCard}>
+            <a href={getStudioAssetUrl('Linux') || "https://github.com/resitdc/rakoda-programming-language/releases"} target="_self" rel="noopener noreferrer" className={styles.platformCard}>
               <div className={styles.platformIcon}><LinuxIcon /></div>
               <div><div className={styles.platformName}>Linux</div><div className={styles.platformMeta}>AppImage / .deb</div></div>
             </a>
-            <a href={getStudioAssetUrl('Android') || "https://github.com/resitdc/rakoda-programming-language/releases"} target="_blank" rel="noopener noreferrer" className={styles.platformCard}>
+            <a href={getStudioAssetUrl('Android') || "https://github.com/resitdc/rakoda-programming-language/releases"} target="_self" rel="noopener noreferrer" className={styles.platformCard}>
               <div className={styles.platformIcon}><AndroidIcon /></div>
               <div><div className={styles.platformName}>Android</div><div className={styles.platformMeta}>Aplikasi (.apk)</div></div>
             </a>
