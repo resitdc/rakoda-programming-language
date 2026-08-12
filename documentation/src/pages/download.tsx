@@ -50,6 +50,9 @@ const formatSize = (bytes: number) => {
 
 const classifyAsset = (name: string): { os: string; arch: string; ext: string } | null => {
   const lower = name.toLowerCase();
+  if (lower.endsWith('.apk')) {
+    return { os: 'Android', arch: '', ext: 'Aplikasi (.apk)' };
+  }
   if (lower.endsWith('.exe') || lower.endsWith('.msi')) {
     const arch = lower.includes('arm') ? 'ARM64' : 'x64';
     return { os: 'Windows', arch, ext: lower.endsWith('.exe') ? 'Installer (.exe)' : 'Installer (.msi)' };
@@ -80,6 +83,7 @@ const osIcon = (os: string) => {
     case 'Windows': return <WindowsIcon />;
     case 'macOS': return <MacIcon />;
     case 'Linux': return <LinuxIcon />;
+    case 'Android': return <AndroidIcon />;
     default: return <DownloadIcon />;
   }
 };
@@ -87,27 +91,45 @@ const osIcon = (os: string) => {
 // ─── Component ───────────────────────────────────────────
 
 const Download = () => {
-  const [release, setRelease] = useState<any>(null);
+  const [rakodaRelease, setRakodaRelease] = useState<any>(null);
+  const [studioRelease, setStudioRelease] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('https://api.github.com/repos/resitdc/rakoda-programming-language/releases/latest')
+    fetch('https://api.github.com/repos/resitdc/rakoda-programming-language/releases')
       .then(res => { if (!res.ok) throw new Error('Not found'); return res.json(); })
-      .then(data => { if (data?.tag_name) setRelease(data); setLoading(false); })
+      .then(releases => {
+        if (Array.isArray(releases)) {
+          const rakoda = releases.find((r: any) => r.tag_name.startsWith('v') && !r.tag_name.startsWith('studio-'));
+          const studio = releases.find((r: any) => r.tag_name.startsWith('studio-'));
+          if (rakoda) setRakodaRelease(rakoda);
+          if (studio) setStudioRelease(studio);
+        }
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, []);
 
   // Group CLI assets by OS
-  const grouped: Record<string, { info: ReturnType<typeof classifyAsset>; asset: Asset }[]> = {};
-  if (release?.assets) {
-    for (const asset of release.assets) {
+  const groupedRakoda: Record<string, { info: ReturnType<typeof classifyAsset>; asset: Asset }[]> = {};
+  if (rakodaRelease?.assets) {
+    for (const asset of rakodaRelease.assets) {
       const info = classifyAsset(asset.name);
       if (info) {
-        if (!grouped[info.os]) grouped[info.os] = [];
-        grouped[info.os].push({ info, asset });
+        if (!groupedRakoda[info.os]) groupedRakoda[info.os] = [];
+        groupedRakoda[info.os].push({ info, asset });
       }
     }
   }
+
+  const getStudioAssetUrl = (os: string) => {
+    if (!studioRelease?.assets) return null;
+    const asset = studioRelease.assets.find((a: any) => {
+       const info = classifyAsset(a.name);
+       return info && info.os === os;
+    });
+    return asset?.browser_download_url;
+  };
 
   const osOrder = ['Windows', 'macOS', 'Linux'];
 
@@ -128,26 +150,29 @@ const Download = () => {
         <section className={styles.studioSection}>
           <div className={styles.studioContent}>
             <div className={styles.studioLabel}>IDE Resmi</div>
-            <Heading as="h2" className={styles.studioTitle}>RPL Studio</Heading>
+            <Heading as="h2" className={styles.studioTitle}>
+              RPL Studio
+              {studioRelease && <span className={styles.versionBadge} style={{ marginLeft: '12px' }}>{studioRelease.tag_name}</span>}
+            </Heading>
             <p className={styles.studioDesc}>
               Editor kode profesional dengan Autocompletion, HTTP Workspace,
               integrasi Database, dan eksekusi kode langsung di dalam aplikasi.
             </p>
           </div>
           <div className={styles.studioGrid}>
-            <a href="https://drive.google.com/drive/folders/1_URCMaQvbogZpIY7P8aTjMorYIXm7yec?usp=drive_link" target="_blank" rel="noopener noreferrer" className={styles.platformCard}>
+            <a href={getStudioAssetUrl('Windows') || "https://github.com/resitdc/rakoda-programming-language/releases"} target="_blank" rel="noopener noreferrer" className={styles.platformCard}>
               <div className={styles.platformIcon}><WindowsIcon /></div>
-              <div><div className={styles.platformName}>Windows</div><div className={styles.platformMeta}>Portable (.exe / .zip)</div></div>
+              <div><div className={styles.platformName}>Windows</div><div className={styles.platformMeta}>Installer / Portable</div></div>
             </a>
-            <a href="https://drive.google.com/drive/folders/1Ud2goNnyGtUCuIuw8J1kYsTK734MtC1K?usp=drive_link" target="_blank" rel="noopener noreferrer" className={styles.platformCard}>
+            <a href={getStudioAssetUrl('macOS') || "https://github.com/resitdc/rakoda-programming-language/releases"} target="_blank" rel="noopener noreferrer" className={styles.platformCard}>
               <div className={styles.platformIcon}><MacIcon /></div>
               <div><div className={styles.platformName}>macOS</div><div className={styles.platformMeta}>Installer (.dmg)</div></div>
             </a>
-            <a href="https://drive.google.com/drive/folders/1k-v-_2ZqUluQciA5KiQjLXyjhGFp1ni_?usp=sharing" target="_blank" rel="noopener noreferrer" className={styles.platformCard}>
+            <a href={getStudioAssetUrl('Linux') || "https://github.com/resitdc/rakoda-programming-language/releases"} target="_blank" rel="noopener noreferrer" className={styles.platformCard}>
               <div className={styles.platformIcon}><LinuxIcon /></div>
               <div><div className={styles.platformName}>Linux</div><div className={styles.platformMeta}>AppImage / .deb</div></div>
             </a>
-            <a href="https://drive.google.com/drive/folders/1zl72gl8DgT2PgVi41yDgGkLEd1ba8h8L?usp=drive_link" target="_blank" rel="noopener noreferrer" className={styles.platformCard}>
+            <a href={getStudioAssetUrl('Android') || "https://github.com/resitdc/rakoda-programming-language/releases"} target="_blank" rel="noopener noreferrer" className={styles.platformCard}>
               <div className={styles.platformIcon}><AndroidIcon /></div>
               <div><div className={styles.platformName}>Android</div><div className={styles.platformMeta}>Aplikasi (.apk)</div></div>
             </a>
@@ -163,8 +188,8 @@ const Download = () => {
                 Jalankan kode Rakoda langsung dari terminal. Cocok untuk server, automation, atau pengembangan tanpa GUI.
               </p>
             </div>
-            {release && (
-              <span className={styles.versionBadge}>{release.tag_name}</span>
+            {rakodaRelease && (
+              <span className={styles.versionBadge}>{rakodaRelease.tag_name}</span>
             )}
           </div>
 
@@ -173,10 +198,10 @@ const Download = () => {
               <div className={styles.loader} />
               <span>Mengambil data rilis terbaru...</span>
             </div>
-          ) : release && Object.keys(grouped).length > 0 ? (
+          ) : rakodaRelease && Object.keys(groupedRakoda).length > 0 ? (
             <div className={styles.osGroups}>
               {osOrder.map(os => {
-                const items = grouped[os];
+                const items = groupedRakoda[os];
                 if (!items) return null;
                 return (
                   <div key={os} className={styles.osGroup}>
