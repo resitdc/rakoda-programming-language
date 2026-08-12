@@ -9,7 +9,7 @@ edition = "2021"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
-runtime = { git = "https://github.com/resitdc/indonesia-programming-language", tag = "v5.0.0" }
+runtime = { git = "https://github.com/resitdc/indonesia-programming-language", tag = "v6.0.0" }
 flutter_rust_bridge = "=2.12.0"
 
 [profile.release]
