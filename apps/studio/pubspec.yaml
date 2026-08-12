@@ -86,4 +86,4 @@ flutter_native_splash:
   web: true
 
 dependency_overrides:
-  sqlite3: 3.3.2
+  sqlite3: 2.4.2
