@@ -245,7 +245,7 @@ pub fn register(vm: &mut VM) {
                             let mut ffi_args = Vec::with_capacity(call_args.len());
                             let mut vals_i32 = vec![0i32; call_args.len()];
                             let mut vals_f32 = vec![0f32; call_args.len()];
-                            let mut vals_ptr = vec![std::ptr::null::<i8>(); call_args.len()];
+                            let mut vals_ptr = vec![std::ptr::null::<std::ffi::c_char>(); call_args.len()];
 
                             for (i, v) in &int_vals {
                                 vals_i32[*i] = *v;
@@ -283,7 +283,7 @@ pub fn register(vm: &mut VM) {
                                     Ok(Value::Angka(res as f64))
                                 }
                                 "string" => {
-                                    let res: *const i8 = cif.call(code_ptr, &ffi_args);
+                                    let res: *const std::ffi::c_char = cif.call(code_ptr, &ffi_args);
                                     if res.is_null() {
                                         Ok(Value::Kosong)
                                     } else {
