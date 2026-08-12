@@ -2478,9 +2478,11 @@ dependencies = [
  "nom",
  "percent-encoding",
  "quoted_printable",
+ "rustls",
  "socket2",
  "tokio",
  "url",
+ "webpki-roots",
 ]
 
 [[package]]
