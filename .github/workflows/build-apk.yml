@@ -38,6 +38,19 @@ jobs:
         working-directory: apps/studio
         run: flutter pub get
 
+      - name: 🔐 Decode Keystore
+        working-directory: apps/studio/android
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo $KEYSTORE_BASE64 | base64 --decode > upload-keystore.jks
+            echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" > key.properties
+            echo "keyPassword=${{ secrets.KEYSTORE_PASSWORD }}" >> key.properties
+            echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> key.properties
+            echo "storeFile=upload-keystore.jks" >> key.properties
+          fi
+
       - name: 🏗️ Build APK
         working-directory: apps/studio
         run: flutter build apk --release
