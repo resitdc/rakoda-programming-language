@@ -250,29 +250,17 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: TemplateCategory.values.map((cat) {
+            children: TemplateCategory.values
+                .where((cat) => _isCategoryAvailable(cat))
+                .map((cat) {
               final isSelected = _selectedCategory == cat;
-              final isAvailable = _isCategoryAvailable(cat);
-              final needsRuntime = cat.runtimeKey != null;
 
               return Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: _FilterChip(
                   label: cat.label,
                   isSelected: isSelected,
-                  isLocked: needsRuntime && !isAvailable,
-                  onTap: () {
-                    if (needsRuntime && !isAvailable) {
-                      // Navigasi ke Runtime Manager
-                      Navigator.pop(context); // Tutup dialog dulu
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const RuntimeManagerScreen()),
-                      );
-                      return;
-                    }
-                    setState(() => _selectedCategory = cat);
-                  },
+                  onTap: () => setState(() => _selectedCategory = cat),
                 ),
               );
             }).toList(),
@@ -729,13 +717,11 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
 class _FilterChip extends StatelessWidget {
   final String label;
   final bool isSelected;
-  final bool isLocked;
   final VoidCallback onTap;
 
   const _FilterChip({
     required this.label,
     required this.isSelected,
-    required this.isLocked,
     required this.onTap,
   });
 
@@ -749,38 +735,21 @@ class _FilterChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? const Color(0xFF2568E7).withOpacity(0.18)
-              : isLocked
-                  ? Colors.white.withOpacity(0.03)
-                  : Colors.white.withOpacity(0.06),
+              : Colors.white.withOpacity(0.06),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected
                 ? const Color(0xFF2568E7).withOpacity(0.5)
-                : isLocked
-                    ? Colors.white.withOpacity(0.06)
-                    : Colors.white.withOpacity(0.1),
+                : Colors.white.withOpacity(0.1),
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected
-                    ? const Color(0xFF2568E7)
-                    : isLocked
-                        ? Colors.white24
-                        : Colors.white60,
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              ),
-            ),
-            if (isLocked) ...[
-              const SizedBox(width: 4),
-              Icon(Icons.lock_outline, size: 11, color: Colors.white.withOpacity(0.2)),
-            ],
-          ],
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFF2568E7) : Colors.white60,
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+          ),
         ),
       ),
     );
