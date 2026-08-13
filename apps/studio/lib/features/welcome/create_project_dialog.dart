@@ -173,7 +173,17 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
       backgroundColor: const Color(0xFF1E1E1E),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      child: Container(
+      child: Theme(
+        data: ThemeData.dark().copyWith(
+          inputDecorationTheme: const InputDecorationTheme(
+            filled: true,
+            fillColor: Color(0xFF252526),
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+          ),
+        ),
+        child: Container(
         constraints: BoxConstraints(
           maxWidth: 560,
           maxHeight: isSmallScreen ? screenHeight * 0.85 : 620,
@@ -192,8 +202,8 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
             child: _currentStep == 0
                 ? _buildStep1(key: const ValueKey('step1'))
                 : _buildStep2(key: const ValueKey('step2')),
-          ),
         ),
+      ),
       ),
     );
   }
@@ -403,17 +413,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
 
         // ── Form ──
         Expanded(
-          child: Theme(
-            data: ThemeData.dark().copyWith(
-              inputDecorationTheme: const InputDecorationTheme(
-                filled: true,
-                fillColor: Color(0xFF252526),
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-              ),
-            ),
-            child: SingleChildScrollView(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -626,7 +626,6 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                 ],
               ],
             ),
-          ),
           ),
         ),
 
