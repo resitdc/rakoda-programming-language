@@ -403,7 +403,17 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
 
         // ── Form ──
         Expanded(
-          child: SingleChildScrollView(
+          child: Theme(
+            data: ThemeData.dark().copyWith(
+              inputDecorationTheme: const InputDecorationTheme(
+                filled: true,
+                fillColor: Color(0xFF252526),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+              ),
+            ),
+            child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -616,6 +626,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                 ],
               ],
             ),
+          ),
           ),
         ),
 
