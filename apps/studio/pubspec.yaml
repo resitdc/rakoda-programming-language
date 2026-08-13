@@ -16,7 +16,8 @@ dependencies:
   path_provider: ^2.1.6
   file_picker: ^11.0.2
   provider: ^6.1.5+1
-  flutter_code_editor: ^0.3.5
+  flutter_code_editor:
+    path: packages/flutter_code_editor
   flutter_highlight: ^0.7.0
   flutter_svg: ^2.0.17
   archive: any

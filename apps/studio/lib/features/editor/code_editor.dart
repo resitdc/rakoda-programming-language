@@ -522,6 +522,8 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
                       maxLines: null,
                       textStyle: codeTextStyle,
                       lineNumberBuilder: lineNumberBuilder,
+                      activeLine: _currentLine + 1,
+                      activeLineColor: Colors.white.withOpacity(0.08),
                       gutterStyle: GutterStyle(
                         textStyle: gutterTextStyle,
                         textAlign: TextAlign.right,
@@ -541,6 +543,8 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
                       undoController: widget.tab.undoController,
                       textStyle: codeTextStyle,
                       lineNumberBuilder: lineNumberBuilder,
+                      activeLine: _currentLine + 1,
+                      activeLineColor: Colors.white.withOpacity(0.08),
                       gutterStyle: GutterStyle(
                         textStyle: gutterTextStyle,
                         textAlign: TextAlign.right,
