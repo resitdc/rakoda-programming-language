@@ -206,10 +206,14 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     try {
       final nodePaths = await CodeExecutorService.getInstalledRuntimePaths('node');
       final phpPaths = await CodeExecutorService.getInstalledRuntimePaths('php');
+      final pythonPaths = await CodeExecutorService.getInstalledRuntimePaths('python');
+      final javaPaths = await CodeExecutorService.getInstalledRuntimePaths('java');
       
       String newPath = '';
       String nodeDir = '';
       String phpDir = '';
+      String pythonDir = '';
+      String javaDir = '';
       
       if (nodePaths.isNotEmpty) {
         nodeDir = File(nodePaths.first).parent.path;
@@ -219,6 +223,14 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
         phpDir = File(phpPaths.first).parent.path;
         newPath += '$phpDir:';
       }
+      if (pythonPaths.isNotEmpty) {
+        pythonDir = File(pythonPaths.first).parent.path;
+        newPath += '$pythonDir:';
+      }
+      if (javaPaths.isNotEmpty) {
+        javaDir = File(javaPaths.first).parent.path;
+        newPath += '$javaDir:';
+      }
       
       if (newPath.isNotEmpty) {
         if (Platform.isWindows) {
@@ -226,6 +238,16 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           _pty?.write(const Utf8Encoder().convert(shellCmd));
         } else {
           String shellCmd = 'export PATH="$newPath\$PATH"\r\n';
+          
+          // Fix bug python-build-standalone: script 'pip' bawaan rusak jika dijalankan
+          // dari folder yang memiliki spasi (seperti "Application Support").
+          // Jadi kita bypass pip dengan langsung memanggil modul python -m pip
+          if (pythonDir.isNotEmpty) {
+            if (!Platform.isAndroid) {
+              shellCmd += 'pip() { python3 -m pip "\$@"; }\r\n';
+            }
+          }
+
           if (Platform.isAndroid) {
             // Android 10+ W^X memblokir eksekusi script/binary di /data/user/0/...
             // Jadi kita harus mendefinisikan shell function agar memanggil 'sh' secara eksplisit.
@@ -239,6 +261,15 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
             if (phpDir.isNotEmpty) {
               shellCmd += 'php() { sh "$phpDir/php" "\$@"; }\r\n';
               shellCmd += 'composer() { sh "$phpDir/composer" "\$@"; }\r\n';
+            }
+            if (pythonDir.isNotEmpty) {
+              shellCmd += 'python() { sh "$pythonDir/python_wrapper" "\$@"; }\r\n';
+              shellCmd += 'python3() { sh "$pythonDir/python_wrapper" "\$@"; }\r\n';
+              shellCmd += 'pip() { sh "$pythonDir/python_wrapper" -m pip "\$@"; }\r\n';
+            }
+            if (javaDir.isNotEmpty) {
+              shellCmd += 'java() { sh "$javaDir/java" "\$@"; }\r\n';
+              shellCmd += 'javac() { sh "$javaDir/javac" "\$@"; }\r\n';
             }
           }
           shellCmd += 'clear\r\n';
@@ -286,6 +317,57 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     }
   }
 
+  void _autoDetectAndPopupImage(String dirPath, DateTime after) async {
+    try {
+      final dir = Directory(dirPath);
+      if (!await dir.exists()) return;
+      
+      final files = await dir.list().toList();
+      for (var entity in files) {
+        if (entity is File) {
+          final lower = entity.path.toLowerCase();
+          final isImage = lower.endsWith('.png') || 
+                          lower.endsWith('.jpg') || 
+                          lower.endsWith('.jpeg') || 
+                          lower.endsWith('.gif') || 
+                          lower.endsWith('.webp') || 
+                          lower.endsWith('.bmp');
+          if (isImage) {
+            final stat = await entity.stat();
+            // Buffer waktu 1 detik ke belakang untuk mengatasi delay filesystem Android
+            if (stat.modified.isAfter(after.subtract(const Duration(seconds: 1)))) {
+              if (mounted) {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    backgroundColor: const Color(0xFF1E1E1E),
+                    title: const Text('Output Gambar', style: TextStyle(color: Colors.white)),
+                    content: InteractiveViewer(
+                      child: Image.file(entity),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Tutup', style: TextStyle(color: Colors.white70)),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _openFile(entity.path);
+                        },
+                        child: const Text('Buka di Tab', style: TextStyle(color: Color(0xFF4EC9B0))),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              break;
+            }
+          }
+        }
+      }
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -1215,8 +1297,16 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                       
                       String resultString = '';
                       
-                      if (ext == 'php' || ext == 'js') {
-                        final language = ext == 'js' ? 'node' : 'php';
+                      final supportedExts = ['php', 'js', 'py', 'java', 'go', 'cpp', 'cc', 'c', 'cs', 'kt', 'kts', 'rb', 'dart', 'r'];
+                      if (supportedExts.contains(ext)) {
+                        String language = ext;
+                        if (ext == 'js') language = 'node';
+                        else if (ext == 'py') language = 'python';
+                        else if (ext == 'cpp' || ext == 'cc' || ext == 'c') language = 'cpp';
+                        else if (ext == 'kts') language = 'kt';
+                        else if (ext == 'cs') language = 'csharp';
+                        else if (ext == 'rb') language = 'ruby';
+                        
                         final availableRuntimes = await CodeExecutorService.getInstalledRuntimePaths(language);
                         
                         if (availableRuntimes.isEmpty) {
@@ -1251,8 +1341,14 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                           }
                           
                           if (resultString.isEmpty) {
-                            final result = await CodeExecutorService.executeWithRuntime(selectedExe, content, language);
+                            final fileDir = File(tab.filePath).parent.path;
+                            final runStartTime = DateTime.now();
+                            final result = await CodeExecutorService.executeWithRuntime(selectedExe, content, language, workingDirectory: fileDir);
                             resultString = result.replaceAll('\n', '\r\n') + '\r\n';
+                            
+                            if (mounted) {
+                              _autoDetectAndPopupImage(fileDir, runStartTime);
+                            }
                           }
                         }
                       } else {

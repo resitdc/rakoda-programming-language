@@ -224,6 +224,16 @@ class _RuntimeCard extends ConsumerWidget {
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
+  String _getExtension(String runtimeKey) {
+    switch (runtimeKey.toLowerCase()) {
+      case 'node': return 'js';
+      case 'python': return 'py';
+      case 'ruby': return 'rb';
+      case 'rust': return 'rs';
+      default: return runtimeKey.toLowerCase();
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final runtimeKey = item['runtimeKey'] as String;
@@ -262,7 +272,7 @@ class _RuntimeCard extends ConsumerWidget {
                       ),
                     ),
                     child: Center(
-                      child: FileIconHelper.getFileIcon('dummy.$runtimeKey', size: 28),
+                      child: FileIconHelper.getFileIcon('dummy.${_getExtension(runtimeKey)}', size: 28),
                     ),
                   ),
                   const SizedBox(width: 14),

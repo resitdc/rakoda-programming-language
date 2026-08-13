@@ -723,6 +723,11 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
       _windowsController.webMessage.listen((msg) {
         if (!mounted) return;
         try {
+          if (msg is String) {
+            try {
+              msg = jsonDecode(msg);
+            } catch (_) {}
+          }
           if (msg is Map) {
             if (msg['type'] == 'js_eval_result') {
               final id = msg['id'];
@@ -816,7 +821,10 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
         })();
       ''';
       await _windowsController.executeScript(wrappedCode);
-      return completer.future;
+      return completer.future.timeout(const Duration(seconds: 2), onTimeout: () {
+        _jsCallbacks.remove(id);
+        return null;
+      });
     } else {
       try {
         return await _controller.runJavaScriptReturningResult(code);
