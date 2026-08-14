@@ -283,7 +283,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
               shellCmd += 'pnpx() { sh "$nodeDir/pnpx" "\$@"; }\r\n';
             }
             if (phpDir.isNotEmpty) {
-              shellCmd += 'php() { sh "$phpDir/php" "\$@"; }\r\n';
+              shellCmd += 'php() { sh "$phpDir/php" -d opcache.enable=0 -d opcache.enable_cli=0 "\$@"; }\r\n';
               shellCmd += 'composer() { sh "$phpDir/composer" "\$@"; }\r\n';
             }
             if (pythonDir.isNotEmpty) {
