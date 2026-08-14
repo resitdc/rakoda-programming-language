@@ -103,7 +103,10 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           columns: 80,
           rows: 24,
           workingDirectory: widget.project.path,
-          environment: Platform.environment,
+          environment: {
+            ...Platform.environment,
+            if (Platform.isAndroid) 'TMPDIR': Directory.systemTemp.path,
+          },
         );
 
         _pty!.output

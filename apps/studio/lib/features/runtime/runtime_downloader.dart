@@ -215,6 +215,9 @@ class RuntimeDownloaderNotifier extends ChangeNotifier {
         // Uncomment extension_dir for Windows
         content = content.replaceAll(RegExp(r'^;\s*extension_dir\s*=\s*"ext"', multiLine: true), 'extension_dir = "ext"');
         
+        // Disable opcache for Android compatibility
+        content += '\n\n; Otomatis ditambahkan oleh RPL Studio\nopcache.enable=0\nopcache.enable_cli=0\n';
+        
         await phpIni.writeAsString(content);
         print("Berhasil mengaktifkan ekstensi PHP secara otomatis di ${phpIni.path}");
       }
