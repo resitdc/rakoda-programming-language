@@ -191,17 +191,18 @@ class ProjectService {
         extractSubfolder: templateDef.extractSubfolder,
       );
       
-      if (templateDef.id == 'php_wordpress' && useSqlite) {
-        final wpContentDir = Directory('$projectPath/wp-content');
-        if (!await wpContentDir.exists()) await wpContentDir.create(recursive: true);
-        
-        final response = await http.get(Uri.parse('https://raw.githubusercontent.com/aaemnnosttv/wp-sqlite-db/master/src/db.php'));
-        if (response.statusCode == 200) {
-          await File('${wpContentDir.path}/db.php').writeAsBytes(response.bodyBytes);
-        }
-        
-        // Buat wp-config.php otomatis agar wizard koneksi database terlewati
-        final wpConfigContent = '''<?php
+      if (templateDef.id == 'php_wordpress') {
+        if (useSqlite) {
+          final wpContentDir = Directory('$projectPath/wp-content');
+          if (!await wpContentDir.exists()) await wpContentDir.create(recursive: true);
+          
+          final response = await http.get(Uri.parse('https://raw.githubusercontent.com/aaemnnosttv/wp-sqlite-db/master/src/db.php'));
+          if (response.statusCode == 200) {
+            await File('${wpContentDir.path}/db.php').writeAsBytes(response.bodyBytes);
+          }
+          
+          // Buat wp-config.php otomatis agar wizard koneksi database terlewati
+          final wpConfigContent = '''<?php
 // Otomatis digenerate oleh RPL Studio (SQLite Mode)
 define( 'WP_HOME', 'http://' . \$_SERVER['HTTP_HOST'] );
 define( 'WP_SITEURL', 'http://' . \$_SERVER['HTTP_HOST'] );
@@ -230,7 +231,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 require_once ABSPATH . 'wp-settings.php';
 ''';
-        await File('$projectPath/wp-config.php').writeAsString(wpConfigContent);
+          await File('$projectPath/wp-config.php').writeAsString(wpConfigContent);
+        } else {
+          final sampleFile = File('$projectPath/wp-config-sample.php');
+          if (await sampleFile.exists()) {
+            String content = await sampleFile.readAsString();
+            content = content.replaceFirst('<?php', '''<?php
+// Otomatis ditambahkan oleh RPL Studio (MySQL Mode)
+define( 'WP_HOME', 'http://' . \$_SERVER['HTTP_HOST'] );
+define( 'WP_SITEURL', 'http://' . \$_SERVER['HTTP_HOST'] );
+''');
+            await sampleFile.writeAsString(content);
+          }
+        }
       }
       
       if (templateDef.id.startsWith('php_laravel')) {
