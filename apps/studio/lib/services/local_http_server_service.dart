@@ -52,7 +52,13 @@ class LocalHttpServerService {
     _isRunning = true;
 
     try {
-      _phpProcess = await Process.start(phpExecutable, ['-S', '0.0.0.0:$_port', '-t', rootPath]);
+      _phpProcess = await Process.start(
+        phpExecutable, 
+        ['-d', 'opcache.enable=0', '-d', 'opcache.enable_cli=0', '-S', '0.0.0.0:$_port', '-t', rootPath],
+        environment: {
+          'TMPDIR': Directory.systemTemp.path,
+        },
+      );
     } catch (e) {
       _isRunning = false;
       _port = null;
