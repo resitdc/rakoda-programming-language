@@ -150,6 +150,7 @@ class ProjectTemplateDefinition {
   final int tagColor;          // Warna ARGB badge
   final String iconAsset;      // Path file ekstensi untuk FileIconHelper (e.g. ".rpl", ".php")
   final bool hasJsTsToggle;    // Apakah template ini punya opsi JavaScript/TypeScript
+  final bool hasSqliteOption;  // Apakah template ini punya opsi database SQLite (biasanya untuk WordPress)
   final String? cliCommand;    // Perintah CLI untuk generate project (null = generate file manual)
   final String? downloadUrl;   // URL zip untuk diunduh otomatis
   final String? extractSubfolder; // Folder akar di dalam zip yang isinya akan diekstrak ke project
@@ -163,6 +164,7 @@ class ProjectTemplateDefinition {
     required this.tagColor,
     required this.iconAsset,
     this.hasJsTsToggle = false,
+    this.hasSqliteOption = false,
     this.cliCommand,
     this.downloadUrl,
     this.extractSubfolder,
@@ -209,6 +211,7 @@ const List<ProjectTemplateDefinition> allProjectTemplates = [
     tag: 'PHP',
     tagColor: 0xFF777BB4,
     iconAsset: '.php',
+    hasSqliteOption: true,
     downloadUrl: 'https://wordpress.org/latest.zip',
     extractSubfolder: 'wordpress',
   ),

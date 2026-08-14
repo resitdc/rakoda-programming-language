@@ -32,6 +32,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
   final _nameController = TextEditingController();
   String _parentPath = '';
   bool _useTypeScript = false;
+  bool _useSqlite = false;
   bool _creating = false;
   String _loadingMessage = 'Membuat...';
   String? _error;
@@ -133,6 +134,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
         parentPath: _parentPath,
         templateDef: _selectedTemplate!,
         useTypeScript: _useTypeScript,
+        useSqlite: _useSqlite,
       );
       if (mounted) {
         Navigator.pop(context, project);
@@ -150,6 +152,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
       _selectedTemplate = template;
       _currentStep = 1;
       _useTypeScript = false;
+      _useSqlite = false;
       _error = null;
     });
   }
@@ -579,6 +582,104 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                       ],
                     ),
                   ),
+                ],
+
+                // Toggle SQLite vs MySQL
+                if (t.hasSqliteOption) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E1E1E),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.white.withOpacity(0.08)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _useSqlite = false),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color: !_useSqlite
+                                    ? const Color(0xFFDD4814).withOpacity(0.12)
+                                    : Colors.transparent,
+                                borderRadius: const BorderRadius.horizontal(left: Radius.circular(9)),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.storage,
+                                    size: 16,
+                                    color: !_useSqlite ? const Color(0xFFDD4814) : Colors.white38,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'MySQL',
+                                    style: TextStyle(
+                                      color: !_useSqlite ? const Color(0xFFDD4814) : Colors.white38,
+                                      fontSize: 13,
+                                      fontWeight: !_useSqlite ? FontWeight.w600 : FontWeight.w400,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Container(width: 1, height: 30, color: const Color(0xFF3C3C3C)),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _useSqlite = true),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color: _useSqlite
+                                    ? const Color(0xFF0F80CC).withOpacity(0.12)
+                                    : Colors.transparent,
+                                borderRadius: const BorderRadius.horizontal(right: Radius.circular(9)),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.sd_storage,
+                                    size: 16,
+                                    color: _useSqlite ? const Color(0xFF0F80CC) : Colors.white38,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'SQLite',
+                                    style: TextStyle(
+                                      color: _useSqlite ? const Color(0xFF0F80CC) : Colors.white38,
+                                      fontSize: 13,
+                                      fontWeight: _useSqlite ? FontWeight.w600 : FontWeight.w400,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_useSqlite)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.info_outline, size: 12, color: Colors.white54),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Tidak membutuhkan konfigurasi MySQL Server.',
+                            style: TextStyle(color: Colors.white54, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
 
                 // Download/CLI info

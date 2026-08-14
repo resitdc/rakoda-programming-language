@@ -148,6 +148,7 @@ class ProjectService {
     required String parentPath,
     required ProjectTemplateDefinition templateDef,
     bool useTypeScript = false,
+    bool useSqlite = false,
   }) async {
     final projectPath = '$parentPath${Platform.pathSeparator}$name';
 
@@ -158,7 +159,7 @@ class ProjectService {
     await dir.create(recursive: true);
 
     // Generate file berdasarkan template
-    await _generateTemplateFiles(projectPath, templateDef, name, useTypeScript);
+    await _generateTemplateFiles(projectPath, templateDef, name, useTypeScript, useSqlite);
 
     final project = Project(
       name: name,
@@ -181,6 +182,7 @@ class ProjectService {
     ProjectTemplateDefinition templateDef,
     String projectName,
     bool useTypeScript,
+    bool useSqlite,
   ) async {
     if (templateDef.downloadUrl != null) {
       await _downloadAndExtractZip(
@@ -188,6 +190,16 @@ class ProjectService {
         projectPath,
         extractSubfolder: templateDef.extractSubfolder,
       );
+      
+      if (templateDef.id == 'php_wordpress' && useSqlite) {
+        final wpContentDir = Directory('$projectPath/wp-content');
+        if (!await wpContentDir.exists()) await wpContentDir.create(recursive: true);
+        
+        final response = await http.get(Uri.parse('https://raw.githubusercontent.com/aaemnnosttv/wp-sqlite-db/master/src/db.php'));
+        if (response.statusCode == 200) {
+          await File('${wpContentDir.path}/db.php').writeAsBytes(response.bodyBytes);
+        }
+      }
       
       if (templateDef.id.startsWith('php_laravel')) {
         await File('$projectPath/README_FIRST.md').writeAsString(
