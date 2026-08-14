@@ -203,6 +203,9 @@ class ProjectService {
         // Buat wp-config.php otomatis agar wizard koneksi database terlewati
         final wpConfigContent = '''<?php
 // Otomatis digenerate oleh RPL Studio (SQLite Mode)
+define( 'WP_HOME', 'http://' . \$_SERVER['HTTP_HOST'] );
+define( 'WP_SITEURL', 'http://' . \$_SERVER['HTTP_HOST'] );
+
 define( 'DB_NAME', 'sqlite_database' );
 define( 'DB_USER', 'sqlite_user' );
 define( 'DB_PASSWORD', 'sqlite_password' );
