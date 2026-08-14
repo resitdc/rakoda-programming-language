@@ -107,7 +107,9 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
                 _networkRequests.last['status'] = '200 OK';
               }
             });
-            _extractDevToolsData();
+            if (!_isDevToolsMinimized) {
+              _extractDevToolsData();
+            }
           },
           onWebResourceError: (WebResourceError error) {
             if (!mounted) return;
@@ -451,9 +453,9 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
         })();
       ''');
 
-      // Get page source
+      // Get page source (Truncate to prevent WebView bridge crash on massive pages like WP Admin)
       final html = await _evaluateJavascript(
-        'document.documentElement.outerHTML',
+        'document.documentElement.outerHTML.substring(0, 150000)',
       );
       String htmlStr = html.toString();
       if (htmlStr.startsWith('"') && htmlStr.endsWith('"')) {
@@ -717,7 +719,9 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
               _networkRequests.last['status'] = '200 OK';
             }
           });
-          _extractDevToolsData();
+          if (!_isDevToolsMinimized) {
+            _extractDevToolsData();
+          }
         }
       });
       _windowsController.webMessage.listen((msg) {
