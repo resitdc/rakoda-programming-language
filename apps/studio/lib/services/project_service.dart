@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:archive/archive.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
 import '../models/project.dart';
 
 /// Service untuk manajemen project: create, open, recent list.
@@ -181,6 +182,21 @@ class ProjectService {
     String projectName,
     bool useTypeScript,
   ) async {
+    if (templateDef.downloadUrl != null) {
+      await _downloadAndExtractZip(
+        templateDef.downloadUrl!,
+        projectPath,
+        extractSubfolder: templateDef.extractSubfolder,
+      );
+      
+      if (templateDef.id.startsWith('php_laravel')) {
+        await File('$projectPath/README_FIRST.md').writeAsString(
+          '# $projectName\n\nTemplate: ${templateDef.name}\n\nJalankan perintah berikut di terminal:\n1. `composer install`\n2. `cp .env.example .env`\n3. `php artisan key:generate`\n',
+        );
+      }
+      return;
+    }
+
     switch (templateDef.id) {
       // ── Rakoda ────────────────────────────────────────────────────
       case 'rakoda_empty':
@@ -198,22 +214,6 @@ class ProjectService {
       // ── PHP ───────────────────────────────────────────────────────
       case 'php_empty':
         await File('$projectPath/index.php').writeAsString(_phpTemplate(projectName));
-        break;
-      case 'php_ci3':
-        // CI3 tidak tersedia via Composer, buat struktur dasar
-        await _generateCi3Template(projectPath, projectName);
-        break;
-      case 'php_wordpress':
-      case 'php_ci4':
-      case 'php_laravel12':
-      case 'php_laravel10':
-        // Template dengan CLI command — buat placeholder readme dulu
-        await File('$projectPath/README.md').writeAsString(
-          '# $projectName\n\n'
-          'Template: ${templateDef.name}\n\n'
-          'Jalankan perintah berikut di terminal untuk mengunduh framework:\n\n'
-          '```\n${templateDef.cliCommand}\n```\n',
-        );
         break;
 
       // ── Node.js ───────────────────────────────────────────────────
@@ -346,34 +346,37 @@ public class Main {
 }
 ''';
 
-  static Future<void> _generateCi3Template(String projectPath, String projectName) async {
-    // Buat struktur folder dasar CodeIgniter 3
-    await Directory('$projectPath/application/controllers').create(recursive: true);
-    await Directory('$projectPath/application/models').create(recursive: true);
-    await Directory('$projectPath/application/views').create(recursive: true);
-    await Directory('$projectPath/application/config').create(recursive: true);
+  static Future<void> _downloadAndExtractZip(
+      String url, String destPath, {String? extractSubfolder}) async {
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode != 200) {
+      throw Exception('Gagal mengunduh template (Status ${response.statusCode})');
+    }
 
-    await File('$projectPath/index.php').writeAsString('''<?php
-/**
- * $projectName - CodeIgniter 3
- * Dibuat dengan RPL Studio
- *
- * Unduh CodeIgniter 3 dari: https://codeigniter.com/download
- * Lalu ekstrak dan timpa folder ini.
- */
+    final archive = ZipDecoder().decodeBytes(response.bodyBytes);
+    final String prefix = extractSubfolder != null 
+        ? (extractSubfolder.endsWith('/') ? extractSubfolder : '$extractSubfolder/') 
+        : '';
 
-echo "Silakan unduh CodeIgniter 3 terlebih dahulu.\\n";
-echo "Kunjungi: https://codeigniter.com/download\\n";
-''');
+    for (final file in archive) {
+      if (file.isFile) {
+        String filename = file.name;
+        if (prefix.isNotEmpty) {
+          if (filename.startsWith(prefix)) {
+            filename = filename.substring(prefix.length);
+          } else {
+            continue; // Skip files outside the subfolder
+          }
+        }
+        
+        if (filename.isEmpty) continue;
 
-    await File('$projectPath/README.md').writeAsString(
-      '# $projectName\n\n'
-      'Template: CodeIgniter 3\n\n'
-      '## Cara Memulai\n\n'
-      '1. Unduh CodeIgniter 3 dari https://codeigniter.com/download\n'
-      '2. Ekstrak dan timpa folder project ini\n'
-      '3. Jalankan `php -S localhost:8000` di terminal\n',
-    );
+        final data = file.content as List<int>;
+        final outFile = File('$destPath/$filename');
+        await outFile.parent.create(recursive: true);
+        await outFile.writeAsBytes(data);
+      }
+    }
   }
 
   static Future<void> _generateExpressTemplate(

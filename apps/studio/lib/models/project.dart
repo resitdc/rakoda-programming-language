@@ -151,6 +151,8 @@ class ProjectTemplateDefinition {
   final String iconAsset;      // Path file ekstensi untuk FileIconHelper (e.g. ".rpl", ".php")
   final bool hasJsTsToggle;    // Apakah template ini punya opsi JavaScript/TypeScript
   final String? cliCommand;    // Perintah CLI untuk generate project (null = generate file manual)
+  final String? downloadUrl;   // URL zip untuk diunduh otomatis
+  final String? extractSubfolder; // Folder akar di dalam zip yang isinya akan diekstrak ke project
 
   const ProjectTemplateDefinition({
     required this.id,
@@ -162,6 +164,8 @@ class ProjectTemplateDefinition {
     required this.iconAsset,
     this.hasJsTsToggle = false,
     this.cliCommand,
+    this.downloadUrl,
+    this.extractSubfolder,
   });
 }
 
@@ -205,7 +209,8 @@ const List<ProjectTemplateDefinition> allProjectTemplates = [
     tag: 'PHP',
     tagColor: 0xFF777BB4,
     iconAsset: '.php',
-    cliCommand: 'composer create-project --prefer-dist wordpress/wordpress .',
+    downloadUrl: 'https://wordpress.org/latest.zip',
+    extractSubfolder: 'wordpress',
   ),
   ProjectTemplateDefinition(
     id: 'php_ci4',
@@ -215,7 +220,8 @@ const List<ProjectTemplateDefinition> allProjectTemplates = [
     tag: 'PHP',
     tagColor: 0xFFDD4814,
     iconAsset: '.php',
-    cliCommand: 'composer create-project codeigniter4/appstarter .',
+    downloadUrl: 'https://github.com/codeigniter4/framework/archive/refs/tags/v4.4.7.zip',
+    extractSubfolder: 'framework-4.4.7',
   ),
   ProjectTemplateDefinition(
     id: 'php_ci3',
@@ -225,6 +231,8 @@ const List<ProjectTemplateDefinition> allProjectTemplates = [
     tag: 'PHP',
     tagColor: 0xFFDD4814,
     iconAsset: '.php',
+    downloadUrl: 'https://github.com/bcit-ci/CodeIgniter/archive/refs/tags/3.1.13.zip',
+    extractSubfolder: 'CodeIgniter-3.1.13',
   ),
   ProjectTemplateDefinition(
     id: 'php_laravel12',
@@ -234,7 +242,8 @@ const List<ProjectTemplateDefinition> allProjectTemplates = [
     tag: 'PHP',
     tagColor: 0xFFFF2D20,
     iconAsset: '.php',
-    cliCommand: 'composer create-project laravel/laravel . "12.*"',
+    downloadUrl: 'https://github.com/laravel/laravel/archive/refs/heads/11.x.zip', // 12.x not out yet, fallback to 11.x codebase
+    extractSubfolder: 'laravel-11.x',
   ),
   ProjectTemplateDefinition(
     id: 'php_laravel10',
@@ -244,7 +253,8 @@ const List<ProjectTemplateDefinition> allProjectTemplates = [
     tag: 'PHP',
     tagColor: 0xFFFF2D20,
     iconAsset: '.php',
-    cliCommand: 'composer create-project laravel/laravel . "10.*"',
+    downloadUrl: 'https://github.com/laravel/laravel/archive/refs/heads/10.x.zip',
+    extractSubfolder: 'laravel-10.x',
   ),
 
   // ── Node.js (membutuhkan runtime Node) ───────────────────────────

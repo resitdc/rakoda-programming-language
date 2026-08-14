@@ -33,6 +33,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
   String _parentPath = '';
   bool _useTypeScript = false;
   bool _creating = false;
+  String _loadingMessage = 'Membuat...';
   String? _error;
 
   @override
@@ -121,6 +122,9 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
     setState(() {
       _creating = true;
       _error = null;
+      _loadingMessage = _selectedTemplate?.downloadUrl != null
+          ? 'Mengunduh...'
+          : 'Membuat...';
     });
 
     try {
@@ -577,8 +581,8 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                   ),
                 ],
 
-                // CLI command info
-                if (t.cliCommand != null) ...[
+                // Download/CLI info
+                if (t.downloadUrl != null || t.cliCommand != null) ...[
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(10),
@@ -593,7 +597,9 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Template ini akan diunduh dari internet saat pembuatan project.',
+                            t.downloadUrl != null
+                                ? 'Template ini akan diunduh dari internet secara otomatis (butuh koneksi stabil).'
+                                : 'Template ini akan menghasilkan instruksi CLI (harus dijalankan manual).',
                             style: TextStyle(color: const Color(0xFF2568E7).withOpacity(0.7), fontSize: 11),
                           ),
                         ),
@@ -665,10 +671,17 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                     elevation: 0,
                   ),
                   child: _creating
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(_loadingMessage, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                          ],
                         )
                       : const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
