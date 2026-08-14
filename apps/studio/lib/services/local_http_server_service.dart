@@ -3,6 +3,7 @@ import 'package:path/path.dart' as p;
 
 class LocalHttpServerService {
   HttpServer? _server;
+  Process? _phpProcess;
   String? _rootPath;
   int? _port;
   bool _isRunning = false;
@@ -30,10 +31,48 @@ class LocalHttpServerService {
     });
   }
 
+  Future<void> startPhpServer(String rootPath, String phpExecutable, {int defaultPort = 8000}) async {
+    if (_isRunning) return;
+
+    _rootPath = rootPath;
+    
+    // Cari port yang kosong
+    int targetPort = defaultPort;
+    try {
+      final s = await ServerSocket.bind(InternetAddress.loopbackIPv4, defaultPort);
+      targetPort = s.port;
+      await s.close();
+    } catch (e) {
+      final s = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      targetPort = s.port;
+      await s.close();
+    }
+
+    _port = targetPort;
+    _isRunning = true;
+
+    try {
+      _phpProcess = await Process.start(phpExecutable, ['-S', '0.0.0.0:$_port', '-t', rootPath]);
+    } catch (e) {
+      _isRunning = false;
+      _port = null;
+      rethrow;
+    }
+  }
+
   Future<void> stop() async {
-    if (!_isRunning || _server == null) return;
-    await _server!.close(force: true);
-    _server = null;
+    if (!_isRunning) return;
+    
+    if (_server != null) {
+      await _server!.close(force: true);
+      _server = null;
+    }
+    
+    if (_phpProcess != null) {
+      _phpProcess!.kill();
+      _phpProcess = null;
+    }
+    
     _port = null;
     _isRunning = false;
   }

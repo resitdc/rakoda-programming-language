@@ -61,6 +61,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   bool _showLocalSearch = false;
   String _localSearchQuery = '';
   final TextEditingController _localSearchController = TextEditingController();
+  bool _isPhpWeb = false;
 
   final ClassroomService _classroomService = ClassroomService();
   String _liveCodeContent = '';
@@ -143,6 +144,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
       ),
     ];
     ProjectService.touchProject(widget.project);
+    _checkIfPhpWebProject();
     
     _classroomService.onMessage.listen((msg) {
       if (msg.eventType == 'live_code' && mounted) {
@@ -199,6 +201,25 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
         });
       }
     });
+  }
+
+  Future<void> _checkIfPhpWebProject() async {
+    final rootDir = Directory(widget.project.path);
+    if (!await rootDir.exists()) return;
+    
+    final hasWpConfig = await File('${rootDir.path}/wp-config.php').exists();
+    final hasWpConfigSample = await File('${rootDir.path}/wp-config-sample.php').exists();
+    final hasArtisan = await File('${rootDir.path}/artisan').exists();
+    final hasSpark = await File('${rootDir.path}/spark').exists();
+    
+    if (hasWpConfig || hasWpConfigSample || hasArtisan || hasSpark) {
+      if (mounted) setState(() => _isPhpWeb = true);
+    } else {
+      final hasIndexPhp = await File('${rootDir.path}/index.php').exists();
+      if (hasIndexPhp) {
+        if (mounted) setState(() => _isPhpWeb = true);
+      }
+    }
   }
 
   void _injectPathsToPty() async {
@@ -1258,28 +1279,48 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                   final fileName = tab.fileName;
                   final isPureHtml = fileName.endsWith('.html') && !fileName.endsWith('.rpl.html');
                   
-                  final isServerRunning = isPureHtml && _httpServerService.isRunning;
+                  final isServerRunning = (isPureHtml || _isPhpWeb) && _httpServerService.isRunning;
 
                   return _TitleBarButton(
                     icon: isServerRunning ? Icons.stop : Icons.play_arrow,
                     tooltip: isServerRunning ? 'Stop Server' : 'Run',
                     color: isServerRunning ? Colors.redAccent : const Color(0xFF4EC9B0),
                     onPressed: () async {
-                      if (isPureHtml) {
+                      if (isPureHtml || _isPhpWeb) {
                         if (_httpServerService.isRunning) {
                           await _httpServerService.stop();
-                          _terminal.write('\r\n>_ Server HTML dihentikan.\r\n');
+                          _terminal.write('\r\n>_ Server dihentikan.\r\n');
                           setState(() {});
                         } else {
-                          await _httpServerService.start(widget.project.path, defaultPort: 8000);
+                          if (isPureHtml) {
+                            await _httpServerService.start(widget.project.path, defaultPort: 8000);
+                          } else {
+                            final availableRuntimes = await CodeExecutorService.getInstalledRuntimePaths('php');
+                            if (availableRuntimes.isEmpty) {
+                              _terminal.write('\r\n>_ Error: Runtime PHP belum terpasang. Silakan unduh melalui Pengelola Runtime.\r\n');
+                              setState(() {
+                                _isTerminalMinimized = false;
+                              });
+                              return;
+                            }
+                            await _httpServerService.startPhpServer(widget.project.path, availableRuntimes.first, defaultPort: 8000);
+                          }
                           final port = _httpServerService.port;
-                          _terminal.write('\r\n>_ HTTP Server berjalan di http://localhost:$port\r\n');
+                          _terminal.write('\r\n>_ Web Server berjalan di http://localhost:$port\r\n');
                           
                           setState(() {
-                            _browserInitialUrl = 'http://localhost:$port/$fileName';
+                            _browserInitialUrl = isPureHtml ? 'http://localhost:$port/$fileName' : 'http://localhost:$port/';
                             _activeWorkspace = WorkspaceType.browser;
                             _activeActivity = ActivityType.browser;
                           });
+                          
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('🌐 Web Server berjalan di http://localhost:$port'),
+                              backgroundColor: const Color(0xFF4EC9B0),
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
                         }
                         return;
                       }
