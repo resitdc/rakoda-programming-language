@@ -163,9 +163,63 @@ class RuntimeDownloaderNotifier extends ChangeNotifier {
         }
       }
 
+      if (runtimeName == 'php') {
+        await _configurePhpIni(targetRuntimeDir);
+      }
+
       _updateStatus(_status.copyWith(state: DownloadState.installed));
     } catch (e) {
       _updateStatus(_status.copyWith(state: DownloadState.error, error: e.toString()));
+    }
+  }
+
+  Future<void> _configurePhpIni(Directory runtimeDir) async {
+    try {
+      final entities = await runtimeDir.list(recursive: true).toList();
+      File? phpIni;
+      File? phpIniTemplate;
+
+      for (final entity in entities) {
+        if (entity is File) {
+          final name = p.basename(entity.path);
+          if (name == 'php.ini') {
+            phpIni = entity;
+            break;
+          } else if (name == 'php.ini-development' || name == 'php.ini-production') {
+            phpIniTemplate = entity;
+          }
+        }
+      }
+
+      if (phpIni == null && phpIniTemplate != null) {
+        final newPath = p.join(phpIniTemplate.parent.path, 'php.ini');
+        phpIni = await phpIniTemplate.copy(newPath);
+      }
+
+      if (phpIni != null && await phpIni.exists()) {
+        String content = await phpIni.readAsString();
+        
+        final extensions = [
+          'mysqli', 'pdo_mysql', 'pgsql', 'pdo_pgsql', 'sqlite3', 'pdo_sqlite',
+          'curl', 'mbstring', 'openssl', 'fileinfo', 'gd', 'zip', 'intl', 'exif',
+          'sodium', 'ftp', 'bz2'
+        ];
+        
+        for (final ext in extensions) {
+          // Uncomment standard extensions: ;extension=mysqli -> extension=mysqli
+          content = content.replaceAll(RegExp('^;\\s*extension\\s*=\\s*$ext\$', multiLine: true), 'extension=$ext');
+          // Uncomment Windows extensions: ;extension=php_mysqli.dll -> extension=php_mysqli.dll
+          content = content.replaceAll(RegExp('^;\\s*extension\\s*=\\s*php_$ext\\.dll\$', multiLine: true), 'extension=php_$ext.dll');
+        }
+        
+        // Uncomment extension_dir for Windows
+        content = content.replaceAll(RegExp(r'^;\s*extension_dir\s*=\s*"ext"', multiLine: true), 'extension_dir = "ext"');
+        
+        await phpIni.writeAsString(content);
+        print("Berhasil mengaktifkan ekstensi PHP secara otomatis di ${phpIni.path}");
+      }
+    } catch (e) {
+      print("Gagal mengonfigurasi php.ini: \$e");
     }
   }
 
