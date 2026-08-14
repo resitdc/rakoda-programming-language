@@ -199,6 +199,35 @@ class ProjectService {
         if (response.statusCode == 200) {
           await File('${wpContentDir.path}/db.php').writeAsBytes(response.bodyBytes);
         }
+        
+        // Buat wp-config.php otomatis agar wizard koneksi database terlewati
+        final wpConfigContent = '''<?php
+// Otomatis digenerate oleh RPL Studio (SQLite Mode)
+define( 'DB_NAME', 'sqlite_database' );
+define( 'DB_USER', 'sqlite_user' );
+define( 'DB_PASSWORD', 'sqlite_password' );
+define( 'DB_HOST', 'localhost' );
+define( 'DB_CHARSET', 'utf8mb4' );
+define( 'DB_COLLATE', '' );
+
+define( 'AUTH_KEY',         'rpl_studio_dummy_key_1' );
+define( 'SECURE_AUTH_KEY',  'rpl_studio_dummy_key_2' );
+define( 'LOGGED_IN_KEY',    'rpl_studio_dummy_key_3' );
+define( 'NONCE_KEY',        'rpl_studio_dummy_key_4' );
+define( 'AUTH_SALT',        'rpl_studio_dummy_salt_1' );
+define( 'SECURE_AUTH_SALT', 'rpl_studio_dummy_salt_2' );
+define( 'LOGGED_IN_SALT',   'rpl_studio_dummy_salt_3' );
+define( 'NONCE_SALT',       'rpl_studio_dummy_salt_4' );
+
+\$table_prefix = 'wp_';
+define( 'WP_DEBUG', true );
+
+if ( ! defined( 'ABSPATH' ) ) {
+	define( 'ABSPATH', __DIR__ . '/' );
+}
+require_once ABSPATH . 'wp-settings.php';
+''';
+        await File('$projectPath/wp-config.php').writeAsString(wpConfigContent);
       }
       
       if (templateDef.id.startsWith('php_laravel')) {
