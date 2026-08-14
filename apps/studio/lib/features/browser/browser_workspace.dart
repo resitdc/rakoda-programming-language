@@ -21,6 +21,7 @@ class BrowserWorkspace extends StatefulWidget {
 
 class _BrowserWorkspaceState extends State<BrowserWorkspace> {
   late final WebViewController _controller;
+  late final Widget _webViewWidget;
   final _windowsController = win_web.WebviewController();
   bool _isWindowsWebviewInitialized = false;
   final Map<String, Completer<dynamic>> _jsCallbacks = {};
@@ -291,6 +292,16 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
       _controller.loadRequest(Uri.parse(widget.initialUrl!));
     } else {
       _controller.loadHtmlString(_getDefaultHtml());
+    }
+
+    if (Platform.isAndroid && _controller.platform is AndroidWebViewController) {
+      final androidParams = AndroidWebViewWidgetCreationParams(
+        controller: _controller.platform as AndroidWebViewController,
+        displayWithHybridComposition: true,
+      );
+      _webViewWidget = WebViewWidget.fromPlatformCreationParams(params: androidParams);
+    } else {
+      _webViewWidget = WebViewWidget(controller: _controller);
     }
   }
 
@@ -875,17 +886,6 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
     }
   }
 
-  Widget _buildWebView() {
-    if (Platform.isAndroid && _controller.platform is AndroidWebViewController) {
-      final androidParams = AndroidWebViewWidgetCreationParams(
-        controller: _controller.platform as AndroidWebViewController,
-        displayWithHybridComposition: true,
-      );
-      return WebViewWidget.fromPlatformCreationParams(params: androidParams);
-    }
-    return WebViewWidget(controller: _controller);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -967,7 +967,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
                 flex: 3,
                 child: Platform.isWindows
                     ? (_isWindowsWebviewInitialized ? win_web.Webview(_windowsController) : const Center(child: CircularProgressIndicator()))
-                    : _buildWebView(),
+                    : _webViewWidget,
               ),
               Container(height: 1, color: const Color(0xFF333333)),
               // DevTools View
