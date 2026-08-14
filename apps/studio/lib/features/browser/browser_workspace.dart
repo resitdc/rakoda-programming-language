@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_windows/webview_windows.dart' as win_web;
 import 'package:uuid/uuid.dart';
 import 'dart:async';
@@ -64,7 +65,19 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
       WebViewPlatform.instance = WebKitWebViewPlatform();
     }
 
-    _controller = WebViewController()
+    late final PlatformWebViewControllerCreationParams params;
+    if (WebViewPlatform.instance is WebKitWebViewPlatform) {
+      params = WebKitWebViewControllerCreationParams(
+        allowsInlineMediaPlayback: true,
+      );
+    } else if (Platform.isAndroid) {
+      // Force Hybrid Composition to avoid SurfaceAnimationManager crash on heavy CSS/JS (WordPress Admin)
+      params = AndroidWebViewControllerCreationParams();
+    } else {
+      params = const PlatformWebViewControllerCreationParams();
+    }
+
+    _controller = WebViewController.fromPlatformCreationParams(params)
       ..setJavaScriptMode(JavaScriptMode.unrestricted);
 
     try {
