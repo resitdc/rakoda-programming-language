@@ -35,6 +35,38 @@ class LocalHttpServerService {
     if (_isRunning) return;
 
     _rootPath = rootPath;
+
+    // Otomatis deteksi WordPress dan buat mu-plugin untuk mematikan View Transitions
+    // (Mencegah Android WebView crash/blank screen)
+    if (File(p.join(rootPath, 'wp-config.php')).existsSync() || 
+        File(p.join(rootPath, 'wp-config-sample.php')).existsSync()) {
+      try {
+        final muDir = Directory(p.join(rootPath, 'wp-content', 'mu-plugins'));
+        if (!muDir.existsSync()) {
+          muDir.createSync(recursive: true);
+        }
+        final fixFile = File(p.join(muDir.path, 'rpl_studio_compat.php'));
+        fixFile.writeAsStringSync('''<?php
+/**
+ * Plugin Name: RPL Studio Compatibility Fix
+ * Description: Disables CSS View Transitions and polyfills to prevent Android WebView crashes on navigation.
+ * Author: RPL Studio
+ */
+add_action('init', function() {
+    remove_action('wp_head', 'wp_view_transition_meta');
+    remove_action('admin_head', 'wp_view_transition_meta');
+});
+add_action('admin_head', function() {
+    echo "<style>@view-transition { navigation: none !important; }</style>";
+    echo "<script>if (typeof document !== 'undefined') document.startViewTransition = undefined;</script>";
+}, 1);
+add_action('wp_head', function() {
+    echo "<style>@view-transition { navigation: none !important; }</style>";
+    echo "<script>if (typeof document !== 'undefined') document.startViewTransition = undefined;</script>";
+}, 1);
+''');
+      } catch (_) {}
+    }
     
     // Cari port yang kosong
     int targetPort = defaultPort;
