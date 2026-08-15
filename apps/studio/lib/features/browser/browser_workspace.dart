@@ -735,6 +735,14 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
                       initialUserScripts: UnmodifiableListView<UserScript>([
                         UserScript(
                           source: '''
+                            // Disable View Transitions API globally before any script runs
+                            if (typeof document !== 'undefined') {
+                              document.startViewTransition = undefined;
+                            }
+                            if (typeof window !== 'undefined') {
+                              window.document.startViewTransition = undefined;
+                            }
+
                             window.ConsoleChannel = {
                               postMessage: function(msg) {
                                 window.flutter_inappwebview.callHandler('ConsoleChannel', msg);
@@ -747,6 +755,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
                             };
                           ''',
                           injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+                          forMainFrameOnly: false,
                         )
                       ]),
                       onWebViewCreated: (controller) {
