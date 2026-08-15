@@ -92,12 +92,21 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
         NavigationDelegate(
           onProgress: (int progress) {
             if (!mounted) return;
+            try {
+              if (progress < 50) {
+                 _controller.runJavaScript('if (typeof document !== "undefined") { document.startViewTransition = undefined; }');
+              }
+            } catch (_) {}
             setState(() {
               _progress = progress / 100;
             });
           },
           onPageStarted: (String url) {
             if (!mounted) return;
+            try {
+              // Forcefully disable View Transitions API to prevent Chromium SurfaceAnimationManager crash / freezing
+              _controller.runJavaScript('if (typeof document !== "undefined") { document.startViewTransition = undefined; }');
+            } catch (_) {}
             setState(() {
               _isLoading = true;
               _urlController.text =
