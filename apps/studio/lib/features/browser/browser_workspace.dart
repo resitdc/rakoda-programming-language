@@ -1,11 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
-import 'package:webview_flutter_android/webview_flutter_android.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:webview_windows/webview_windows.dart' as win_web;
 import 'package:uuid/uuid.dart';
 import 'dart:async';
@@ -20,8 +19,13 @@ class BrowserWorkspace extends StatefulWidget {
 }
 
 class _BrowserWorkspaceState extends State<BrowserWorkspace> {
-  late final WebViewController _controller;
-  late final Widget _webViewWidget;
+  InAppWebViewController? _controller;
+  late final InAppWebViewSettings _settings = InAppWebViewSettings(
+    isInspectable: true,
+    javaScriptEnabled: true,
+    transparentBackground: true,
+    useHybridComposition: true,
+  );
   final _windowsController = win_web.WebviewController();
   bool _isWindowsWebviewInitialized = false;
   final Map<String, Completer<dynamic>> _jsCallbacks = {};
@@ -45,9 +49,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
       if (Platform.isWindows) {
         _windowsController.dispose();
       } else {
-        _controller.loadHtmlString('about:blank');
-        _controller.clearCache();
-        _controller.clearLocalStorage();
+        
       }
     } catch (_) {}
     super.dispose();
@@ -62,256 +64,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
       return;
     }
 
-    if (!kIsWeb && Platform.isMacOS) {
-      WebViewPlatform.instance = WebKitWebViewPlatform();
-    }
-
-    late final PlatformWebViewControllerCreationParams params;
-    if (WebViewPlatform.instance is WebKitWebViewPlatform) {
-      params = WebKitWebViewControllerCreationParams(
-        allowsInlineMediaPlayback: true,
-      );
-    } else if (Platform.isAndroid) {
-      // Force Hybrid Composition to avoid SurfaceAnimationManager crash on heavy CSS/JS (WordPress Admin)
-      params = AndroidWebViewControllerCreationParams();
-    } else {
-      params = const PlatformWebViewControllerCreationParams();
-    }
-
-    _controller = WebViewController.fromPlatformCreationParams(params)
-      ..setJavaScriptMode(JavaScriptMode.unrestricted);
-
-    try {
-      _controller.setBackgroundColor(const Color(0xFF1E1E1E));
-    } catch (_) {
-      // Ignored: webview_flutter_wkwebview throws UnimplementedError for opaque on macOS
-    }
-
-    _controller
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onProgress: (int progress) {
-            if (!mounted) return;
-            try {
-              if (progress < 50) {
-                 _controller.runJavaScript('if (typeof document !== "undefined") { document.startViewTransition = undefined; }');
-              }
-            } catch (_) {}
-            setState(() {
-              _progress = progress / 100;
-            });
-          },
-          onPageStarted: (String url) {
-            if (!mounted) return;
-            try {
-              // Forcefully disable View Transitions API to prevent Chromium SurfaceAnimationManager crash / freezing
-              _controller.runJavaScript('if (typeof document !== "undefined") { document.startViewTransition = undefined; }');
-            } catch (_) {}
-            setState(() {
-              _isLoading = true;
-              _urlController.text =
-                  (url.startsWith('data:text/html') || url == 'about:blank')
-                  ? 'rpl://browser'
-                  : url;
-              _consoleLogs.clear();
-              _networkRequests.add({
-                'url': url,
-                'method': 'GET',
-                'status': 'Pending',
-                'time': DateTime.now().toString(),
-              });
-            });
-          },
-          onPageFinished: (String url) async {
-            if (!mounted) return;
-            setState(() {
-              _isLoading = false;
-              if (_networkRequests.isNotEmpty) {
-                _networkRequests.last['status'] = '200 OK';
-              }
-            });
-            if (!_isDevToolsMinimized) {
-              _extractDevToolsData();
-            }
-          },
-          onWebResourceError: (WebResourceError error) {
-            if (!mounted) return;
-            setState(() {
-              _isLoading = false;
-              _consoleLogs.add('[ERROR] ${error.description}');
-            });
-          },
-        ),
-      )
-      ..addJavaScriptChannel(
-        'ConsoleChannel',
-        onMessageReceived: (JavaScriptMessage message) {
-          if (!mounted) return;
-          setState(() {
-            _consoleLogs.add(message.message);
-          });
-        },
-      )
-      ..addJavaScriptChannel(
-        'NetworkChannel',
-        onMessageReceived: (JavaScriptMessage message) {
-          if (!mounted) return;
-          try {
-            final data = jsonDecode(message.message) as Map<String, dynamic>;
-            setState(() {
-              _networkRequests.add({
-                'url': data['url'] ?? '',
-                'method': data['method'] ?? 'GET',
-                'status': data['status'] ?? '',
-                'payload': data['payload'] ?? '',
-                'response': data['response'] ?? '',
-                'time': DateTime.now().toString(),
-                'contentType': data['contentType'] ?? '',
-              });
-            });
-          } catch (e) {
-            debugPrint('Error parsing network message: $e');
-          }
-        },
-      )
-      ..setOnJavaScriptAlertDialog((
-        JavaScriptAlertDialogRequest request,
-      ) async {
-        if (!mounted) return;
-        await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: const Color(0xFF252526),
-            title: const Text(
-              'JavaScript Alert',
-              style: TextStyle(color: Colors.white),
-            ),
-            content: Text(
-              request.message,
-              style: const TextStyle(color: Colors.white70),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text(
-                  'OK',
-                  style: TextStyle(color: Color(0xFF2568E7)),
-                ),
-              ),
-            ],
-          ),
-        );
-      })
-      ..setOnJavaScriptConfirmDialog((
-        JavaScriptConfirmDialogRequest request,
-      ) async {
-        if (!mounted) return false;
-        final result = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: const Color(0xFF252526),
-            title: const Text(
-              'JavaScript Confirm',
-              style: TextStyle(color: Colors.white),
-            ),
-            content: Text(
-              request.message,
-              style: const TextStyle(color: Colors.white70),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(color: Colors.white54),
-                ),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text(
-                  'OK',
-                  style: TextStyle(color: Color(0xFF2568E7)),
-                ),
-              ),
-            ],
-          ),
-        );
-        return result ?? false;
-      })
-      ..setOnJavaScriptTextInputDialog((
-        JavaScriptTextInputDialogRequest request,
-      ) async {
-        if (!mounted) return '';
-        final TextEditingController textController = TextEditingController(
-          text: request.defaultText,
-        );
-        final result = await showDialog<String>(
-          context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: const Color(0xFF252526),
-            title: const Text(
-              'JavaScript Prompt',
-              style: TextStyle(color: Colors.white),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  request.message,
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: textController,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Color(0xFF333333)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Color(0xFF2568E7)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(null),
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(color: Colors.white54),
-                ),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(textController.text),
-                child: const Text(
-                  'OK',
-                  style: TextStyle(color: Color(0xFF2568E7)),
-                ),
-              ),
-            ],
-          ),
-        );
-        return result ?? '';
-      });
-
-    if (widget.initialUrl != null && widget.initialUrl!.isNotEmpty) {
-      _controller.loadRequest(Uri.parse(widget.initialUrl!));
-    } else {
-      _controller.loadHtmlString(_getDefaultHtml());
-    }
-
-    if (Platform.isAndroid && _controller.platform is AndroidWebViewController) {
-      final androidParams = AndroidWebViewWidgetCreationParams(
-        controller: _controller.platform as AndroidWebViewController,
-        displayWithHybridComposition: true,
-      );
-      _webViewWidget = WebViewWidget.fromPlatformCreationParams(params: androidParams);
-    } else {
-      _webViewWidget = WebViewWidget(controller: _controller);
-    }
+    // Controller is initialized in onWebViewCreated for InAppWebView
   }
 
   Future<void> _extractDevToolsData() async {
@@ -568,7 +321,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
       if (Platform.isWindows) {
         if (_isWindowsWebviewInitialized) _windowsController.loadStringContent(_getDefaultHtml());
       } else {
-        _controller.loadHtmlString(_getDefaultHtml());
+        _controller?.loadData(data: _getDefaultHtml());
       }
       FocusScope.of(context).unfocus();
       return;
@@ -587,7 +340,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
     if (Platform.isWindows) {
       if (_isWindowsWebviewInitialized) _windowsController.loadUrl(url);
     } else {
-      _controller.loadRequest(Uri.parse(url));
+      _controller?.loadUrl(urlRequest: URLRequest(url: WebUri(url)));
     }
     FocusScope.of(context).unfocus();
   }
@@ -826,7 +579,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
       await _windowsController.executeScript(code);
     } else {
       try {
-        await _controller.runJavaScript(code);
+        await _controller?.evaluateJavascript(source: code);
       } catch (_) {}
     }
   }
@@ -864,7 +617,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
       });
     } else {
       try {
-        return await _controller.runJavaScriptReturningResult(code);
+        return await _controller?.evaluateJavascript(source: code);
       } catch (_) {
         return null;
       }
@@ -875,7 +628,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
     if (Platform.isWindows) {
       if (_isWindowsWebviewInitialized) _windowsController.goBack();
     } else {
-      _controller.goBack();
+      _controller?.goBack();
     }
   }
 
@@ -883,7 +636,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
     if (Platform.isWindows) {
       if (_isWindowsWebviewInitialized) _windowsController.goForward();
     } else {
-      _controller.goForward();
+      _controller?.goForward();
     }
   }
 
@@ -891,7 +644,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
     if (Platform.isWindows) {
       if (_isWindowsWebviewInitialized) _windowsController.reload();
     } else {
-      _controller.reload();
+      _controller?.reload();
     }
   }
 
@@ -976,7 +729,98 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
                 flex: 3,
                 child: Platform.isWindows
                     ? (_isWindowsWebviewInitialized ? win_web.Webview(_windowsController) : const Center(child: CircularProgressIndicator()))
-                    : _webViewWidget,
+                    : InAppWebView(
+                      initialUrlRequest: URLRequest(url: WebUri(widget.initialUrl ?? 'about:blank')),
+                      initialSettings: _settings,
+                      initialUserScripts: UnmodifiableListView<UserScript>([
+                        UserScript(
+                          source: '''
+                            window.ConsoleChannel = {
+                              postMessage: function(msg) {
+                                window.flutter_inappwebview.callHandler('ConsoleChannel', msg);
+                              }
+                            };
+                            window.NetworkChannel = {
+                              postMessage: function(msg) {
+                                window.flutter_inappwebview.callHandler('NetworkChannel', msg);
+                              }
+                            };
+                          ''',
+                          injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+                        )
+                      ]),
+                      onWebViewCreated: (controller) {
+                        _controller = controller;
+                        _controller?.addJavaScriptHandler(
+                          handlerName: 'ConsoleChannel',
+                          callback: (args) {
+                            if (!mounted) return;
+                            setState(() {
+                              _consoleLogs.add(args[0]);
+                            });
+                          },
+                        );
+                        _controller?.addJavaScriptHandler(
+                          handlerName: 'NetworkChannel',
+                          callback: (args) {
+                            if (!mounted) return;
+                            try {
+                              final data = jsonDecode(args[0]) as Map<String, dynamic>;
+                              setState(() {
+                                _networkRequests.add({
+                                  'url': data['url'] ?? '',
+                                  'method': data['method'] ?? 'GET',
+                                  'status': data['status'] ?? '',
+                                  'payload': data['payload'] ?? '',
+                                  'response': data['response'] ?? '',
+                                  'time': DateTime.now().toString(),
+                                  'contentType': data['contentType'] ?? '',
+                                });
+                              });
+                            } catch (_) {}
+                          },
+                        );
+                      },
+                      onLoadStart: (controller, url) {
+                        if (!mounted) return;
+                        setState(() {
+                          _isLoading = true;
+                          _urlController.text = url?.toString() ?? '';
+                          _consoleLogs.clear();
+                          _networkRequests.add({
+                            'url': _urlController.text,
+                            'method': 'GET',
+                            'status': 'Pending',
+                            'time': DateTime.now().toString(),
+                          });
+                        });
+                      },
+                      onLoadStop: (controller, url) async {
+                        if (!mounted) return;
+                        setState(() {
+                          _isLoading = false;
+                          if (_networkRequests.isNotEmpty) {
+                            _networkRequests.last['status'] = '200 OK';
+                          }
+                        });
+                        if (!_isDevToolsMinimized) {
+                          _extractDevToolsData();
+                        }
+                      },
+                      onProgressChanged: (controller, progress) {
+                        if (!mounted) return;
+                        setState(() {
+                          _progress = progress / 100;
+                        });
+                      },
+                      onReceivedError: (controller, request, error) {
+                        if (!mounted) return;
+                        setState(() {
+                          _isLoading = false;
+                          _consoleLogs.add('[ERROR] ${error.description}');
+                        });
+                      },
+                    ),
               ),
               Container(height: 1, color: const Color(0xFF333333)),
               // DevTools View
@@ -1069,8 +913,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
                     },
                     onExecuteJS: (code) async {
                       try {
-                        final result = await _controller
-                            .runJavaScriptReturningResult(code);
+                        final result = await _evaluateJavascript(code);
                         if (mounted) {
                           setState(() {
                             _consoleLogs.add('> $code');
