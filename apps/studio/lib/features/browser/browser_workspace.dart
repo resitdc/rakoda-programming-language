@@ -23,8 +23,8 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
   late final InAppWebViewSettings _settings = InAppWebViewSettings(
     isInspectable: true,
     javaScriptEnabled: true,
-    transparentBackground: true,
-    useHybridComposition: true,
+    transparentBackground: false, // Transparent background can cause texture detachment
+    useHybridComposition: false, // FORCE Virtual Display mode to bypass SurfaceAnimationManager crashes completely
   );
   final _windowsController = win_web.WebviewController();
   bool _isWindowsWebviewInitialized = false;
