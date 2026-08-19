@@ -243,6 +243,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
               textAlignVertical: TextAlignVertical.center,
               style: const TextStyle(color: Colors.white, fontSize: 13),
               decoration: InputDecoration(
+                filled: false,
                 isDense: true,
                 hintText: 'Cari template...',
                 hintStyle: TextStyle(color: Colors.white.withOpacity(0.25), fontSize: 13),
@@ -447,6 +448,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                     textAlignVertical: TextAlignVertical.center,
                     style: const TextStyle(color: Colors.white, fontSize: 14),
                     decoration: InputDecoration(
+                      filled: false,
                       isDense: true,
                       hintText: 'contoh: aplikasi_toko',
                       hintStyle: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 13),
