@@ -316,20 +316,17 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                         ],
                       ),
                     )
-                  : GridView.builder(
+                  : ListView.builder(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 10,
-                        crossAxisSpacing: 10,
-                        childAspectRatio: 1.35,
-                      ),
                       itemCount: _filteredTemplates.length,
                       itemBuilder: (ctx, i) {
                         final t = _filteredTemplates[i];
-                        return _TemplateCard(
-                          template: t,
-                          onTap: () => _goToStep2(t),
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: _TemplateCard(
+                            template: t,
+                            onTap: () => _goToStep2(t),
+                          ),
                         );
                       },
                     ),
@@ -916,78 +913,79 @@ class _TemplateCardState extends State<_TemplateCard> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: _hovering ? const Color(0xFF2A2A2E) : const Color(0xFF252526),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: _hovering
                   ? Color(t.tagColor).withOpacity(0.35)
                   : Colors.white.withOpacity(0.06),
               width: _hovering ? 1.5 : 1,
             ),
-            boxShadow: _hovering
-                ? [
-                    BoxShadow(
-                      color: Color(t.tagColor).withOpacity(0.08),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : null,
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          child: Row(
+            children: [
+              // Icon
+              SizedBox(
+                width: 28,
+                height: 28,
+                child: FileIconHelper.getFileIcon('dummy${t.iconAsset}', size: 24),
+              ),
+              const SizedBox(width: 12),
+              // Name + Description
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: FileIconHelper.getFileIcon('dummy${t.iconAsset}', size: 22),
+                    Text(
+                      t.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const Spacer(),
-                    // Tag badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Color(t.tagColor).withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        t.tag,
-                        style: TextStyle(
-                          color: Color(t.tagColor),
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
+                    const SizedBox(height: 2),
+                    Text(
+                      t.description,
+                      style: TextStyle(color: Colors.white.withOpacity(0.35), fontSize: 10),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
-                const Spacer(),
-                Text(
-                  t.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+              ),
+              const SizedBox(width: 8),
+              // Tag badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Color(t.tagColor).withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  t.tag,
+                  style: TextStyle(
+                    color: Color(t.tagColor),
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.3,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  t.description,
-                  style: TextStyle(color: Colors.white.withOpacity(0.35), fontSize: 10),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 4),
+              // Arrow indicator
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 16,
+                color: Colors.white.withOpacity(_hovering ? 0.4 : 0.12),
+              ),
+            ],
           ),
         ),
       ),
