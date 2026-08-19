@@ -240,13 +240,16 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
             ),
             child: TextField(
               controller: _searchController,
+              textAlignVertical: TextAlignVertical.center,
               style: const TextStyle(color: Colors.white, fontSize: 13),
               decoration: InputDecoration(
+                isDense: true,
                 hintText: 'Cari template...',
                 hintStyle: TextStyle(color: Colors.white.withOpacity(0.25), fontSize: 13),
                 prefixIcon: Icon(Icons.search, color: Colors.white.withOpacity(0.3), size: 18),
+                prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                contentPadding: EdgeInsets.zero,
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.close, size: 16, color: Colors.white38),
@@ -441,13 +444,16 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                   child: TextField(
                     controller: _nameController,
                     autofocus: true,
+                    textAlignVertical: TextAlignVertical.center,
                     style: const TextStyle(color: Colors.white, fontSize: 14),
                     decoration: InputDecoration(
+                      isDense: true,
                       hintText: 'contoh: aplikasi_toko',
                       hintStyle: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 13),
                       prefixIcon: Icon(Icons.edit_outlined, color: Colors.white.withOpacity(0.3), size: 18),
+                      prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                      contentPadding: EdgeInsets.zero,
                     ),
                   ),
                 ),
