@@ -139,13 +139,15 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     }
 
     final mainFile = _findMainFile();
-    _openTabs = [
-      EditorTab(
-        filePath: mainFile.path,
-        fileName: mainFile.path.split(Platform.pathSeparator).last,
-        content: _readFile(mainFile.path),
-      ),
-    ];
+    _openTabs = mainFile != null
+        ? [
+            EditorTab(
+              filePath: mainFile.path,
+              fileName: mainFile.path.split(Platform.pathSeparator).last,
+              content: _readFile(mainFile.path),
+            ),
+          ]
+        : [];
     ProjectService.touchProject(widget.project);
     _checkIfPhpWebProject();
     
@@ -405,18 +407,47 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     super.dispose();
   }
 
-  File _findMainFile() {
-    final mainPath = '${widget.project.path}${Platform.pathSeparator}main.rpl';
-    if (File(mainPath).existsSync()) return File(mainPath);
-    final dir = Directory(widget.project.path);
-    if (dir.existsSync()) {
-      for (final entry in dir.listSync()) {
-        if (entry is File && entry.path.endsWith('.rpl')) return entry;
-      }
+  File? _findMainFile() {
+    final projectDir = Directory(widget.project.path);
+    if (!projectDir.existsSync()) return null;
+
+    // Prioritas nama file utama berdasarkan ekosistem umum
+    final priorityNames = [
+      'main.rpl',
+      'index.html',
+      'index.php',
+      'main.py',
+      'app.py',
+      'index.js',
+      'index.ts',
+      'main.js',
+      'main.ts',
+      'Main.java',
+      'README_FIRST.md',
+      'README.md',
+      'wp-config.php',
+      'wp-config-sample.php',
+    ];
+
+    for (final name in priorityNames) {
+      final file = File('${widget.project.path}${Platform.pathSeparator}$name');
+      if (file.existsSync()) return file;
     }
-    final newFile = File(mainPath);
-    newFile.createSync(recursive: true);
-    return newFile;
+
+    // Jika tidak ada nama prioritas di atas, cari file non-hidden pertama di root folder
+    try {
+      final entries = projectDir.listSync();
+      for (final entry in entries) {
+        if (entry is File) {
+          final fileName = entry.path.split(Platform.pathSeparator).last;
+          if (!fileName.startsWith('.')) {
+            return entry;
+          }
+        }
+      }
+    } catch (_) {}
+
+    return null;
   }
 
 
