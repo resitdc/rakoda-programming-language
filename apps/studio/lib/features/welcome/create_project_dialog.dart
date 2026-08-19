@@ -77,25 +77,24 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
   }
 
   List<ProjectTemplateDefinition> get _filteredTemplates {
-    var templates = allProjectTemplates.where((t) {
-      // Filter by category
+    return allProjectTemplates.where((t) {
+      // Template yang runtime-nya tidak terinstall harus selalu disembunyikan
+      if (!_isCategoryAvailable(t.category)) {
+        return false;
+      }
+      // Filter berdasarkan kategori
       if (_selectedCategory != TemplateCategory.semua && t.category != _selectedCategory) {
         return false;
       }
-      // Filter by search
+      // Filter berdasarkan pencarian
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
         return t.name.toLowerCase().contains(q) ||
             t.description.toLowerCase().contains(q) ||
             t.tag.toLowerCase().contains(q);
       }
-      // Hide templates whose runtime is not installed (unless showing "Semua")
-      if (_selectedCategory == TemplateCategory.semua) {
-        return _isCategoryAvailable(t.category);
-      }
       return true;
     }).toList();
-    return templates;
   }
 
   Future<void> _pickFolder() async {
