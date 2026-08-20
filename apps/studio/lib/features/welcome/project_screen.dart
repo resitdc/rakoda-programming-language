@@ -2192,6 +2192,8 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                     _terminal,
                     controller: _terminalController,
                     focusNode: _terminalFocusNode,
+                    hardwareKeyboardOnly: Platform.isWindows || Platform.isLinux || Platform.isMacOS,
+                    autofocus: true,
                     textStyle: TerminalStyle(
                       fontFamily: 'monospace',
                       fontSize: settings.terminalFontSize,

@@ -1,7 +1,7 @@
 name: rpl_studio
 description: "RPL Studio - IDE Resmi Rakoda Programming Language"
 publish_to: 'none'
-version: 5.0.0+500
+version: 5.0.1+501
 
 environment:
   sdk: ^3.12.2
