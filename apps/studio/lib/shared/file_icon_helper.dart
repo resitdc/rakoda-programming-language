@@ -10,6 +10,7 @@ class FileIconHelper {
     if (lowerName.endsWith('.php')) return SvgPicture.asset('assets/icons/php.svg', width: size, height: size);
     if (lowerName.endsWith('.js')) return SvgPicture.asset('assets/icons/javascript.svg', width: size, height: size);
     if (lowerName.endsWith('.node')) return SvgPicture.asset('assets/icons/nodejs.svg', width: size, height: size);
+    if (lowerName.endsWith('.ts') || lowerName.endsWith('.tsx')) return SvgPicture.asset('assets/icons/typescript.svg', width: size, height: size);
     if (lowerName.endsWith('.py')) return SvgPicture.asset('assets/icons/python.svg', width: size, height: size);
     if (lowerName.endsWith('.rs')) return SvgPicture.asset('assets/icons/rust.svg', width: size, height: size);
     if (lowerName.endsWith('.java')) return SvgPicture.asset('assets/icons/java.svg', width: size, height: size);

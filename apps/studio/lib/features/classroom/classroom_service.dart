@@ -561,7 +561,7 @@ class ClassroomService {
     }
   }
 
-  void broadcastLiveCode(String codeContent, {int? selectionStart, int? selectionEnd}) {
+  void broadcastLiveCode(String codeContent, {String? fileName, int? selectionStart, int? selectionEnd}) {
     if (status != ClassroomStatus.connected || !isHost || !isLiveCodeSharingEnabled) return;
     
     final msg = ClassroomEvent(
@@ -569,6 +569,7 @@ class ClassroomService {
       name: IdentityService.name ?? 'Unknown',
       avatar: IdentityService.avatar ?? '🐼',
       text: codeContent,
+      fileName: fileName,
       isMine: true,
       eventType: 'live_code',
       selectionStart: selectionStart,
@@ -593,7 +594,7 @@ class ClassroomService {
     _broadcast(jsonEncode(msg.toJson()) + '\n');
   }
 
-  void sendStudentLiveCode(String codeContent, {int? selectionStart, int? selectionEnd}) {
+  void sendStudentLiveCode(String codeContent, {String? fileName, int? selectionStart, int? selectionEnd}) {
     if (status != ClassroomStatus.connected || isHost || !isBroadcastingToHost) return;
     
     final msg = ClassroomEvent(
@@ -601,6 +602,7 @@ class ClassroomService {
       name: IdentityService.name ?? 'Unknown',
       avatar: IdentityService.avatar ?? '🐼',
       text: codeContent,
+      fileName: fileName,
       isMine: true,
       eventType: 'student_live_code',
       selectionStart: selectionStart,

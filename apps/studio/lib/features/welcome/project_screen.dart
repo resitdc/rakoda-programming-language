@@ -62,6 +62,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   String _localSearchQuery = '';
   final TextEditingController _localSearchController = TextEditingController();
   bool _isPhpWeb = false;
+  int _serverPort = 8000;
 
   final ClassroomService _classroomService = ClassroomService();
   String _liveCodeContent = '';
@@ -70,6 +71,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   int? _liveSelectionStart;
   int? _liveSelectionEnd;
   String? _liveHostName;
+  String? _liveCodeFileName;
 
   late final Terminal _terminal;
   late final TerminalController _terminalController;
@@ -80,7 +82,21 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   final List<String> _iosTerminalLines = [];
   final TextEditingController _iosTerminalInputController = TextEditingController();
   final ScrollController _iosTerminalScrollController = ScrollController();
+  final ScrollController _liveCodeScrollController = ScrollController();
   late String _iosTerminalCwd;
+  final Set<String> _detectedServerUrls = {};
+
+  String _getHighlightLanguage(String? fileName) {
+    if (fileName == null) return 'rpl';
+    final ext = fileName.split('.').last.toLowerCase();
+    if (ext == 'ts' || ext == 'tsx') return 'typescript';
+    if (ext == 'js') return 'javascript';
+    if (ext == 'py') return 'python';
+    if (ext == 'rs') return 'rust';
+    if (ext == 'html' || ext == 'xml') return 'xml';
+    if (ext == 'json' || ext == 'css' || ext == 'php' || ext == 'java' || ext == 'rpl') return ext;
+    return 'rpl';
+  }
 
   @override
   void initState() {
@@ -158,8 +174,28 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           _liveSelectionStart = msg.selectionStart;
           _liveSelectionEnd = msg.selectionEnd;
           _liveHostName = msg.name;
+          _liveCodeFileName = msg.fileName;
           _isLiveCodeVisible = true;
         });
+
+        if (msg.selectionStart != null && _liveCodeScrollController.hasClients) {
+          final textBeforeCursor = msg.text.length > msg.selectionStart! ? msg.text.substring(0, msg.selectionStart!) : msg.text;
+          final lineNumber = textBeforeCursor.split('\n').length;
+          final lineHeight = 13.0 * 1.5;
+          final targetOffset = (lineNumber - 1) * lineHeight;
+          
+          final currentOffset = _liveCodeScrollController.offset;
+          final viewportHeight = _liveCodeScrollController.position.viewportDimension;
+          
+          if (targetOffset < currentOffset || targetOffset > currentOffset + viewportHeight - (lineHeight * 3)) {
+              final scrollTo = (targetOffset - (viewportHeight / 2)).clamp(0.0, _liveCodeScrollController.position.maxScrollExtent);
+              _liveCodeScrollController.animateTo(
+                scrollTo,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+              );
+          }
+        }
       } else if (msg.eventType == 'hide_live_code' && mounted) {
         setState(() {
           _isLiveCodeVisible = false;
@@ -167,6 +203,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           _liveSelectionStart = null;
           _liveSelectionEnd = null;
           _liveHostName = null;
+          _liveCodeFileName = null;
         });
       } else if (msg.eventType == 'terminal_output' && mounted && !_classroomService.isHost) {
         setState(() {
@@ -185,6 +222,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           if (_classroomService.isBroadcastingToHost && _openTabs.isNotEmpty) {
             _classroomService.sendStudentLiveCode(
               _openTabs[_activeTabIndex].content,
+              fileName: _openTabs[_activeTabIndex].fileName,
             );
           }
         }
@@ -194,6 +232,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           _liveSelectionStart = msg.selectionStart;
           _liveSelectionEnd = msg.selectionEnd;
           _liveHostName = "Siswa: ${msg.name}";
+          _liveCodeFileName = msg.fileName;
           _isLiveCodeVisible = true;
         });
       }
@@ -203,6 +242,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
         setState(() {
           _isLiveCodeVisible = false;
           _liveCodeContent = '';
+          _liveCodeFileName = null;
         });
       }
     });
@@ -306,31 +346,46 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   }
 
   void _checkForLocalhostUrl(String data) {
+    if (!mounted) return;
+
     // Regex untuk mendeteksi URL localhost/127.0.0.1 dengan port
     final regExp = RegExp(r'http:\/\/(?:localhost|127\.0\.0\.1):\d+');
     final match = regExp.firstMatch(data);
     if (match != null) {
       final url = match.group(0)!;
       
-      if (_activeWorkspace != WorkspaceType.browser) {
-        // Tampilkan notifikasi agar siswa tahu Web Server sudah menyala
-        ScaffoldMessenger.of(context).showSnackBar(
+      // Jika URL ini sudah pernah diberi tahu, jangan munculkan notifikasi berulang-ulang
+      if (_detectedServerUrls.contains(url)) return;
+      _detectedServerUrls.add(url);
+
+      if (_activeWorkspace != WorkspaceType.browser && mounted) {
+        // Hapus snackbar yang sedang tampil agar tidak menumpuk dalam antrean
+        ScaffoldMessenger.of(context).clearSnackBars();
+        final scaffoldMessenger = ScaffoldMessenger.of(context);
+        scaffoldMessenger.showSnackBar(
           SnackBar(
-            content: Text('🌐 Web Server terdeteksi berjalan di $url\r\nBuka tab RPL Browser untuk melihat hasilnya!'),
+            content: Text('Web Server terdeteksi berjalan di $url\r\nBuka tab RPL Browser untuk melihat hasilnya!'),
             backgroundColor: const Color(0xFF2568E7),
-            duration: const Duration(seconds: 5),
+            duration: const Duration(seconds: 3),
             action: SnackBarAction(
               label: 'BUKA BROWSER',
               textColor: Colors.white,
               onPressed: () {
-                setState(() {
-                  _browserInitialUrl = url;
-                  _activeWorkspace = WorkspaceType.browser;
-                });
+                if (mounted) {
+                  setState(() {
+                    _browserInitialUrl = url;
+                    _activeWorkspace = WorkspaceType.browser;
+                  });
+                }
               },
             ),
           ),
         );
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) {
+            scaffoldMessenger.hideCurrentSnackBar();
+          }
+        });
       }
     }
   }
@@ -397,11 +452,13 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
 
   @override
   void dispose() {
+    _detectedServerUrls.clear();
     _httpServerService.stop();
 
     _pty?.kill();
     _iosTerminalInputController.dispose();
     _iosTerminalScrollController.dispose();
+    _liveCodeScrollController.dispose();
     _localSearchController.dispose();
     _terminalFocusNode.dispose();
     super.dispose();
@@ -1007,7 +1064,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                                           onTap: (i) {
                                             setState(() => _activeTabIndex = i);
                                             if (_classroomService.isHost && _openTabs.isNotEmpty) {
-                                              _classroomService.broadcastLiveCode(_openTabs[i].content ?? '');
+                                              _classroomService.broadcastLiveCode(_openTabs[i].content, fileName: _openTabs[i].fileName);
                                             }
                                           },
                                           onClose: _closeTab,
@@ -1027,6 +1084,8 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                                           tab: _openTabs.isNotEmpty
                                               ? _openTabs[_activeTabIndex]
                                               : null,
+                                          line: _openTabs.isNotEmpty ? _openTabs[_activeTabIndex].cursorLine : 1,
+                                          column: _openTabs.isNotEmpty ? _openTabs[_activeTabIndex].cursorColumn : 1,
                                         ),
                                       ],
                                     ),
@@ -1098,6 +1157,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                                             width: double.infinity,
                                             padding: const EdgeInsets.all(8),
                                             child: SingleChildScrollView(
+                                              controller: _liveCodeScrollController,
                                               child: Row(
                                                 crossAxisAlignment: CrossAxisAlignment.start,
                                                 children: [
@@ -1123,7 +1183,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                                                       children: [
                                                         HighlightView(
                                                           _liveCodeContent,
-                                                          language: 'rpl',
+                                                          language: _getHighlightLanguage(_liveCodeFileName),
                                                           theme: vs2015Theme,
                                                           padding: const EdgeInsets.all(4),
                                                           textStyle: const TextStyle(
@@ -1242,6 +1302,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                 _classroomService.disconnect();
                 
                 if (context.mounted) {
+                  ScaffoldMessenger.of(context).clearSnackBars();
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(builder: (_) => const WelcomeScreen()),
@@ -1311,53 +1372,120 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                   if (_openTabs.isEmpty) return const SizedBox();
                   final tab = _openTabs[_activeTabIndex];
                   final fileName = tab.fileName;
-                  final isPureHtml = fileName.endsWith('.html') && !fileName.endsWith('.rpl.html');
+                  final isPureHtml = fileName.endsWith('.html');
+                  final ext = fileName.contains('.') ? fileName.split('.').last.toLowerCase() : '';
+                  final isScriptFile = ['rpl', 'py', 'java', 'go', 'cpp', 'cc', 'c', 'cs', 'kt', 'kts', 'rb', 'dart', 'r'].contains(ext);
                   
-                  final isServerRunning = (isPureHtml || _isPhpWeb) && _httpServerService.isRunning;
+                  final isServerContext = (isPureHtml || _isPhpWeb) && !isScriptFile;
+                  final isServerRunning = isServerContext && _httpServerService.isRunning;
 
-                  return _TitleBarButton(
-                    icon: isServerRunning ? Icons.stop : Icons.play_arrow,
-                    tooltip: isServerRunning ? 'Stop Server' : 'Run',
-                    color: isServerRunning ? Colors.redAccent : const Color(0xFF4EC9B0),
-                    onPressed: () async {
-                      if (isPureHtml || _isPhpWeb) {
-                        if (_httpServerService.isRunning) {
-                          await _httpServerService.stop();
-                          _terminal.write('\r\n>_ Server dihentikan.\r\n');
-                          setState(() {});
-                        } else {
-                          if (isPureHtml) {
-                            await _httpServerService.start(widget.project.path, defaultPort: 8000);
-                          } else {
-                            final availableRuntimes = await CodeExecutorService.getInstalledRuntimePaths('php');
-                            if (availableRuntimes.isEmpty) {
-                              _terminal.write('\r\n>_ Error: Runtime PHP belum terpasang. Silakan unduh melalui Pengelola Runtime.\r\n');
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isServerContext && !isServerRunning)
+                        _TitleBarButton(
+                          icon: Icons.settings_ethernet,
+                          tooltip: 'Atur Port Server',
+                          onPressed: () async {
+                            final TextEditingController portController = TextEditingController(text: _serverPort.toString());
+                            final newPort = await showDialog<int>(
+                              context: context,
+                              builder: (ctx) => Theme(
+                                data: ThemeData.dark().copyWith(
+                                  dialogBackgroundColor: const Color(0xFF252526),
+                                ),
+                                child: AlertDialog(
+                                  backgroundColor: const Color(0xFF252526),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  title: const Text('Atur Port Server', style: TextStyle(color: Colors.white, fontSize: 16)),
+                                  content: TextField(
+                                    controller: portController,
+                                    keyboardType: TextInputType.number,
+                                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                                    cursorColor: const Color(0xFF4EC9B0),
+                                    decoration: InputDecoration(
+                                      labelText: 'Port',
+                                      labelStyle: const TextStyle(color: Colors.white54),
+                                      filled: true,
+                                      fillColor: const Color(0xFF1E1E1E),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                        borderSide: const BorderSide(color: Colors.white24),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(6),
+                                        borderSide: const BorderSide(color: Color(0xFF4EC9B0)),
+                                      ),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx),
+                                      child: const Text('Batal', style: TextStyle(color: Colors.white70)),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        final parsed = int.tryParse(portController.text);
+                                        Navigator.pop(ctx, parsed);
+                                      },
+                                      child: const Text('Simpan', style: TextStyle(color: Color(0xFF4EC9B0))),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                            if (newPort != null && newPort > 0 && newPort <= 65535) {
                               setState(() {
-                                _isTerminalMinimized = false;
+                                _serverPort = newPort;
                               });
-                              return;
                             }
-                            await _httpServerService.startPhpServer(widget.project.path, availableRuntimes.first, defaultPort: 8000);
+                          },
+                        ),
+                      _TitleBarButton(
+                        icon: isServerRunning ? Icons.stop : Icons.play_arrow,
+                        tooltip: isServerRunning ? 'Stop Server' : 'Run',
+                        color: isServerRunning ? Colors.redAccent : const Color(0xFF4EC9B0),
+                        onPressed: () async {
+                          if (isServerContext) {
+                            if (_httpServerService.isRunning) {
+                              await _httpServerService.stop();
+                              _terminal.write('\r\n>_ Server dihentikan.\r\n');
+                              setState(() {});
+                            } else {
+                              if (isPureHtml && !_isPhpWeb) {
+                                await _httpServerService.start(widget.project.path, defaultPort: _serverPort);
+                              } else {
+                                final availableRuntimes = await CodeExecutorService.getInstalledRuntimePaths('php');
+                                if (availableRuntimes.isEmpty) {
+                                  _terminal.write('\r\n>_ Error: Runtime PHP belum terpasang. Silakan unduh melalui Pengelola Runtime.\r\n');
+                                  setState(() {
+                                    _isTerminalMinimized = false;
+                                  });
+                                  return;
+                                }
+                                await _httpServerService.startPhpServer(widget.project.path, availableRuntimes.first, defaultPort: _serverPort);
+                              }
+                              final port = _httpServerService.port;
+                              _terminal.write('\r\n>_ Web Server berjalan di http://localhost:$port\r\n');
+                              
+                              setState(() {
+                                _browserInitialUrl = isPureHtml ? 'http://localhost:$port/$fileName' : 'http://localhost:$port/';
+                                _activeWorkspace = WorkspaceType.browser;
+                                _activeActivity = ActivityType.browser;
+                              });
+                              
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Web Server berjalan di http://localhost:$port'),
+                                  backgroundColor: const Color(0xFF4EC9B0),
+                                  duration: const Duration(seconds: 3),
+                                ),
+                              );
+                            }
+                            return;
                           }
-                          final port = _httpServerService.port;
-                          _terminal.write('\r\n>_ Web Server berjalan di http://localhost:$port\r\n');
-                          
-                          setState(() {
-                            _browserInitialUrl = isPureHtml ? 'http://localhost:$port/$fileName' : 'http://localhost:$port/';
-                            _activeWorkspace = WorkspaceType.browser;
-                            _activeActivity = ActivityType.browser;
-                          });
-                          
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('🌐 Web Server berjalan di http://localhost:$port'),
-                              backgroundColor: const Color(0xFF4EC9B0),
-                              duration: const Duration(seconds: 3),
-                            ),
-                          );
-                        }
-                        return;
-                      }
+
 
                       if (_openTabs.isEmpty) return;
                       setState(() {
@@ -1451,6 +1579,8 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                         _classroomService.broadcastTerminalOutput(cmdString + resultString);
                       }
                     },
+                  ),
+                    ],
                   );
                 },
               ),
@@ -1692,10 +1822,22 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
       searchQuery: _localSearchQuery,
       onChanged: (content, selStart, selEnd) {
         tab.content = content;
+        
+        int line = 1;
+        int col = 1;
+        if (selStart != null && selStart >= 0 && selStart <= content.length) {
+          final textBeforeCursor = content.substring(0, selStart);
+          final lines = textBeforeCursor.split('\n');
+          line = lines.length;
+          col = lines.last.length + 1;
+        }
+        tab.cursorLine = line;
+        tab.cursorColumn = col;
+
         if (_classroomService.isHost) {
-          _classroomService.broadcastLiveCode(content, selectionStart: selStart, selectionEnd: selEnd);
+          _classroomService.broadcastLiveCode(content, fileName: _openTabs[_activeTabIndex].fileName, selectionStart: selStart, selectionEnd: selEnd);
         } else if (_classroomService.isBroadcastingToHost) {
-          _classroomService.sendStudentLiveCode(content, selectionStart: selStart, selectionEnd: selEnd);
+          _classroomService.sendStudentLiveCode(content, fileName: _openTabs[_activeTabIndex].fileName, selectionStart: selStart, selectionEnd: selEnd);
         }
         setState(() {});
       },

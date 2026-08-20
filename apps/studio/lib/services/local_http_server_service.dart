@@ -86,7 +86,7 @@ add_action('wp_head', function() {
     try {
       _phpProcess = await Process.start(
         phpExecutable, 
-        ['-d', 'opcache.enable=0', '-d', 'opcache.enable_cli=0', '-S', '0.0.0.0:$_port', '-t', rootPath],
+        ['-d', 'opcache.enable=0', '-d', 'opcache.enable_cli=0', '-d', 'error_reporting=22527', '-S', '0.0.0.0:$_port', '-t', rootPath],
         environment: {
           'TMPDIR': Directory.systemTemp.path,
         },

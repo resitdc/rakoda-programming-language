@@ -94,7 +94,7 @@ class CodeExecutorService {
       Map<String, String>? environment;
       
       if (language == 'php') {
-        processArgs = ['-d', 'opcache.enable=0', '-d', 'opcache.enable_cli=0', tempFile.path];
+        processArgs = ['-d', 'opcache.enable=0', '-d', 'opcache.enable_cli=0', '-d', 'error_reporting=22527', tempFile.path];
         environment = {
           'TMPDIR': Directory.systemTemp.path,
         };

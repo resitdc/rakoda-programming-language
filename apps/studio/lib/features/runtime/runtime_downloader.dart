@@ -10,6 +10,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:ffi';
+import 'package:ffi/ffi.dart';
+
+typedef _ChmodC = Int32 Function(Pointer<Utf8> path, Int32 mode);
+typedef _ChmodDart = int Function(Pointer<Utf8> path, int mode);
+
+void _setExecutableBit(String path) {
+  try {
+    final res = Process.runSync('chmod', ['755', path]);
+    if (res.exitCode == 0) return;
+  } catch (_) {}
+
+  try {
+    final libc = Platform.isMacOS || Platform.isIOS
+        ? DynamicLibrary.process()
+        : DynamicLibrary.open('libc.so.6');
+    final chmodFunc = libc.lookupFunction<_ChmodC, _ChmodDart>('chmod');
+    final pathPtr = path.toNativeUtf8();
+    chmodFunc(pathPtr, 493); // 493 == 0755
+    calloc.free(pathPtr);
+  } catch (e) {
+    print('FFI chmod failed for $path: $e');
+  }
+}
 
 enum DownloadState { idle, downloading, extracting, installed, error }
 
@@ -151,15 +175,13 @@ class RuntimeDownloaderNotifier extends ChangeNotifier {
         // Berikan akses execute secara spesifik (karena chmod -R sering gagal di Android/Toybox)
         final binFile = File('${targetRuntimeDir.path}/$runtimeName');
         if (await binFile.exists()) {
-          final res1 = await Process.run('chmod', ['755', binFile.path]);
-          if (res1.exitCode != 0) print('chmod 755 failed on ${binFile.path}: ${res1.stderr}');
+          _setExecutableBit(binFile.path);
         }
         
         // Untuk Node.js di Android, ada file .bin tambahan yang butuh di-chmod
         final binFile2 = File('${targetRuntimeDir.path}/$runtimeName.bin');
         if (await binFile2.exists()) {
-          final res2 = await Process.run('chmod', ['755', binFile2.path]);
-          if (res2.exitCode != 0) print('chmod 755 failed on ${binFile2.path}: ${res2.stderr}');
+          _setExecutableBit(binFile2.path);
         }
       }
 

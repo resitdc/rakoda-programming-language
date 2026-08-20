@@ -564,7 +564,11 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
       });
       
       if (widget.initialUrl != null && widget.initialUrl!.isNotEmpty) {
-        await _windowsController.loadUrl(widget.initialUrl!);
+        if (widget.initialUrl == 'rpl://browser') {
+           await _windowsController.loadStringContent(_getDefaultHtml());
+        } else {
+           await _windowsController.loadUrl(widget.initialUrl!);
+        }
       } else {
         await _windowsController.loadStringContent(_getDefaultHtml());
       }
@@ -730,7 +734,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
                 child: Platform.isWindows
                     ? (_isWindowsWebviewInitialized ? win_web.Webview(_windowsController) : const Center(child: CircularProgressIndicator()))
                     : InAppWebView(
-                      initialUrlRequest: URLRequest(url: WebUri(widget.initialUrl ?? 'about:blank')),
+                      initialUrlRequest: widget.initialUrl == 'rpl://browser' ? null : URLRequest(url: WebUri(widget.initialUrl ?? 'about:blank')),
                       initialSettings: _settings,
                       initialUserScripts: UnmodifiableListView<UserScript>([
                         UserScript(
@@ -789,12 +793,16 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
                             } catch (_) {}
                           },
                         );
+                        if (widget.initialUrl == 'rpl://browser') {
+                          _loadUrl('rpl://browser');
+                        }
                       },
                       onLoadStart: (controller, url) {
                         if (!mounted) return;
                         setState(() {
                           _isLoading = true;
-                          _urlController.text = url?.toString() ?? '';
+                          final urlStr = url?.toString() ?? '';
+                          _urlController.text = (urlStr.startsWith('data:text/html') || urlStr == 'about:blank') ? 'rpl://browser' : urlStr;
                           _consoleLogs.clear();
                           _networkRequests.add({
                             'url': _urlController.text,
