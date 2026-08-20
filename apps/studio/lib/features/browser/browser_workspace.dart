@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:webview_windows/webview_windows.dart' as win_web;
 import 'package:uuid/uuid.dart';
 import 'dart:async';
 import 'devtools_panel.dart';
@@ -26,8 +25,6 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
     transparentBackground: false, // Transparent background can cause texture detachment
     useHybridComposition: false, // FORCE Virtual Display mode to bypass SurfaceAnimationManager crashes completely
   );
-  final _windowsController = win_web.WebviewController();
-  bool _isWindowsWebviewInitialized = false;
   final Map<String, Completer<dynamic>> _jsCallbacks = {};
   late final TextEditingController _urlController = TextEditingController(
     text: widget.initialUrl ?? 'https://flutter.dev',
@@ -46,11 +43,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
 @override
   void dispose() {
     try {
-      if (Platform.isWindows) {
-        _windowsController.dispose();
-      } else {
-        
-      }
+      _controller?.dispose();
     } catch (_) {}
     super.dispose();
   }
@@ -59,10 +52,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
   void initState() {
     super.initState();
 
-    if (Platform.isWindows) {
-      _initWindowsWebview();
-      return;
-    }
+    // Controller is initialized in onWebViewCreated for InAppWebView
 
     // Controller is initialized in onWebViewCreated for InAppWebView
   }
@@ -318,11 +308,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
     url = url.trim();
     if (url.isEmpty) return;
     if (url == 'rpl://browser') {
-      if (Platform.isWindows) {
-        if (_isWindowsWebviewInitialized) _windowsController.loadStringContent(_getDefaultHtml());
-      } else {
-        _controller?.loadData(data: _getDefaultHtml());
-      }
+      _controller?.loadData(data: _getDefaultHtml());
       FocusScope.of(context).unfocus();
       return;
     }
@@ -337,11 +323,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
       }
     }
     
-    if (Platform.isWindows) {
-      if (_isWindowsWebviewInitialized) _windowsController.loadUrl(url);
-    } else {
-      _controller?.loadUrl(urlRequest: URLRequest(url: WebUri(url)));
-    }
+    _controller?.loadUrl(urlRequest: URLRequest(url: WebUri(url)));
     FocusScope.of(context).unfocus();
   }
 
@@ -479,177 +461,30 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
   }
 
 
-  Future<void> _initWindowsWebview() async {
-    try {
-      await _windowsController.initialize();
-      _windowsController.url.listen((url) {
-        if (!mounted) return;
-        setState(() {
-          _urlController.text = (url.startsWith('data:text/html') || url == 'about:blank') ? 'rpl://browser' : url;
-          _isLoading = true;
-          _consoleLogs.clear();
-          _networkRequests.add({
-            'url': _urlController.text,
-            'method': 'GET',
-            'status': 'Pending',
-            'time': DateTime.now().toString(),
-          });
-        });
-      });
-      _windowsController.loadingState.listen((state) {
-        if (!mounted) return;
-        if (state == win_web.LoadingState.navigationCompleted) {
-          setState(() {
-            _isLoading = false;
-            if (_networkRequests.isNotEmpty) {
-              _networkRequests.last['status'] = '200 OK';
-            }
-          });
-          if (!_isDevToolsMinimized) {
-            _extractDevToolsData();
-          }
-        }
-      });
-      _windowsController.webMessage.listen((msg) {
-        if (!mounted) return;
-        try {
-          if (msg is String) {
-            try {
-              msg = jsonDecode(msg);
-            } catch (_) {}
-          }
-          if (msg is Map) {
-            if (msg['type'] == 'js_eval_result') {
-              final id = msg['id'];
-              final result = msg['result'];
-              final error = msg['error'];
-              if (_jsCallbacks.containsKey(id)) {
-                if (error != null) {
-                  _jsCallbacks[id]!.completeError(error);
-                } else {
-                  _jsCallbacks[id]!.complete(result);
-                }
-                _jsCallbacks.remove(id);
-              }
-              return;
-            }
-            if (msg['type'] == 'network') {
-               setState(() {
-                 _networkRequests.add({
-                    'url': msg['url'] ?? '',
-                    'method': msg['method'] ?? 'GET',
-                    'status': msg['status'] ?? '',
-                    'payload': msg['payload'] ?? '',
-                    'response': msg['response'] ?? '',
-                    'time': DateTime.now().toString(),
-                    'contentType': msg['contentType'] ?? '',
-                 });
-               });
-               return;
-            }
-            if (msg['type'] == 'console') {
-               setState(() {
-                  _consoleLogs.add(msg['message']);
-               });
-               return;
-            }
-          }
-        } catch (e) {
-          debugPrint('Error parsing Windows WebMessage: $e');
-        }
-      });
-      
-      setState(() {
-        _isWindowsWebviewInitialized = true;
-      });
-      
-      if (widget.initialUrl != null && widget.initialUrl!.isNotEmpty) {
-        if (widget.initialUrl == 'rpl://browser') {
-           await _windowsController.loadStringContent(_getDefaultHtml());
-        } else {
-           await _windowsController.loadUrl(widget.initialUrl!);
-        }
-      } else {
-        await _windowsController.loadStringContent(_getDefaultHtml());
-      }
-    } catch (e) {
-      debugPrint('Windows Webview Initialization Error: $e');
-    }
-  }
-
   Future<void> _runJavascript(String code) async {
-    if (Platform.isWindows) {
-      if (!_isWindowsWebviewInitialized) return;
-      await _windowsController.executeScript(code);
-    } else {
-      try {
-        await _controller?.evaluateJavascript(source: code);
-      } catch (_) {}
-    }
+    try {
+      await _controller?.evaluateJavascript(source: code);
+    } catch (_) {}
   }
 
   Future<dynamic> _evaluateJavascript(String code) async {
-    if (Platform.isWindows) {
-      if (!_isWindowsWebviewInitialized) return null;
-      final id = const Uuid().v4();
-      final completer = Completer<dynamic>();
-      _jsCallbacks[id] = completer;
-      final wrappedCode = '''
-        (function() {
-          try {
-            var result = eval(${jsonEncode(code)});
-            window.chrome.webview.postMessage({
-              type: 'js_eval_result',
-              id: '$id',
-              result: result,
-              error: null
-            });
-          } catch(e) {
-            window.chrome.webview.postMessage({
-              type: 'js_eval_result',
-              id: '$id',
-              result: null,
-              error: e.toString()
-            });
-          }
-        })();
-      ''';
-      await _windowsController.executeScript(wrappedCode);
-      return completer.future.timeout(const Duration(seconds: 2), onTimeout: () {
-        _jsCallbacks.remove(id);
-        return null;
-      });
-    } else {
-      try {
-        return await _controller?.evaluateJavascript(source: code);
-      } catch (_) {
-        return null;
-      }
+    try {
+      return await _controller?.evaluateJavascript(source: code);
+    } catch (_) {
+      return null;
     }
   }
 
   void _goBack() {
-    if (Platform.isWindows) {
-      if (_isWindowsWebviewInitialized) _windowsController.goBack();
-    } else {
-      _controller?.goBack();
-    }
+    _controller?.goBack();
   }
 
   void _goForward() {
-    if (Platform.isWindows) {
-      if (_isWindowsWebviewInitialized) _windowsController.goForward();
-    } else {
-      _controller?.goForward();
-    }
+    _controller?.goForward();
   }
 
   void _reload() {
-    if (Platform.isWindows) {
-      if (_isWindowsWebviewInitialized) _windowsController.reload();
-    } else {
-      _controller?.reload();
-    }
+    _controller?.reload();
   }
 
   @override
@@ -731,9 +566,7 @@ class _BrowserWorkspaceState extends State<BrowserWorkspace> {
               // Browser View
               Expanded(
                 flex: 3,
-                child: Platform.isWindows
-                    ? (_isWindowsWebviewInitialized ? win_web.Webview(_windowsController) : const Center(child: CircularProgressIndicator()))
-                    : InAppWebView(
+                child: InAppWebView(
                       initialUrlRequest: widget.initialUrl == 'rpl://browser' ? null : URLRequest(url: WebUri(widget.initialUrl ?? 'about:blank')),
                       initialSettings: _settings,
                       initialUserScripts: UnmodifiableListView<UserScript>([

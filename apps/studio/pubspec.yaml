@@ -24,7 +24,7 @@ dependencies:
   mobile_scanner: ^7.0.2
   rust_lib_rpl_studio:
     path: rust_builder
-  webview_windows: ^0.4.0
+
   html: ^0.15.6
   window_manager: ^0.5.2
   mysql_client: ^0.0.27
