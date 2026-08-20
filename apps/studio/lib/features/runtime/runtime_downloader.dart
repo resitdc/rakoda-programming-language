@@ -10,6 +10,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:ffi';
+import 'package:ffi/ffi.dart';
+
+typedef _ChmodC = Int32 Function(Pointer<Utf8> path, Int32 mode);
+typedef _ChmodDart = int Function(Pointer<Utf8> path, int mode);
+
+void _setExecutableBit(String path) {
+  try {
+    final res = Process.runSync('chmod', ['755', path]);
+    if (res.exitCode == 0) return;
+  } catch (_) {}
+
+  try {
+    final libc = Platform.isMacOS || Platform.isIOS
+        ? DynamicLibrary.process()
+        : DynamicLibrary.open('libc.so.6');
+    final chmodFunc = libc.lookupFunction<_ChmodC, _ChmodDart>('chmod');
+    final pathPtr = path.toNativeUtf8();
+    chmodFunc(pathPtr, 493); // 493 == 0755
+    calloc.free(pathPtr);
+  } catch (e) {
+    print('FFI chmod failed for $path: $e');
+  }
+}
 
 enum DownloadState { idle, downloading, extracting, installed, error }
 
@@ -151,21 +175,76 @@ class RuntimeDownloaderNotifier extends ChangeNotifier {
         // Berikan akses execute secara spesifik (karena chmod -R sering gagal di Android/Toybox)
         final binFile = File('${targetRuntimeDir.path}/$runtimeName');
         if (await binFile.exists()) {
-          final res1 = await Process.run('chmod', ['755', binFile.path]);
-          if (res1.exitCode != 0) print('chmod 755 failed on ${binFile.path}: ${res1.stderr}');
+          _setExecutableBit(binFile.path);
         }
         
         // Untuk Node.js di Android, ada file .bin tambahan yang butuh di-chmod
         final binFile2 = File('${targetRuntimeDir.path}/$runtimeName.bin');
         if (await binFile2.exists()) {
-          final res2 = await Process.run('chmod', ['755', binFile2.path]);
-          if (res2.exitCode != 0) print('chmod 755 failed on ${binFile2.path}: ${res2.stderr}');
+          _setExecutableBit(binFile2.path);
         }
+      }
+
+      if (runtimeName == 'php') {
+        await _configurePhpIni(targetRuntimeDir);
       }
 
       _updateStatus(_status.copyWith(state: DownloadState.installed));
     } catch (e) {
       _updateStatus(_status.copyWith(state: DownloadState.error, error: e.toString()));
+    }
+  }
+
+  Future<void> _configurePhpIni(Directory runtimeDir) async {
+    try {
+      final entities = await runtimeDir.list(recursive: true).toList();
+      File? phpIni;
+      File? phpIniTemplate;
+
+      for (final entity in entities) {
+        if (entity is File) {
+          final name = p.basename(entity.path);
+          if (name == 'php.ini') {
+            phpIni = entity;
+            break;
+          } else if (name == 'php.ini-development' || name == 'php.ini-production') {
+            phpIniTemplate = entity;
+          }
+        }
+      }
+
+      if (phpIni == null && phpIniTemplate != null) {
+        final newPath = p.join(phpIniTemplate.parent.path, 'php.ini');
+        phpIni = await phpIniTemplate.copy(newPath);
+      }
+
+      if (phpIni != null && await phpIni.exists()) {
+        String content = await phpIni.readAsString();
+        
+        final extensions = [
+          'mysqli', 'pdo_mysql', 'pgsql', 'pdo_pgsql', 'sqlite3', 'pdo_sqlite',
+          'curl', 'mbstring', 'openssl', 'fileinfo', 'gd', 'zip', 'intl', 'exif',
+          'sodium', 'ftp', 'bz2'
+        ];
+        
+        for (final ext in extensions) {
+          // Uncomment standard extensions: ;extension=mysqli -> extension=mysqli
+          content = content.replaceAll(RegExp('^;\\s*extension\\s*=\\s*$ext\$', multiLine: true), 'extension=$ext');
+          // Uncomment Windows extensions: ;extension=php_mysqli.dll -> extension=php_mysqli.dll
+          content = content.replaceAll(RegExp('^;\\s*extension\\s*=\\s*php_$ext\\.dll\$', multiLine: true), 'extension=php_$ext.dll');
+        }
+        
+        // Uncomment extension_dir for Windows
+        content = content.replaceAll(RegExp(r'^;\s*extension_dir\s*=\s*"ext"', multiLine: true), 'extension_dir = "ext"');
+        
+        // Disable opcache for Android compatibility
+        content += '\n\n; Otomatis ditambahkan oleh RPL Studio\nopcache.enable=0\nopcache.enable_cli=0\n';
+        
+        await phpIni.writeAsString(content);
+        print("Berhasil mengaktifkan ekstensi PHP secara otomatis di ${phpIni.path}");
+      }
+    } catch (e) {
+      print("Gagal mengonfigurasi php.ini: \$e");
     }
   }
 

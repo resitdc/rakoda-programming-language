@@ -1,0 +1,7 @@
+#!/system/bin/sh
+DIR="$(cd "$(dirname "$0")" && pwd)"
+export HOME="$DIR"
+export TMPDIR="$DIR/tmp"
+mkdir -p "$TMPDIR"
+export COMPOSER_HOME="$DIR/.composer"
+exec "$DIR/php" "$DIR/composer.phar" "$@"

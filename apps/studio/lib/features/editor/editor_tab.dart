@@ -6,6 +6,8 @@ class EditorTab {
   final String fileName;
   bool isModified;
   String content;
+  int cursorLine;
+  int cursorColumn;
   final UndoHistoryController undoController;
 
   EditorTab({
@@ -13,6 +15,8 @@ class EditorTab {
     required this.fileName,
     this.isModified = false,
     this.content = '',
+    this.cursorLine = 1,
+    this.cursorColumn = 1,
   }) : undoController = UndoHistoryController();
 
   String get title => isModified ? '• $fileName' : fileName;

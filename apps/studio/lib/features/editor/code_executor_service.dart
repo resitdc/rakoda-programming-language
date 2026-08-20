@@ -93,6 +93,12 @@ class CodeExecutorService {
       
       Map<String, String>? environment;
       
+      if (language == 'php') {
+        processArgs = ['-d', 'opcache.enable=0', '-d', 'opcache.enable_cli=0', '-d', 'error_reporting=22527', tempFile.path];
+        environment = {
+          'TMPDIR': Directory.systemTemp.path,
+        };
+      }
       // Khusus untuk di Android:
       // OS Android sering memblokir execve() langsung pada binary dinamis di folder data aplikasi (SELinux).
       // Triknya adalah mengeksekusi sistem linker secara eksplisit, ATAU mengeksekusi shell script dengan 'sh'.
@@ -123,6 +129,7 @@ class CodeExecutorService {
           if (ldLibPath.isNotEmpty) {
             final currentLdPath = Platform.environment['LD_LIBRARY_PATH'] ?? '';
             environment = {
+              ...?environment,
               'LD_LIBRARY_PATH': '$ldLibPath$currentLdPath'
             };
           }

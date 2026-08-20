@@ -22,6 +22,7 @@ import 'package:highlight/languages/python.dart';
 import 'package:highlight/languages/rust.dart';
 import 'package:highlight/languages/json.dart';
 import 'package:highlight/languages/java.dart';
+import 'package:highlight/languages/typescript.dart';
 import 'rpl_languages.dart';
 import 'editor_tab.dart';
 import '../../features/theme/theme_state.dart';
@@ -155,6 +156,7 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
     if (ext == 'rs') return rust;
     if (ext == 'json') return json;
     if (ext == 'java') return java;
+    if (ext == 'ts' || ext == 'tsx') return typescript;
     if (ext == 'html' || ext == 'xml') return xml;
     return null;
   }
