@@ -1180,13 +1180,19 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                                                     ),
                                                   ),
                                                   Expanded(
-                                                    child: Stack(
-                                                      children: [
-                                                        SelectionArea(
-                                                          child: MouseRegion(
-                                                            cursor: SystemMouseCursors.text,
-                                                            child: Container(
-                                                              width: double.infinity,
+                                                    child: LayoutBuilder(
+                                                      builder: (context, constraints) {
+                                                        return SingleChildScrollView(
+                                                          scrollDirection: Axis.horizontal,
+                                                          child: ConstrainedBox(
+                                                            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                                                            child: Stack(
+                                                              children: [
+                                                                SelectionArea(
+                                                                  child: MouseRegion(
+                                                                    cursor: SystemMouseCursors.text,
+                                                                    child: Container(
+                                                                      width: double.infinity,
                                                               child: SelectableHighlightView(
                                                                 _liveCodeContent,
                                                                 language: _getHighlightLanguage(_liveCodeFileName),
@@ -1221,6 +1227,10 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                                                             ),
                                                           ),
                                                       ],
+                                                            ),
+                                                          ),
+                                                        );
+                                                      },
                                                     ),
                                                   ),
                                                 ],
@@ -2401,7 +2411,7 @@ class _LiveCursorPainter extends CustomPainter {
       text: TextSpan(text: text, style: textStyle),
       textDirection: TextDirection.ltr,
     );
-    textPainter.layout(minWidth: 0, maxWidth: size.width);
+    textPainter.layout(minWidth: 0, maxWidth: double.infinity);
 
     final start = selectionStart <= selectionEnd ? selectionStart : selectionEnd;
     final end = selectionStart <= selectionEnd ? selectionEnd : selectionStart;
