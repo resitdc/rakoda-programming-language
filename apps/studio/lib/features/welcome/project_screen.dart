@@ -1181,30 +1181,34 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                                                   Expanded(
                                                     child: Stack(
                                                       children: [
-                                                        HighlightView(
-                                                          _liveCodeContent,
-                                                          language: _getHighlightLanguage(_liveCodeFileName),
-                                                          theme: vs2015Theme,
-                                                          padding: const EdgeInsets.all(4),
-                                                          textStyle: const TextStyle(
-                                                            fontFamily: 'monospace',
-                                                            fontSize: 13,
-                                                            height: 1.5,
+                                                        SelectionArea(
+                                                          child: HighlightView(
+                                                            _liveCodeContent,
+                                                            language: _getHighlightLanguage(_liveCodeFileName),
+                                                            theme: vs2015Theme,
+                                                            padding: const EdgeInsets.all(4),
+                                                            textStyle: const TextStyle(
+                                                              fontFamily: 'monospace',
+                                                              fontSize: 13,
+                                                              height: 1.5,
+                                                            ),
                                                           ),
                                                         ),
                                                         if (_liveSelectionStart != null)
                                                           Positioned.fill(
-                                                            child: CustomPaint(
-                                                              painter: _LiveCursorPainter(
-                                                                text: _liveCodeContent,
-                                                                selectionStart: _liveSelectionStart!,
-                                                                selectionEnd: _liveSelectionEnd ?? _liveSelectionStart!,
-                                                                hostName: _liveHostName ?? 'Guru',
-                                                                textStyle: const TextStyle(
-                                                                  fontFamily: 'monospace',
-                                                                  fontSize: 13,
-                                                                  height: 1.5,
-                                                                  color: Colors.transparent,
+                                                            child: IgnorePointer(
+                                                              child: CustomPaint(
+                                                                painter: _LiveCursorPainter(
+                                                                  text: _liveCodeContent,
+                                                                  selectionStart: _liveSelectionStart!,
+                                                                  selectionEnd: _liveSelectionEnd ?? _liveSelectionStart!,
+                                                                  hostName: _liveHostName ?? 'Guru',
+                                                                  textStyle: const TextStyle(
+                                                                    fontFamily: 'monospace',
+                                                                    fontSize: 13,
+                                                                    height: 1.5,
+                                                                    color: Colors.transparent,
+                                                                  ),
                                                                 ),
                                                               ),
                                                             ),

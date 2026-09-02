@@ -686,7 +686,7 @@ class _ClassroomPanelState extends State<ClassroomPanel> with SingleTickerProvid
                               ),
                             ),
                           ],
-                          Text(
+                          SelectableText(
                             msg.text,
                             style: const TextStyle(color: Colors.white, fontSize: 12),
                           ),
