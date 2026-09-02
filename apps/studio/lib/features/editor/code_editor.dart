@@ -164,6 +164,35 @@ class _CodeEditorState extends ConsumerState<CodeEditor> {
   void _onTextChanged() {
     final hasContentChanged = _controller.text != _content;
     
+    if (hasContentChanged && _controller.text.length == _content.length + 1) {
+      final settings = ref.read(settingsProvider);
+      if (settings.isAutoCloseHtmlTags) {
+        final selection = _controller.selection;
+        if (selection.baseOffset > 0 && _controller.text[selection.baseOffset - 1] == '>') {
+          final ext = widget.tab.filePath.split('.').last.toLowerCase();
+          if (ext == 'html' || ext == 'xml' || ext == 'rpl') {
+            final textBeforeCursor = _controller.text.substring(0, selection.baseOffset);
+            final tagMatch = RegExp(r'<([a-zA-Z][a-zA-Z0-9]*)[^>]*>$').firstMatch(textBeforeCursor);
+            if (tagMatch != null) {
+              final tagName = tagMatch.group(1)!.toLowerCase();
+              final voidElements = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
+              if (!voidElements.contains(tagName) && !textBeforeCursor.endsWith('/>')) {
+                final closingTag = '</$tagName>';
+                final newText = _controller.text.replaceRange(selection.baseOffset, selection.baseOffset, closingTag);
+                Future.microtask(() {
+                  _controller.value = _controller.value.copyWith(
+                    text: newText,
+                    selection: TextSelection.collapsed(offset: selection.baseOffset),
+                  );
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    
     setState(() {
       _content = _controller.text;
       widget.tab.content = _content;
