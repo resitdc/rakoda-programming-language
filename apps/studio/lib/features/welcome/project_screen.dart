@@ -34,6 +34,7 @@ import 'package:desktop_drop/desktop_drop.dart';
 import 'dart:convert';
 import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/themes/vs2015.dart';
+import 'selectable_highlight_view.dart';
 import '../editor/rpl_languages.dart';
 
 enum WorkspaceType { editor, browser, database, http }
@@ -1179,18 +1180,29 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                                                     ),
                                                   ),
                                                   Expanded(
-                                                    child: Stack(
-                                                      children: [
-                                                        SelectionArea(
-                                                          child: HighlightView(
-                                                            _liveCodeContent,
-                                                            language: _getHighlightLanguage(_liveCodeFileName),
-                                                            theme: vs2015Theme,
-                                                            padding: const EdgeInsets.all(4),
-                                                            textStyle: const TextStyle(
-                                                              fontFamily: 'monospace',
-                                                              fontSize: 13,
-                                                              height: 1.5,
+                                                    child: LayoutBuilder(
+                                                      builder: (context, constraints) {
+                                                        return SingleChildScrollView(
+                                                          scrollDirection: Axis.horizontal,
+                                                          child: ConstrainedBox(
+                                                            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                                                            child: Stack(
+                                                              children: [
+                                                                SelectionArea(
+                                                                  child: MouseRegion(
+                                                                    cursor: SystemMouseCursors.text,
+                                                                    child: Container(
+                                                              child: SelectableHighlightView(
+                                                                _liveCodeContent,
+                                                                language: _getHighlightLanguage(_liveCodeFileName),
+                                                                theme: vs2015Theme,
+                                                                padding: const EdgeInsets.all(4),
+                                                                textStyle: const TextStyle(
+                                                                  fontFamily: 'monospace',
+                                                                  fontSize: 13,
+                                                                  height: 1.5,
+                                                                ),
+                                                              ),
                                                             ),
                                                           ),
                                                         ),
@@ -1209,11 +1221,17 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                                                                     height: 1.5,
                                                                     color: Colors.transparent,
                                                                   ),
+                                                                  textScaler: MediaQuery.textScalerOf(context),
+                                                                  textHeightBehavior: DefaultTextHeightBehavior.maybeOf(context),
                                                                 ),
                                                               ),
                                                             ),
                                                           ),
                                                       ],
+                                                            ),
+                                                          ),
+                                                        );
+                                                      },
                                                     ),
                                                   ),
                                                 ],
@@ -2375,6 +2393,8 @@ class _LiveCursorPainter extends CustomPainter {
   final int selectionEnd;
   final String hostName;
   final TextStyle textStyle;
+  final TextScaler textScaler;
+  final TextHeightBehavior? textHeightBehavior;
 
   _LiveCursorPainter({
     required this.text,
@@ -2382,72 +2402,93 @@ class _LiveCursorPainter extends CustomPainter {
     required this.selectionEnd,
     required this.hostName,
     required this.textStyle,
+    required this.textScaler,
+    this.textHeightBehavior,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     if (text.isEmpty) return;
 
-    final paddingOffset = const Offset(4, 4); // Sesuai dengan padding HighlightView(EdgeInsets.all(4))
+    final paddingOffset = const Offset(4, 4);
 
-    final textPainter = TextPainter(
-      text: TextSpan(text: text, style: textStyle),
+    // Measure single character width and line height
+    final measurePainter = TextPainter(
+      text: TextSpan(text: 'a', style: textStyle),
       textDirection: TextDirection.ltr,
+      textScaler: textScaler,
+      textHeightBehavior: textHeightBehavior,
     );
-    textPainter.layout(minWidth: 0, maxWidth: size.width);
+    measurePainter.layout();
+    final double charWidth = measurePainter.width;
+    final double lineHeight = measurePainter.height;
 
     final start = selectionStart <= selectionEnd ? selectionStart : selectionEnd;
     final end = selectionStart <= selectionEnd ? selectionEnd : selectionStart;
+    final cursorOffset = selectionEnd;
+
+    // Helper to get line and column (0-indexed)
+    Map<String, int> getPos(int offset) {
+      if (offset < 0) offset = 0;
+      if (offset > text.length) offset = text.length;
+      final textBefore = text.substring(0, offset);
+      final lines = textBefore.split('\n');
+      return {'line': lines.length - 1, 'col': lines.last.length};
+    }
+
+    final startPos = getPos(start);
+    final endPos = getPos(end);
+    final cursorPos = getPos(cursorOffset);
 
     // 1. Draw Selection Boxes
     if (start != end) {
       final selectionPaint = Paint()..color = Colors.blueAccent.withAlpha(80);
-      try {
-        final boxes = textPainter.getBoxesForSelection(
-          TextSelection(baseOffset: start, extentOffset: end),
-        );
+      
+      final startLine = startPos['line']!;
+      final endLine = endPos['line']!;
+      
+      final lines = text.split('\n');
+
+      for (int i = startLine; i <= endLine; i++) {
+        final isFirstLine = i == startLine;
+        final isLastLine = i == endLine;
         
-        for (final box in boxes) {
-          canvas.drawRect(
-            box.toRect().shift(paddingOffset),
-            selectionPaint,
+        final lineText = i < lines.length ? lines[i] : '';
+        
+        final startCol = isFirstLine ? startPos['col']! : 0;
+        final endCol = isLastLine ? endPos['col']! : lineText.length;
+        
+        if (startCol != endCol || startLine == endLine) {
+          final rect = Rect.fromLTWH(
+            startCol * charWidth,
+            i * lineHeight,
+            (endCol - startCol) * charWidth,
+            lineHeight,
           );
+          canvas.drawRect(rect.shift(paddingOffset), selectionPaint);
         }
-      } catch (e) {
-        // Abaikan error layout (mis. index di luar teks)
       }
     }
 
     // 2. Draw Cursor Line
     final cursorPaint = Paint()
-      ..color = Colors.orangeAccent
+      ..color = Colors.orange
       ..strokeWidth = 2.0;
 
-    Offset caretOffset;
-    try {
-      caretOffset = textPainter.getOffsetForCaret(
-        TextPosition(offset: selectionEnd),
-        Rect.zero,
-      );
-    } catch (e) {
-      caretOffset = Offset.zero;
-    }
+    final cursorX = cursorPos['col']! * charWidth;
+    final cursorY = cursorPos['line']! * lineHeight;
     
-    final finalCaretOffset = caretOffset + paddingOffset;
+    final cursorStart = Offset(cursorX, cursorY) + paddingOffset;
+    final cursorEnd = Offset(cursorX, cursorY + lineHeight) + paddingOffset;
 
-    canvas.drawLine(
-      finalCaretOffset,
-      finalCaretOffset + Offset(0, textStyle.fontSize! * (textStyle.height ?? 1.0)),
-      cursorPaint,
-    );
+    canvas.drawLine(cursorStart, cursorEnd, cursorPaint);
 
     // 3. Draw Host Name Label
     final labelPainter = TextPainter(
       text: TextSpan(
-        text: ' $hostName ',
+        text: hostName,
         style: const TextStyle(
           color: Colors.black,
-          backgroundColor: Colors.orangeAccent,
           fontSize: 10,
           fontWeight: FontWeight.bold,
         ),
@@ -2455,12 +2496,17 @@ class _LiveCursorPainter extends CustomPainter {
       textDirection: TextDirection.ltr,
     );
     labelPainter.layout();
-    
-    // Position label slightly di atas cursor
-    labelPainter.paint(
-      canvas,
-      finalCaretOffset - const Offset(0, 14),
+
+    final labelBgPaint = Paint()..color = Colors.orange;
+    final labelBgRect = Rect.fromLTWH(
+      cursorStart.dx,
+      cursorStart.dy - labelPainter.height,
+      labelPainter.width + 4,
+      labelPainter.height,
     );
+
+    canvas.drawRect(labelBgRect, labelBgPaint);
+    labelPainter.paint(canvas, Offset(cursorStart.dx + 2, cursorStart.dy - labelPainter.height));
   }
 
   @override
