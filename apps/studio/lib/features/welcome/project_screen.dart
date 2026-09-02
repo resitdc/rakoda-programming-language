@@ -1470,8 +1470,25 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                                 }
                                 await _httpServerService.startPhpServer(widget.project.path, availableRuntimes.first, defaultPort: _serverPort);
                               }
-                              final port = _httpServerService.port;
-                              _terminal.write('\r\n>_ Web Server berjalan di http://localhost:$port\r\n');
+                                final port = _httpServerService.port;
+                              
+                              String localIp = 'localhost';
+                              try {
+                                final interfaces = await NetworkInterface.list(type: InternetAddressType.IPv4);
+                                for (var interface in interfaces) {
+                                  for (var addr in interface.addresses) {
+                                    if (!addr.isLoopback && !addr.address.startsWith('169.254.')) {
+                                      localIp = addr.address;
+                                      break;
+                                    }
+                                  }
+                                  if (localIp != 'localhost') break;
+                                }
+                              } catch (_) {}
+
+                              _terminal.write('\r\n>_ Web Server berjalan di:\r\n');
+                              _terminal.write('>_ - Lokal:   http://localhost:$port\r\n');
+                              _terminal.write('>_ - Network: http://$localIp:$port\r\n');
                               
                               setState(() {
                                 _browserInitialUrl = isPureHtml ? 'http://localhost:$port/$fileName' : 'http://localhost:$port/';
@@ -1481,7 +1498,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                               
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Web Server berjalan di http://localhost:$port'),
+                                  content: Text('Web Server berjalan di http://$localIp:$port'),
                                   backgroundColor: const Color(0xFF4EC9B0),
                                   duration: const Duration(seconds: 3),
                                 ),
