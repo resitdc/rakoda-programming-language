@@ -34,6 +34,7 @@ import 'package:desktop_drop/desktop_drop.dart';
 import 'dart:convert';
 import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/themes/vs2015.dart';
+import 'selectable_highlight_view.dart';
 import '../editor/rpl_languages.dart';
 
 enum WorkspaceType { editor, browser, database, http }
@@ -1182,15 +1183,21 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                                                     child: Stack(
                                                       children: [
                                                         SelectionArea(
-                                                          child: HighlightView(
-                                                            _liveCodeContent,
-                                                            language: _getHighlightLanguage(_liveCodeFileName),
-                                                            theme: vs2015Theme,
-                                                            padding: const EdgeInsets.all(4),
-                                                            textStyle: const TextStyle(
-                                                              fontFamily: 'monospace',
-                                                              fontSize: 13,
-                                                              height: 1.5,
+                                                          child: MouseRegion(
+                                                            cursor: SystemMouseCursors.text,
+                                                            child: Container(
+                                                              width: double.infinity,
+                                                              child: SelectableHighlightView(
+                                                                _liveCodeContent,
+                                                                language: _getHighlightLanguage(_liveCodeFileName),
+                                                                theme: vs2015Theme,
+                                                                padding: const EdgeInsets.all(4),
+                                                                textStyle: const TextStyle(
+                                                                  fontFamily: 'monospace',
+                                                                  fontSize: 13,
+                                                                  height: 1.5,
+                                                                ),
+                                                              ),
                                                             ),
                                                           ),
                                                         ),
