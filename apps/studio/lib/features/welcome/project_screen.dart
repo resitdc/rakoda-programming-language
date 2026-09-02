@@ -1192,7 +1192,6 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                                                                   child: MouseRegion(
                                                                     cursor: SystemMouseCursors.text,
                                                                     child: Container(
-                                                                      width: double.infinity,
                                                               child: SelectableHighlightView(
                                                                 _liveCodeContent,
                                                                 language: _getHighlightLanguage(_liveCodeFileName),
@@ -1222,6 +1221,8 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                                                                     height: 1.5,
                                                                     color: Colors.transparent,
                                                                   ),
+                                                                  textScaler: MediaQuery.textScalerOf(context),
+                                                                  textHeightBehavior: DefaultTextHeightBehavior.maybeOf(context),
                                                                 ),
                                                               ),
                                                             ),
@@ -2392,6 +2393,8 @@ class _LiveCursorPainter extends CustomPainter {
   final int selectionEnd;
   final String hostName;
   final TextStyle textStyle;
+  final TextScaler textScaler;
+  final TextHeightBehavior? textHeightBehavior;
 
   _LiveCursorPainter({
     required this.text,
@@ -2399,6 +2402,8 @@ class _LiveCursorPainter extends CustomPainter {
     required this.selectionEnd,
     required this.hostName,
     required this.textStyle,
+    required this.textScaler,
+    this.textHeightBehavior,
   });
 
   @override
@@ -2410,6 +2415,8 @@ class _LiveCursorPainter extends CustomPainter {
     final textPainter = TextPainter(
       text: TextSpan(text: text, style: textStyle),
       textDirection: TextDirection.ltr,
+      textScaler: textScaler,
+      textHeightBehavior: textHeightBehavior,
     );
     textPainter.layout(minWidth: 0, maxWidth: double.infinity);
 
