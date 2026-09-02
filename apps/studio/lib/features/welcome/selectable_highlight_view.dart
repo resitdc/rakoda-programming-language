@@ -17,7 +17,7 @@ class SelectableHighlightView extends StatelessWidget {
     this.padding,
     this.textStyle,
     this.tabSize = 8,
-  }) : source = input.replaceAll('\t', ' ' * tabSize);
+  }) : source = input;
 
   List<TextSpan> _convert(List<Node> nodes) {
     List<TextSpan> spans = [];
