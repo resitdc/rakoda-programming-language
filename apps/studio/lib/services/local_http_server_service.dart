@@ -17,10 +17,10 @@ class LocalHttpServerService {
     _rootPath = rootPath;
     
     try {
-      _server = await HttpServer.bind(InternetAddress.loopbackIPv4, defaultPort);
+      _server = await HttpServer.bind(InternetAddress.anyIPv4, defaultPort);
     } catch (e) {
       // Jika port terpakai, sistem akan mencari port kosong otomatis (port 0)
-      _server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      _server = await HttpServer.bind(InternetAddress.anyIPv4, 0);
     }
 
     _port = _server!.port;
@@ -71,11 +71,11 @@ add_action('wp_head', function() {
     // Cari port yang kosong
     int targetPort = defaultPort;
     try {
-      final s = await ServerSocket.bind(InternetAddress.loopbackIPv4, defaultPort);
+      final s = await ServerSocket.bind(InternetAddress.anyIPv4, defaultPort);
       targetPort = s.port;
       await s.close();
     } catch (e) {
-      final s = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      final s = await ServerSocket.bind(InternetAddress.anyIPv4, 0);
       targetPort = s.port;
       await s.close();
     }
