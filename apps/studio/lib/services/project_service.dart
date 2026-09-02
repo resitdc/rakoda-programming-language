@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'bootstrap_assets.dart';
+import 'css_framework_assets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:archive/archive.dart';
 import 'package:path_provider/path_provider.dart';
@@ -267,6 +269,37 @@ define( 'WP_SITEURL', 'http://' . \$_SERVER['HTTP_HOST'] );
         await File('$projectPath/index.html').writeAsString(_htmlTemplate(projectName));
         await File('$projectPath/style.css').writeAsString(_cssTemplate());
         break;
+      case 'html_bootstrap':
+        await File('$projectPath/index.html').writeAsString(_htmlBootstrapTemplate(projectName));
+        await Directory('$projectPath/assets/css').create(recursive: true);
+        await Directory('$projectPath/assets/js').create(recursive: true);
+        await File('$projectPath/assets/css/bootstrap.min.css').writeAsString(BootstrapAssets.css);
+        await File('$projectPath/assets/js/bootstrap.bundle.min.js').writeAsString(BootstrapAssets.js);
+        break;
+      case 'html_tailwind':
+        await File('$projectPath/index.html').writeAsString(_htmlTailwindTemplate(projectName));
+        await Directory('$projectPath/assets/js').create(recursive: true);
+        await File('$projectPath/assets/js/tailwindcss.js').writeAsString(CssFrameworkAssets.tailwindJs);
+        break;
+      case 'html_bulma':
+        await File('$projectPath/index.html').writeAsString(_htmlBulmaTemplate(projectName));
+        await Directory('$projectPath/assets/css').create(recursive: true);
+        await File('$projectPath/assets/css/bulma.min.css').writeAsString(CssFrameworkAssets.bulmaCss);
+        break;
+      case 'html_foundation':
+        await File('$projectPath/index.html').writeAsString(_htmlFoundationTemplate(projectName));
+        await Directory('$projectPath/assets/css').create(recursive: true);
+        await Directory('$projectPath/assets/js').create(recursive: true);
+        await File('$projectPath/assets/css/foundation.min.css').writeAsString(CssFrameworkAssets.foundationCss);
+        await File('$projectPath/assets/js/foundation.min.js').writeAsString(CssFrameworkAssets.foundationJs);
+        break;
+      case 'html_semantic':
+        await File('$projectPath/index.html').writeAsString(_htmlSemanticTemplate(projectName));
+        await Directory('$projectPath/assets/css').create(recursive: true);
+        await Directory('$projectPath/assets/js').create(recursive: true);
+        await File('$projectPath/assets/css/semantic.min.css').writeAsString(CssFrameworkAssets.semanticCss);
+        await File('$projectPath/assets/js/semantic.min.js').writeAsString(CssFrameworkAssets.semanticJs);
+        break;
 
       // ── PHP ───────────────────────────────────────────────────────
       case 'php_empty':
@@ -327,6 +360,78 @@ define( 'WP_SITEURL', 'http://' . \$_SERVER['HTTP_HOST'] );
         <h1>Selamat Datang di $projectName! 🎉</h1>
         <p>Edit file <code>index.html</code> untuk memulai.</p>
     </div>
+</body>
+</html>
+''';
+  static String _htmlBootstrapTemplate(String projectName) => '''<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>$projectName</title>
+    <link href="assets/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    
+    <script src="assets/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+''';
+
+  static String _htmlTailwindTemplate(String projectName) => '''<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>$projectName</title>
+    <script src="assets/js/tailwindcss.js"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    
+</body>
+</html>
+''';
+
+  static String _htmlBulmaTemplate(String projectName) => '''<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>$projectName</title>
+    <link href="assets/css/bulma.min.css" rel="stylesheet">
+</head>
+<body>
+    
+</body>
+</html>
+''';
+
+  static String _htmlFoundationTemplate(String projectName) => '''<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>$projectName</title>
+    <link href="assets/css/foundation.min.css" rel="stylesheet">
+</head>
+<body>
+    
+    <script src="assets/js/foundation.min.js"></script>
+</body>
+</html>
+''';
+
+  static String _htmlSemanticTemplate(String projectName) => '''<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>$projectName</title>
+    <link href="assets/css/semantic.min.css" rel="stylesheet">
+</head>
+<body>
+    
+    <script src="assets/js/semantic.min.js"></script>
 </body>
 </html>
 ''';
