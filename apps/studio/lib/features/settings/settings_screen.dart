@@ -74,6 +74,14 @@ class SettingsScreen extends ConsumerWidget {
             value: settings.isAutoSave,
             onChanged: (v) => ref.read(settingsProvider.notifier).toggleAutoSave(v),
           ),
+          const SizedBox(height: 12),
+          _settingCard(
+            icon: HugeIcons.strokeRoundedCode,
+            title: 'Auto Close HTML Tags',
+            subtitle: 'Otomatis menutup tag HTML/XML saat Anda mengetik tag baru.',
+            value: settings.isAutoCloseHtmlTags,
+            onChanged: (v) => ref.read(settingsProvider.notifier).toggleAutoCloseHtmlTags(v),
+          ),
           // const SizedBox(height: 8),
           // _settingCard(
           //   icon: HugeIcons.strokeRoundedTextWrap,

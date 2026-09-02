@@ -8,6 +8,7 @@ const _kEditorFontSizeKey = 'setting_editor_font_size';
 const _kTerminalFontSizeKey = 'setting_terminal_font_size';
 const _kEditorThemeKey = 'setting_editor_theme';
 const _kTerminalHeightKey = 'setting_terminal_height';
+const _kAutoCloseHtmlTagsKey = 'setting_auto_close_html_tags';
 
 final settingsProvider = NotifierProvider<SettingsNotifier, SettingsState>(() {
   return SettingsNotifier();
@@ -21,6 +22,7 @@ class SettingsState {
   final double terminalFontSize;
   final String editorTheme;
   final double terminalHeight;
+  final bool isAutoCloseHtmlTags;
 
   const SettingsState({
     this.isLowEndMode = false,
@@ -30,6 +32,7 @@ class SettingsState {
     this.terminalFontSize = 12.0,
     this.editorTheme = 'VS2015',
     this.terminalHeight = 170.0,
+    this.isAutoCloseHtmlTags = true,
   });
 
   SettingsState copyWith({
@@ -40,6 +43,7 @@ class SettingsState {
     double? terminalFontSize,
     String? editorTheme,
     double? terminalHeight,
+    bool? isAutoCloseHtmlTags,
   }) {
     return SettingsState(
       isLowEndMode: isLowEndMode ?? this.isLowEndMode,
@@ -49,6 +53,7 @@ class SettingsState {
       terminalFontSize: terminalFontSize ?? this.terminalFontSize,
       editorTheme: editorTheme ?? this.editorTheme,
       terminalHeight: terminalHeight ?? this.terminalHeight,
+      isAutoCloseHtmlTags: isAutoCloseHtmlTags ?? this.isAutoCloseHtmlTags,
     );
   }
 }
@@ -69,6 +74,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final terminalFontSize = prefs.getDouble(_kTerminalFontSizeKey) ?? 12.0;
     final editorTheme = prefs.getString(_kEditorThemeKey) ?? 'VS2015';
     final terminalHeight = prefs.getDouble(_kTerminalHeightKey) ?? 170.0;
+    final isAutoCloseHtmlTags = prefs.getBool(_kAutoCloseHtmlTagsKey) ?? true;
     state = state.copyWith(
       isLowEndMode: isLowEndMode,
       isAutoSave: isAutoSave,
@@ -77,6 +83,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
       terminalFontSize: terminalFontSize,
       editorTheme: editorTheme,
       terminalHeight: terminalHeight,
+      isAutoCloseHtmlTags: isAutoCloseHtmlTags,
     );
   }
 
@@ -120,5 +127,11 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble(_kTerminalHeightKey, value);
     state = state.copyWith(terminalHeight: value);
+  }
+
+  Future<void> toggleAutoCloseHtmlTags(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kAutoCloseHtmlTagsKey, value);
+    state = state.copyWith(isAutoCloseHtmlTags: value);
   }
 }
