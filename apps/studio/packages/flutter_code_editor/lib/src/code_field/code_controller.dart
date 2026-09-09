@@ -798,7 +798,7 @@ class CodeController extends TextEditingController {
     return Code(
       text: text,
       language: language,
-      highlighted: highlight.parse(text, language: _languageId),
+      highlighted: text.length > 30000 ? null : highlight.parse(text, language: _languageId),
       namedSectionParser: namedSectionParser,
       readOnlySectionNames: _readOnlySectionNames,
       visibleSectionNames: _visibleSectionNames,

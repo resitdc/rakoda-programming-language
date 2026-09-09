@@ -64,12 +64,14 @@ class SelectableHighlightView extends StatelessWidget {
     return Container(
       color: theme['root']?.backgroundColor ?? const Color(0xffffffff),
       padding: padding,
-      child: Text.rich(
-        TextSpan(
-          style: style,
-          children: _convert(highlight.parse(source, language: language).nodes!),
-        ),
-      ),
+      child: source.length > 30000
+          ? Text.rich(TextSpan(style: style, text: source))
+          : Text.rich(
+              TextSpan(
+                style: style,
+                children: _convert(highlight.parse(source, language: language).nodes!),
+              ),
+            ),
     );
   }
 }
